@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Wells Fargo Events</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="top-header">
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <video autoplay muted loop>
+                <source src="../assets/background.mp4" type="video/mp4">
+            </video>
+            <img src="../assets/logo3.png" class="left-logo" alt="Logo">
+            <div class="left-content">
+                <h2>Think. Analyze. Critically.</h2>
+                <p>A Frequently Asked Question System, developed to supervised client-based question relatively.</p>
+                <div class="progress-dots">
+                    <div class="dot active"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="container" style="width: 550px; height: 550px; position: relative;">
+                <!-- PROCESSING RING -->
+                <div class="ring" id="ring"></div>
+
+                <!-- LOGIN FORM -->
+                <div id="alertBox" class="alert"></div>
+                <form class="form" id="loginForm" onsubmit="handleLogin(event)" style="background: transparent;">
+                    <h2 style="color: #e845397c7c;">LOGIN ADMIN</h2>
+
+                    <div class="inputBox">
+                        <input type="text" id="username" name="username" required>
+                        <label>Username</label>
+                    </div>
+
+                    <div class="inputBox">
+                        <input type="password" id="password" name="password" required>
+                        <label>Password</label>
+                    </div>
+
+                    <div class="inputBox">
+                        <input type="submit" value="Sign In">
+                    </div>
+
+                    <p class="forgot">Forgot Password? <a href="forget-password.php">Click Here</a></p>
+            </div>
+    </div>
+    
+    <script>
+        const API_BASE = '../api';
+        
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alertBox');
+            if (alertBox) {
+                alertBox.textContent = message;
+                alertBox.className = `alert show alert-${type}`;
+                
+                // Auto-hide after 5 seconds for success
+                if (type === 'success') {
+                    setTimeout(() => {
+                        alertBox.classList.remove('show');
+                    }, 3000);
+                }
+            }
+        }
+        
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.querySelector('.inputBox input[type="submit"]');
+            
+            if (!username || !password) {
+                showAlert('Please enter both username and password', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            loginBtn.disabled = true;
+            
+            fetch(`${API_BASE}/admin_login.php?action=login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => {
+                if (response.status === 429) {
+                    showAlert('Too many failed login attempts. Account is locked for 30 minutes.', 'error');
+                    loginBtn.disabled = false;
+                    throw new Error('Account locked');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Store admin data
+                    localStorage.setItem('admin', JSON.stringify(data.admin));
+                    
+                    // Show success message
+                    showAlert('Login successful! Redirecting...', 'success');
+                    
+                    // Redirect after a short delay
+                    setTimeout(() => {
+                        window.location.href = './index.html';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || 'Login failed. Invalid username or password.', 'error');
+                    loginBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                if (error.message !== 'Account locked') {
+                    showAlert('Connection error. Please try again.', 'error');
+                }
+                loginBtn.disabled = false;
+            });
+        }
+        
+        // Check if already logged in
+        window.addEventListener('load', function() {
+            const admin = localStorage.getItem('admin');
+            if (admin) {
+                // Redirect to dashboard if already logged in
+                window.location.href = './index.html';
+            }
+            
+            // Initialize the rotating ring
+            const ring = document.getElementById('ring');
+            if (ring) {
+                const totalBars = 48;
+                let current = 0;
+                const trailLength = 6;
+
+                for(let i = 0; i < totalBars; i++){
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.style.transform = `rotate(${i*(360/totalBars)}deg)`;
+                    ring.appendChild(bar);
+                }
+
+                const bars = document.querySelectorAll('.bar');
+
+                setInterval(()=>{
+                    bars.forEach(b=>{
+                        b.classList.remove('active','trail1','trail2','trail3','trail4','trail5');
+                    });
+
+                    bars[current].classList.add('active');
+
+                    for(let i=1; i<trailLength; i++){
+                        let index = (current - i + totalBars) % totalBars;
+                        bars[index].classList.add('trail'+i);
+                    }
+
+                    current = (current+1) % totalBars;
+                }, 60);
+            }
+        });
+        
+        // Allow Enter key to submit
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

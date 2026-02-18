@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events.Net - Find & Join Corporate Events</title>
+    <link rel="icon" type="image/png" href="../assets/logo2.png">
+    <link rel="stylesheet" href="css/client.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <img src="../assets/fargo1.png" alt="Wells Fargo" class="logo-image">
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <video class="hero-video" autoplay muted loop playsinline>
+            <source src="../assets/background.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <div class="hero-content">
+            <h1>Find & Join Corporate Events</h1>
+            <p>Discover the latest conferences and internal workshops at Wells Fargo.</p>
+            
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="Search by event name or location..."
+                    >
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+                <button class="search-btn" onclick="searchEvents()">Search</button>
+            </div>
+
+            <!-- Private Event Code Link -->
+            <div style="text-align: center; margin-top: 50px;">
+                <a href="#" onclick="togglePrivateCodeInput(event)" style="color: white; font-size: 18px; text-decoration: none; font-weight: 500; cursor: pointer; transition: opacity 0.3s; ">
+                    Have a private event code?
+                </a>
+            </div>
+
+            <!-- Hidden Private Event Code Input -->
+            <div id="privateCodeContainer" style="display: none; margin-top: 15px; padding: 12px; background: white; border-radius: 8px; max-width: 400px; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+                <div class="code-input-group" style="display: flex; gap: 8px;">
+                    <input 
+                        type="text" 
+                        id="privateCode" 
+                        class="code-input" 
+                        placeholder="Enter your exclusive code"
+                        style="flex: 1; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border-color 0.3s; font-family: 'Poppins', sans-serif;"
+                    >
+                    <button class="join-btn" onclick="joinPrivateEvent()" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.3s; white-space: nowrap; font-family: 'Poppins', sans-serif;">Join Event</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Private Event Code & Countdown Section -->
+    <section class="private-event-section">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 30px; align-items: center;">
+                <!-- Next Event Countdown -->
+                <div class="countdown-card" id="countdownCard" style="background: linear-gradient(135deg, #C41E3A 0%, #a01530 100%); color: white; padding: 30px; border-radius: 8px; box-shadow: 0 8px 25px rgba(196, 30, 58, 0.3);">
+                    <p style="text-transform: uppercase; font-size: 12px; letter-spacing: 2px; margin: 0 0 10px 0; opacity: 0.9; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                            <path fill="currentColor" d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z"/>
+                            <rect width="2" height="7" x="11" y="6" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="9s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                            <rect width="2" height="9" x="11" y="11" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="0.75s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                        </svg>
+                        Next Event Countdown
+                    </p>
+                    <h3 id="countdownEventName" style="margin: 0 0 25px 0; font-size: 22px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <span>Loading event...</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                            <path fill="currentColor" d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z"/>
+                            <rect width="2" height="7" x="11" y="6" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="9s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                            <rect width="2" height="9" x="11" y="11" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="0.75s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                        </svg>
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <div style="text-align: center;">
+                            <div id="countdownDays" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Days</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div id="countdownHours" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Hours</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div id="countdownMinutes" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Minutes</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div id="countdownSeconds" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Seconds</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ongoing Events Section (Today's Events) -->
+    <section class="ongoing-events" id="ongoing">
+        <div class="container">
+            <div class="section-header">
+                <h2 style="display: flex; align-items: center; gap: 10px; margin-top: 30px">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 32 32">
+                    <path fill="currentColor" d="M28 6a2 2 0 0 0-2-2h-4V2h-2v2h-8V2h-2v2H6a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h4v-2H6V6h4v2h2V6h8v2h2V6h4v6h2Z"/><path fill="currentColor" d="m21 15l2.549 4.938l5.451.791l-4 3.844L26 30l-5-2.562L16 30l1-5.427l-4-3.844l5.6-.791z"/>
+                </svg>Happening Today
+                </h2>
+                <p id="ongoingCount" style="color: #666;">Loading today's events...</p>
+            </div>
+
+            <div class="events-grid" id="ongoingEventsGrid">
+                <!-- Ongoing events will be loaded here -->
+                <div class="loading">Loading today's events...</div>
+            </div>
+
+            <div id="noOngoingEvents" class="no-events" style="display: none;">
+                <p>No events happening today. Check upcoming events below!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upcoming Events Section -->
+    <section class="upcoming-events" id="upcoming">
+        <div class="container">
+            <div class="section-header">
+                <h2> <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M6 1h2v2h8V1h2v2h1a2 2 0 0 1 2 2v6h-2V8H5v11h10v2H5a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h1zm11 20l1.8 1.77c.5.5 1.2.1 1.2-.49V18l2.8-3.4A1 1 0 0 0 22 13h-7c-.8 0-1.3 1-.8 1.6L17 18z"/>
+                </svg> Upcoming Events</h2>
+                <p id="eventsCount">Loading events...</p>
+            </div>
+
+            <div class="events-grid" id="eventsGrid">
+                <!-- Events will be loaded here -->
+                <div class="loading">Loading events...</div>
+            </div>
+
+            <div id="noEvents" class="no-events" style="display: none;">
+                <p>No events found. Try adjusting your search criteria.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Past Events Section (Completed Events) -->
+    <section class="past-events" id="past">
+        <div class="container">
+            <div class="section-header">
+                <h2 style="display: flex; align-items: center; gap: 10px;">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 16H5V9h14zM5 7V5h14v2zm5.56 10.46l5.93-5.93l-1.06-1.06l-4.87 4.87l-2.11-2.11l-1.06 1.06z"/>
+                </svg>Past Events
+                </h2>
+                <p id="pastCount" style="color: #666;">Loading past events...</p>
+            </div>
+
+            <div class="carousel-container">
+                <button class="carousel-button carousel-prev" onclick="pastCarouselPrev()" aria-label="Previous events">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+
+                <div class="carousel-wrapper">
+                    <div class="events-carousel" id="pastEventsCarousel">
+                        <!-- Past events will be loaded here -->
+                        <div class="loading">Loading past events...</div>
+                    </div>
+                </div>
+
+                <button class="carousel-button carousel-next" onclick="pastCarouselNext()" aria-label="Next events">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="noPastEvents" class="no-events" style="display: none;">
+                <p>No past events to display.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Event Details Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <img id="modalImage" src="" alt="Event Image" class="modal-image">
+                <span id="modalPrivateBadge" class="badge-private" style="display: none;">Private</span>
+                <button class="close" onclick="closeEventModal()" aria-label="Close modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <h2 id="modalTitle"></h2>
+                
+                <div class="event-details">
+                    <div class="detail-row">
+                        <span class="detail-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12h5v5h-5zm7-9h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 2v2H5V5zM5 19V9h14v10z"/></svg> Date:</span>
+                        <span id="modalDate"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0-18 0"/><path d="M12 7v5l3 3"/></g></svg> Time:</span>
+                        <span id="modalTime"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2s2 .9 2 2s-.9 2-2 2m6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14c4.05-3.7 6-6.8 6-9.14M12 2c4.2 0 8 3.22 8 8.2c0 3.32-2.67 7.25-8 11.8c-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2"/></svg> Location:</span>
+                        <span id="modalLocation"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 22v-.575q0-.6.325-1.1t.9-.75q.65-.275 1.338-.425T7 19t1.438.15t1.337.425q.575.25.9.75t.325 1.1V22zm10 0v-.575q0-.6.325-1.1t.9-.75q.65-.275 1.338-.425T17 19t1.438.15t1.337.425q.575.25.9.75t.325 1.1V22zm-6-4q-.825 0-1.412-.587T5 16t.588-1.412T7 14t1.413.588T9 16t-.587 1.413T7 18m10 0q-.825 0-1.412-.587T15 16t.588-1.412T17 14t1.413.588T19 16t-.587 1.413T17 18m-5-2l-3-3l1.05-1.05l1.2 1.175V11h1.5v2.125l1.2-1.175L15 13zM2 10v-.575q0-.6.325-1.1t.9-.75q.65-.275 1.338-.425T6 7q.5 0 .988.075t.937.2Q7.5 7.7 7.25 8.25T7 9.425V10zm6 0v-.575q0-.6.325-1.1t.9-.75q.65-.275 1.338-.425T12 7t1.438.15t1.337.425q.575.25.9.75t.325 1.1V10zm9 0v-.575q0-.625-.25-1.175t-.675-.975q.45-.125.938-.2T18 7q.75 0 1.438.15t1.337.425q.575.25.9.75t.325 1.1V10zM6 6q-.825 0-1.412-.587T4 4t.588-1.412T6 2t1.413.588T8 4t-.587 1.413T6 6m6 0q-.825 0-1.412-.587T10 4t.588-1.412T12 2t1.413.588T14 4t-.587 1.413T12 6m6 0q-.825 0-1.412-.587T16 4t.588-1.412T18 2t1.413.588T20 4t-.587 1.413T18 6"/></svg> Capacity:</span>
+                        <span id="modalCapacity"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="currentColor" d="M15.879 5H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.121l-4.44 4.44a1.5 1.5 0 0 1-2.12-2.122zM4 8.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5H9a.5.5 0 0 1 0 1H4.5a.5.5 0 0 1-.5-.5m13.854-5.646a.5.5 0 0 0-.708-.708l-5 5a.5.5 0 0 0 .708.708z"/></svg> Available Spots:</span>
+                        <span id="modalAvailable"></span>
+                    </div>
+                </div>
+
+                <div class="event-description">
+                    <h3>About This Event</h3>
+                    <p id="modalDescription"></p>
+                </div>
+
+                <div class="event-stats">
+                    <div class="stat">
+                        <div class="stat-number" id="modalRegistrations">0</div>
+                        <div class="stat-label">Registered</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="modalAttended">0</div>
+                        <div class="stat-label">Attended</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="registerForEvent()">Register Now</button>
+                <button class="btn btn-secondary" onclick="closeEventModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registrationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <span class="close" onclick="closeRegistrationModal()" style="font-size: 28px; color: #666;">&times;</span>
+            
+            <div style="padding: 30px;">
+                <h2 style="margin: 0 0 10px 0; color: #333; font-size: 24px;">Register for Event</h2>
+                <p style="color: #666; margin: 0 0 25px 0; font-size: 14px;" id="modalEventName">Event name will appear here</p>
+
+                <form id="registrationForm" onsubmit="submitRegistration(event)">
+                    <input type="hidden" id="registrationEventId">
+                    <input type="hidden" id="registrationPrivateCode">
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                        <label for="participantName" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Full Name *</label>
+                        <input type="text" id="participantName" autocomplete="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                        <label for="participantEmail" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Email Address *</label>
+                        <input type="email" id="participantEmail" autocomplete="email" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px;">
+                        <div class="form-group">
+                            <label for="participantDepartment" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Department</label>
+                            <select id="participantDepartment" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; background: white; cursor: pointer;">
+                                <option value="">Select a department</option>
+                                <option value="IT">IT</option>
+                                <option value="HR">HR</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Finance">Finance</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="participantPhone" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Phone Number</label>
+                            <input type="tel" id="participantPhone" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <label style="display: flex; align-items: flex-start; cursor: pointer; font-size: 14px; color: #333;">
+                            <input type="checkbox" id="agreeTerms" required style="margin-top: 4px; margin-right: 10px; cursor: pointer;">
+                            <span>I agree to the event terms and conditions</span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: #C41E3A; color: white; transition: background 0.3s;">Register</button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; background: white; color: #333; transition: background 0.3s;" onclick="closeRegistrationModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Confirmation Modal with QR Code -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content" style="max-width: 480px; text-align: center; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <!-- Header with gradient -->
+            <div style="background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%); padding: 20px 18px; color: white; position: relative;">
+                <h2 style="margin: 0; font-size: 22px; font-weight: 700;">✓ Registration Successful!</h2>
+                <p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.95;">Your registration has been confirmed</p>
+            </div>
+            
+            <!-- QR Code Section -->
+            <div style="padding: 20px 18px; background: white;">
+                <p style="margin: 0 0 15px 0; font-weight: 600; color: #333; font-size: 14px;">Your Event QR Code</p>
+                <div style="display: flex; justify-content: center; margin: 15px 0;">
+                    <div style="padding: 10px; background: #f9f9f9; border-radius: 8px; border: 2px solid #e0e0e0;">
+                        <img id="confirmationQRCode" src="" alt="Event QR Code" style="width: 200px; height: 200px; display: block; border-radius: 4px;">
+                    </div>
+                </div>
+                <p style="margin: 12px 0 0 0; font-size: 12px; color: #666; font-weight: 500;">Scan this code at the event check-in</p>
+            </div>
+            
+            <!-- Details Section -->
+            <div id="confirmationDetails" style="margin: 0; padding: 18px 15px; background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%); border-top: 1px solid #e0e0e0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; max-width: 100%;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
+                        <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Event</p>
+                        <p id="confirmEventName" style="margin: 0; font-size: 13px; color: #333; font-weight: 500;">-</p>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
+                        <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Reg Code</p>
+                        <p id="confirmRegistrationCode" style="margin: 0; font-size: 12px; color: #C41E3A; font-weight: 700; font-family: 'Courier New', monospace;">-</p>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
+                        <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Name</p>
+                        <p id="confirmName" style="margin: 0; font-size: 13px; color: #333; font-weight: 500;">-</p>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
+                        <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Email</p>
+                        <p id="confirmEmail" style="margin: 0; font-size: 13px; color: #333; font-weight: 500; word-break: break-all;">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Button Section -->
+            <div style="padding: 15px; background: white;">
+                <button type="button" class="btn btn-primary" style="width: 100%; background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%); color: white; padding: 12px; font-size: 14px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(196, 30, 58, 0.3)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none'; this.style.transform='translateY(0)'" onclick="closeConfirmationModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Private Event Code Modal -->
+    <div id="privateCodeModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 50px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out;">
+            <!-- Header with gradient -->
+            <div style="background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%); padding: 24px 24px; color: white;">
+                <h2 style="margin: 0; font-size: 20px; font-weight: 700;">🔐 Private Event</h2>
+                <p id="privateEventDescription" style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95; font-weight: 500;">This is a private event</p>
+            </div>
+            
+            <!-- Content Section -->
+            <div style="padding: 28px 24px; background: white;">
+                <p style="margin: 0 0 20px 0; font-size: 14px; color: #666; line-height: 1.5;">Please enter the exclusive event code to register:</p>
+                
+                <!-- Input Field -->
+                <div style="margin-bottom: 8px;">
+                    <input 
+                        type="text" 
+                        id="privateCodeInput" 
+                        placeholder="Enter event code" 
+                        style="width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: 'Poppins', sans-serif; box-sizing: border-box; transition: all 0.3s;"
+                        onkeypress="if(event.key === 'Enter') submitPrivateCode();"
+                        onfocus="this.style.borderColor='#C41E3A'; this.style.boxShadow='0 0 0 3px rgba(196, 30, 58, 0.1)'"
+                        onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
+                    >
+                </div>
+                <p id="privateCodeError" style="margin: 0; font-size: 12px; color: #d32f2f; display: none;">Incorrect code. Please try again.</p>
+            </div>
+            
+            <!-- Button Section -->
+            <div style="padding: 16px 24px 24px 24px; background: white; display: flex; gap: 12px;">
+                <button type="button" style="flex: 1; background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%); color: white; padding: 12px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(196, 30, 58, 0.3)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none'; this.style.transform='translateY(0)'" onclick="submitPrivateCode()">Submit Code</button>
+                <button type="button" style="flex: 1; background: #f0f0f0; color: #333; padding: 12px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.backgroundColor='#e0e0e0'" onmouseout="this.style.backgroundColor='#f0f0f0'" onclick="cancelPrivateCodeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <!-- Top Section with Logo, Nav, and Info -->
+            <div class="footer-top">
+                
+                <!-- Left Side - Logo and Company Info -->
+                <div class="footer-left">
+                    <img src="../assets/fargo1.png" alt="Logo" class="footer-logo">
+                    <p class="footer-info" style="margin-left: 55px;">
+                        <span class="font-semibold">Head Office</span><br>
+                        12 Catanduanes Street, Brgy Paltok West Ave., Quezon City, Philippines 1105<br>
+                        +632 8350 5986 (loc. 348) | +632 8352 0377<br>
+                        sales@intellismartinc.com
+                    </p>
+                </div>
+
+                <!-- Center - Navigation Links -->
+                <div class="footer-center">
+                    <p class="footer-title"> Event Lines</p>
+                    <div class="footer-links">
+                        <a href="#upcoming" class="footer-link">Upcoming Events</a>
+                        <a href="#ongoing" class="footer-link">Ongoing Events</a>
+                        <a href="#past" class="footer-link">Past Events</a>
+                        <a href="#" class="footer-link">Contact Support</a>
+                    </div>
+                </div>
+
+                <!-- Right Side - Support and Social -->
+                <div class="footer-right">
+                    <!-- Social Media -->
+                    <p class="footer-social-title" style="margin-right: 40px; margin-bottom: -20px">Follow Us</p>
+                    <div class="footer-socials">
+                        <a href="https://facebook.com" target="_blank" class="social-icon">f</a>
+                        <a href="https://linkedin.com" target="_blank" class="social-icon">in</a>
+                        <a href="https://twitter.com" target="_blank" class="social-icon">𝕏</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Section - Copyright -->
+            <div class="footer-bottom">
+                <p class="footer-copyright" style="font-size: 14px;">&copy; 2026 Wells Fargo Events. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/client.js"></script>
+</body>
+</html>

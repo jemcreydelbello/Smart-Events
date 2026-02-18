@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Database Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            color: #0c5460;
+        }
+        
+        .setup-section {
+            margin-bottom: 30px;
+        }
+        
+        .setup-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .setup-section p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            color: #333;
+        }
+        
+        .credentials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .credentials-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .credentials-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success {
+            background: #28a745;
+        }
+        
+        .status-error {
+            background: #dc3545;
+        }
+        
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Admin Database Setup</h1>
+        <p class="subtitle">Initialize the dedicated admin accounts table for login authentication</p>
+        
+        <div id="alertBox" class="alert"></div>
+        
+        <div class="setup-section">
+            <h3>Step 1: Create Admin Tables</h3>
+            <p>This will create the following tables in your database:</p>
+            <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+                <li><strong>admins</strong> - Dedicated admin accounts with login credentials</li>
+                <li><strong>admin_login_logs</strong> - Login activity audit trail</li>
+            </ul>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="setupAdminTables()">Create Admin Tables</button>
+            </div>
+            <div class="loader" id="setupLoader"></div>
+        </div>
+        
+        <div class="setup-section" id="credentialsSection" style="display: none;">
+            <h3>Step 2: Default Admin Account</h3>
+            <p>Your new admin account has been created. Use these credentials to log in:</p>
+            
+            <table class="credentials-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td><strong>Username</strong></td>
+                    <td><code>admin</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Email</strong></td>
+                    <td><code>admin@wells-fargo.com</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Password</strong></td>
+                    <td><code>admin123</code></td>
+                </tr>
+            </table>
+            
+            <p style="margin-top: 20px; color: #c33; font-weight: bold;">
+                ⚠️ Important: Change the default password immediately after first login!
+            </p>
+            
+            <div class="btn-group">
+                <button class="btn-primary" onclick="window.location.href = './login.html'">Go to Admin Login</button>
+                <button class="btn-secondary" onclick="closeSetup()">Close Setup</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showAlert(message, type = 'info') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert show alert-${type}`;
+        }
+        
+        function setupAdminTables() {
+            const setupBtn = event.currentTarget;
+            const loader = document.getElementById('setupLoader');
+            
+            setupBtn.disabled = true;
+            loader.style.display = 'block';
+            
+            fetch('../api/admin_table_setup.php', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                loader.style.display = 'none';
+                
+                if (data.success) {
+                    showAlert('✓ Admin tables created successfully!', 'success');
+                    setupBtn.style.display = 'none';
+                    document.getElementById('credentialsSection').style.display = 'block';
+                } else {
+                    showAlert('✗ Error: ' + data.message, 'error');
+                    setupBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                loader.style.display = 'none';
+                showAlert('✗ Connection error: ' + error.message, 'error');
+                setupBtn.disabled = false;
+            });
+        }
+        
+        function closeSetup() {
+            window.location.href = './index.html';
+        }
+        
+        // Check if setup is needed
+        window.addEventListener('load', function() {
+            fetch('../api/admin_table_setup.php?check=1')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showAlert('✓ Admin tables already exist. You can proceed to login.', 'info');
+                        document.querySelector('button.btn-primary').textContent = 'Tables Already Created ✓';
+                        document.querySelector('button.btn-primary').disabled = true;
+                        document.getElementById('credentialsSection').style.display = 'block';
+                    }
+                })
+                .catch(error => console.log('Check result:', error));
+        });
+    </script>
+</body>
+</html>

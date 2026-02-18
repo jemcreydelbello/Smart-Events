@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Events.Net</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+    <!-- Main Content -->
+    <div style="padding: 30px; max-width: 1200px; margin: 0 auto;">
+        <h2 style="margin-bottom: 30px;">Check-in Scanner</h2>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <!-- Camera Feed -->
+            <div>
+                <div style="background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                    <video id="video" width="100%" style="display: block; max-height: 400px;"></video>
+                </div>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <button class="btn btn-primary" style="width: 100%; background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%);" onclick="startScanning()">Start Scanner</button>
+            </div>
+
+            <!-- Scanned Info -->
+            <div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">Scanned QR Codes</div>
+                    </div>
+                    <div id="scanResults" style="padding: 20px; min-height: 300px;">
+                        <p class="text-muted text-center">Scan a QR code to get started</p>
+                    </div>
+                </div>
+
+                <!-- Participant Info Panel -->
+                <div id="participantPanel" style="margin-top: 20px; display: none;">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <div class="table-title">Participant Details</div>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div style="margin-bottom: 15px;">
+                                <strong>Name:</strong> <span id="participantName">-</span>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <strong>Email:</strong> <span id="participantEmail">-</span>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <strong>Event:</strong> <span id="participantEvent">-</span>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <strong>Status:</strong> <span id="participantStatus">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        <div style="margin-top: 30px;">
+            <h3 style="margin-bottom: 20px;">Recent Check-ins</h3>
+            <div class="table-container">
+                <table id="recentScans">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Event</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No recent scans</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scanning = false;
+        let currentScan = null;
+        const API_BASE = '../api';
+
+        function startScanning() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Request camera access
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                    scanning = true;
+
+                    // Set canvas size to match video
+                    video.onloadedmetadata = () => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        scanQRCode(video, canvas, ctx);
+                    };
+                })
+                .catch(error => {
+                    alert('Error accessing camera: ' + error.message);
+                });
+        }
+
+        function scanQRCode(video, canvas, ctx) {
+            if (!scanning) return;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+                handleQRScan(code.data);
+            }
+
+            requestAnimationFrame(() => scanQRCode(video, canvas, ctx));
+        }
+
+        function handleQRScan(data) {
+            // QR code contains text like "Registration Code: REG-XXXXX"
+            // Extract just the registration code using regex
+            let registration_code = null;
+            
+            console.log('════════════════════════════════════════');
+            console.log('QR Code scanned:', data);
+            console.log('════════════════════════════════════════');
+            
+            // Try to extract registration code from various formats
+            const match = data.match(/REG-[A-F0-9]+/);
+            if (match) {
+                registration_code = match[0];
+            } else {
+                // If no match, maybe it's just the code
+                registration_code = data.trim();
+            }
+            
+            console.log('Processing scanned QR code:', data);
+            console.log('Registration code extracted:', registration_code);
+            
+            // Check if we found a valid registration code
+            if (!registration_code || !registration_code.startsWith('REG-')) {
+                console.error('❌ Invalid QR Code - registration code format invalid');
+                showError(`❌ Invalid QR Code\n\nCould not extract registration code from QR data.\n\nScanned: ${data}`);
+                return;
+            }
+            
+            console.log('Looking up registration code:', registration_code);
+            
+            // Fetch participant details using registration code
+            const xhr = new XMLHttpRequest();
+            const apiUrl = `${API_BASE}/participants.php`;
+            xhr.open('POST', apiUrl, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            console.log('Making API call to:', apiUrl);
+            console.log('Request payload:', { action: 'get_registration', registration_code: registration_code });
+            
+            xhr.onload = function() {
+                try {
+                    console.log('Response received - Status:', xhr.status);
+                    console.log('Response body:', xhr.responseText);
+                    
+                    const response = JSON.parse(xhr.responseText);
+                    console.log('Parsed response:', response);
+                    
+                    if (response.success) {
+                        currentScan = response.data;
+                        console.log('Search result:', currentScan);
+                        console.log('✅ Registration found successfully');
+                        displayParticipantInfo(currentScan);
+                    } else {
+                        console.error('❌ API returned error:', response.message);
+                        showError(`❌ Registration Not Found\n\n${response.message || 'Registration code ' + registration_code + ' not found in system.'}`);
+                    }
+                } catch (e) {
+                    console.error('❌ JSON parsing error:', e);
+                    console.error('Failed to parse response:', xhr.responseText);
+                    showError('Error processing registration code. Check browser console for details.');
+                }
+            };
+            
+            xhr.onerror = function() {
+                console.error('❌ Network error calling API');
+                console.error('Could not reach:', apiUrl);
+                showError('Error connecting to server. Check that the API is accessible.');
+            };
+            
+            xhr.onabort = function() {
+                console.error('❌ Request aborted');
+                showError('Request was cancelled.');
+            };
+            
+            console.log('Sending request to API...');
+            xhr.send(JSON.stringify({
+                action: 'get_registration',
+                registration_code: registration_code
+            }));
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('scanResults');
+            resultsDiv.innerHTML = `<div style="color: #dc2626; padding: 20px; text-align: center; background: #fee2e2; border-radius: 8px; white-space: pre-wrap;">${message}</div>`;
+            document.getElementById('participantPanel').style.display = 'none';
+        }
+
+        function displayParticipantInfo(participant) {
+            console.log('════════════════════════════════════════');
+            console.log('📋 Displaying participant info...');
+            console.log('Name:', participant.full_name);
+            console.log('Email:', participant.email);
+            console.log('Event:', participant.event_name);
+            console.log('Status from API:', participant.status);
+            console.log('Status type:', typeof participant.status);
+            console.log('════════════════════════════════════════');
+            
+            document.getElementById('participantName').textContent = participant.full_name;
+            console.log('✅ Name displayed');
+            
+            document.getElementById('participantEmail').textContent = participant.email;
+            console.log('✅ Email displayed');
+            
+            document.getElementById('participantEvent').textContent = participant.event_name || 'N/A';
+            console.log('✅ Event displayed');
+            
+            const currentStatus = (participant.status || 'REGISTERED').toUpperCase();
+            document.getElementById('participantStatus').textContent = currentStatus;
+            console.log('✅ Status displayed:', currentStatus);
+            
+            document.getElementById('participantPanel').style.display = 'block';
+            console.log('✅ Participant panel shown');
+
+            // Automatically mark as attended when QR is scanned (only if status is not already ATTENDED)
+            console.log('Checking if should auto-mark... Current status:', currentStatus);
+            if (currentStatus !== 'ATTENDED') {
+                console.log('🔄 Status is NOT ATTENDED, calling markAsAttended()...');
+                markAsAttended();
+            } else {
+                console.log('⏭️ Participant already marked as ATTENDED, skipping auto-mark');
+                // If already attended, still add to recent scans
+                addToRecentScans(participant);
+            }
+        }
+
+        function markAsAttended() {
+            if (!currentScan) {
+                console.error('❌ ERROR: currentScan is null/undefined!');
+                showError('Error: No participant data available');
+                return;
+            }
+            
+            console.log('════════════════════════════════════════');
+            console.log('✋ AUTO-MARKING ATTENDANCE');
+            console.log('Registration Code:', currentScan.registration_code);
+            console.log('Participant:', currentScan.full_name);
+            console.log('════════════════════════════════════════');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', `${API_BASE}/participants.php`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onload = function() {
+                console.log('🔍 API Response Status:', xhr.status);
+                console.log('🔍 API Response Body:', xhr.responseText);
+                
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    console.log('📦 Parsed Response:', response);
+                    
+                    if (xhr.status === 200 && response.success) {
+                        console.log('✅✅✅ ATTENDANCE MARKED SUCCESSFULLY ✅✅✅');
+                        // Update the current scan status
+                        currentScan.status = 'ATTENDED';
+                        
+                        // Update status display
+                        document.getElementById('participantStatus').textContent = 'ATTENDED';
+                        
+                        // Show success message in the results area
+                        const resultsDiv = document.getElementById('scanResults');
+                        resultsDiv.innerHTML = `<div style="color: #059669; padding: 20px; text-align: center; background: #d1fae5; border-radius: 8px; white-space: pre-wrap; font-weight: bold; font-size: 16px;">✅ CHECK-IN SUCCESSFUL!\n\n${currentScan.full_name}\n✓ Already Attended</div>`;
+                        
+                        // Add to recent scans table
+                        console.log('📝 Adding to recent scans table...');
+                        addToRecentScans(currentScan);
+                    } else {
+                        console.error('❌ API Error:', response.message);
+                        showError(`❌ Error: ${response.message || 'Unknown error occurred'}`);
+                    }
+                } catch (e) {
+                    console.error('❌ JSON Parse Error:', e);
+                    console.error('❌ Raw Response:', xhr.responseText);
+                    showError(`❌ Error: ${xhr.status} ${xhr.responseText}`);
+                }
+            };
+
+            xhr.onerror = function() {
+                console.error('❌ NETWORK ERROR - Could not reach API');
+                showError('❌ Network error: Cannot connect to server');
+            };
+
+            xhr.ontimeout = function() {
+                console.error('❌ REQUEST TIMEOUT');
+                showError('❌ Request timeout: Server took too long to respond');
+            };
+
+            const payload = {
+                registration_code: currentScan.registration_code,
+                status: 'ATTENDED'
+            };
+            console.log('📤 Sending Payload:', JSON.stringify(payload));
+            xhr.send(JSON.stringify(payload));
+        }
+
+        function addToRecentScans(participant) {
+            console.log('════════════════════════════════════════');
+            console.log('📝 Adding to recent scans table...');
+            
+            const tbody = document.querySelector('#recentScans tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${participant.full_name}</td>
+                <td>${participant.email}</td>
+                <td>${participant.event_name || 'N/A'}</td>
+                <td>${new Date().toLocaleTimeString()}</td>
+                <td><span class="status-badge badge-attended">ATTENDED</span></td>
+            `;
+            
+            console.log('Row created:', row.innerHTML);
+
+            // Remove "no recent scans" message
+            if (tbody.children.length === 1 && tbody.children[0].cells.length === 5 && 
+                tbody.children[0].cells[0].textContent.includes('No recent')) {
+                tbody.innerHTML = '';
+                console.log('✅ Cleared "No recent scans" message');
+            }
+
+            tbody.insertBefore(row, tbody.firstChild);
+            console.log('✅ Row added to table');
+
+            // Keep only last 10 scans
+            while (tbody.children.length > 10) {
+                tbody.removeChild(tbody.lastChild);
+            }
+            console.log('✅ Table updated (limit: 10 rows)');
+            console.log('════════════════════════════════════════');
+        }
+    </script>
+</body>
+</html>
