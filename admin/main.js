@@ -77,15 +77,35 @@ function setupNavigation() {
 // ============ DASHBOARD ============
 function loadDashboard() {
     fetch(`${API_BASE}/dashboard.php`)
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is OK
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+            // Check content type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON but got: ${contentType}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 updateDashboardStats(data.data);
                 drawRegistrationTrends(data.data.registrationTrends);
                 drawAttendanceChart(data.data.attendanceStatus);
+            } else {
+                console.error('Dashboard API error:', data.message);
             }
         })
-        .catch(error => console.error('Error loading dashboard:', error));
+        .catch(error => {
+            console.error('Error loading dashboard:', error);
+            // Show error message to user
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) {
+                dashboard.innerHTML = `<div style="color: red; padding: 20px;">Error loading dashboard: ${error.message}</div>`;
+            }
+        });
 }
 
 function updateDashboardStats(stats) {
@@ -431,12 +451,56 @@ function showNotification(message, type = 'success') {
     }
 }
 
+function resetEventImagePreview() {
+    const previewArea = document.getElementById('eventImagePreviewArea');
+    const previewText = document.getElementById('eventImagePreviewText');
+    const previewImg = document.getElementById('eventImagePreviewImg');
+    const fileInput = document.getElementById('eventImage');
+    
+    if (previewText) previewText.style.display = 'block';
+    if (previewImg) previewImg.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+}
+
+function previewEventImage(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        console.log('No file selected');
+        resetEventImagePreview();
+        return;
+    }
+    
+    console.log('Image file selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    const previewArea = document.getElementById('eventImagePreviewArea');
+    const previewText = document.getElementById('eventImagePreviewText');
+    const previewImg = document.getElementById('eventImagePreviewImg');
+    
+    if (previewText) previewText.style.display = 'none';
+    if (previewImg) previewImg.style.display = 'block';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        console.log('Image loaded for preview');
+        if (previewImg) {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+        }
+    };
+    reader.onerror = function(err) {
+        console.error('Error reading file:', err);
+    };
+    reader.readAsDataURL(file);
+}
+
 function openCreateEventModal() {
     console.log('Opening create event modal');
     const modal = document.getElementById('createEventModal');
     if (modal) {
         modal.style.display = 'block';
         console.log('Modal opened');
+        // Reset image preview
+        resetEventImagePreview();
     } else {
         console.error('createEventModal not found');
     }
@@ -526,7 +590,16 @@ function createEvent(e) {
         
         if (data.success) {
             console.log('✓ Event created successfully, ID:', data.event_id);
-            showNotification('Event created successfully!', 'success');
+            console.log('  Image uploaded:', data.image_uploaded);
+            if (data.warning) {
+                console.warn('⚠ Warning:', data.warning);
+            }
+            
+            let notificationMsg = 'Event created successfully!';
+            if (!data.image_uploaded) {
+                notificationMsg += ' (No image provided)';
+            }
+            showNotification(notificationMsg, 'success');
             
             closeCreateEventModal();
             console.log('✓ Modal closed');

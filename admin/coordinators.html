@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinators Management - Smart Events</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/login.css">
+    <style>
+        .coordinators-container {
+            display: flex;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .coordinator-form-section {
+            flex: 0 0 400px;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .coordinator-list-section {
+            flex: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6c63ff;
+            box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+        }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #6c63ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-submit:hover {
+            background: #5a52d5;
+        }
+        
+        .btn-reset {
+            width: 100%;
+            padding: 10px;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .btn-reset:hover {
+            background: #e5e5e5;
+        }
+        
+        .coordinators-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .coordinators-table thead {
+            background: #f9f9f9;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .coordinators-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        
+        .coordinators-table tbody tr {
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        
+        .coordinators-table tbody tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .coordinators-table td {
+            padding: 12px;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-edit,
+        .btn-delete {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .btn-edit {
+            background: #6c63ff;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #5a52d5;
+        }
+        
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #ee5a52;
+        }
+        
+        .form-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .success-message,
+        .error-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 1024px) {
+            .coordinators-container {
+                flex-direction: column;
+            }
+            
+            .coordinator-form-section {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation (loaded from separate file) -->
+    <div id="sidebarContainer"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h1 style="margin-bottom: 0px;">Manage Coordinators</h1>
+        <p style="color: #666; margin-bottom: 30px;">Create, edit, and manage event coordinators.</p>
+
+        <!-- Coordinators Management Container -->
+        <div class="coordinators-container">
+            <!-- Add/Edit Coordinator Form -->
+            <div class="coordinator-form-section">
+                <div class="form-title" id="formTitle">Add New Coordinator</div>
+                <div id="messageContainer"></div>
+                
+                <form id="coordinatorForm">
+                    <input type="hidden" id="coordinator_id" value="">
+                    
+                    <div class="form-group">
+                        <label for="coordinator_name">Coordinator Name *</label>
+                        <input type="text" id="coordinator_name" name="coordinator_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contact_number">Contact Number</label>
+                        <input type="tel" id="contact_number" name="contact_number" placeholder="+63 9XX XXX XXXX">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="event_id">Assign to Event *</label>
+                        <select id="event_id" name="event_id" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: white; cursor: pointer;">
+                            <option value="">-- Select an Event --</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="submitBtn">Add Coordinator</button>
+                    <button type="reset" class="btn-reset" id="resetBtn">Clear Form</button>
+                </form>
+            </div>
+
+            <!-- Coordinators List -->
+            <div class="coordinator-list-section">
+                <h2 style="margin-top: 0; margin-bottom: 20px;">Coordinators List</h2>
+                
+                <div id="coordinatorsListContainer">
+                    <div class="empty-state">Loading coordinators...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

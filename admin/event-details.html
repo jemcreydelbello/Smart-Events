@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details - Smart Events Admin</title>
+    <link rel="icon" type="image/png" href="../assets/logo2.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
+    <link rel="stylesheet" href="css/event-details.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Poppins', sans-serif;
+            background: #f9fafb;
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+        }
+
+        /* Main content layout with sidebar */
+        .main-content {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+            min-height: 100vh;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .main-content .p-8 {
+            padding: 2rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        /* Manage Events Container */
+        .manage-events-container {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .manage-events-header {
+            padding: 20px;
+            border-bottom: 2px solid #f5f5f5;
+            background: white;
+        }
+
+        .manage-events-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Tab Navigation */
+        .event-tabs-wrapper {
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            overflow-x: auto;
+            padding: 0 20px;
+        }
+
+        .event-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #f0f0f0;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .event-tab-btn {
+            padding: 15px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #999;
+            font-size: 14px;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .event-tab-btn.active {
+            color: #2563eb; /* Tailwind blue-600 */
+            border-bottom-color: #2563eb;
+        }
+
+        .event-tab-btn:hover {
+            color: #2563eb;
+        }
+
+        /* Tab Content */
+        .tab-content-wrapper {
+            padding: 30px 20px;
+        }
+
+        .event-tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .event-tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Attendees Tab Styles */
+        #initialListContent {
+            display: block !important;
+        }
+
+        #actualAttendeesContent {
+            display: none !important;
+        }
+
+        /* Dashboard Tab Styles */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-card.purple {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-card.pink {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-card.cyan {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        /* Overview Card */
+        .overview-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e8e8e8;
+        }
+
+        .overview-card h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .overview-item {
+            margin-bottom: 15px;
+        }
+
+        .overview-item strong {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .overview-item span {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Form Sections */
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e8e8e8;
+        }
+
+        .form-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group.full {
+            grid-template-columns: 1fr;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-field label {
+            display: block;
+            font-weight: 600;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-field input,
+        .form-field textarea,
+        .form-field select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #f9f9f9;
+            color: #333;
+        }
+
+        .form-field textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-field input:focus,
+        .form-field textarea:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: #C41E3A;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+        }
+
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+            margin-bottom: 20px;
+        }
+
+        .event-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .event-table thead {
+            background: #f5f5f5;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .event-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .event-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .event-table tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .empty-message {
+            padding: 30px;
+            text-align: center;
+            color: #999;
+        }
+
+        /* Attendees Sub-tabs */
+        .attendees-subtabs {
+            display: flex;
+            gap: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            padding-bottom: 0;
+        }
+
+        .attendees-subtab-btn {
+            padding: 12px 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .attendees-subtab-btn.active {
+            color: #C41E3A;
+            border-bottom-color: #C41E3A;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            justify-content: flex-end;
+        }
+
+        .btn-action {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #630909 0%, #950B08 27%, #C41E3A 56%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-create {
+            padding: 8px 16px;
+            background: #C41E3A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-create:hover {
+            background: #a01530;
+        }
+
+        .form-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .form-section-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-group {
+                grid-template-columns: 1fr;
+            }
+
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .event-tabs {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Tab Content Container Styling */
+        .event-tab-content {
+            background: white;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Sidebar Navigation (loaded from separate file) -->
+  <div id="sidebarContainer"></div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="p-8">
+            <!-- Back Button in White Box -->
+            <div class="bg-white rounded-lg shadow-sm mb-6 inline-block">
+                <button onclick="backToEventsList()" class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                    ← Back To Events List
+                </button>
+            </div>
+
+            <!-- Tab Navigation in White Box -->
+            <div class="bg-white rounded-lg p-6 shadow-sm mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex gap-8 border-b border-gray-200 w-full pb-0">
+                        <button class="px-4 py-3 text-sm font-medium event-tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">Dashboard</button>
+                        <button class="px-4 py-3 text-sm font-medium event-tab-btn" onclick="switchTab('details')" data-tab="details">Event Details</button>
+                        <button class="px-4 py-3 text-sm font-medium event-tab-btn" onclick="switchTab('attendees')" data-tab="attendees">Attendees</button>
+                        <button class="px-4 py-3 text-sm font-medium event-tab-btn" onclick="switchTab('tasks')" data-tab="tasks">Tasks</button>
+                    </div>
+                    <button class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors ml-4 flex-shrink-0">Event Sheet</button>
+                </div>
+            </div>
+
+            <!-- Tab Content Container -->
+            <div>
+                <!-- Tab Content -->
+                <div>
+                    <!-- Dashboard Tab -->
+                    <div id="dashboard" class="event-tab-content active">
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-1">Dashboard</h3>
+                            <p class="text-sm text-gray-600">Operations snapshot for this event.</p>
+                        </div>
+
+                        <!-- KPI Cards Row -->
+                        <div class="grid grid-cols-4 gap-6 mb-8">
+                            <!-- Registrations Card -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-blue-600">
+                                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Registrations</div>
+                                <div class="text-3xl font-bold text-gray-900 mb-2" id="dashRegistrations">0</div>
+                                <div class="text-xs text-gray-600" id="dashRegistrationsDetail">Checked in: 0 (0%)</div>
+                            </div>
+
+                            <!-- Task Completion Card -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-amber-500">
+                                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Task Completion</div>
+                                <div class="text-3xl font-bold text-gray-900 mb-2" id="dashTaskCompletion">0%</div>
+                                <div class="text-xs text-gray-600" id="dashTaskDetail">0/0 tasks done</div>
+                            </div>
+
+                            <!-- Logistics Readiness Card -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-green-600">
+                                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Logistics Readiness</div>
+                                <div class="text-3xl font-bold text-gray-900 mb-2" id="dashLogistics">0%</div>
+                                <div class="text-xs text-gray-600" id="dashLogisticsDetail">0 logistics items tracked</div>
+                            </div>
+
+                            <!-- Budget Tracked Card -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-red-600">
+                                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Budget Tracked</div>
+                                <div class="text-3xl font-bold text-gray-900 mb-2" id="dashBudget">$0.00</div>
+                                <div class="text-xs text-gray-600" id="dashBudgetDetail">0 expense line items</div>
+                            </div>
+                        </div>
+
+                        <!-- Two Column Layout -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Left Column -->
+                            <div>
+                                <!-- Task Status Mix -->
+                                <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;">
+                                    <h4 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333;">Task Status Mix</h4>
+                                    <div id="taskStatusList" style="color: #666; font-size: 13px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Done</span>
+                                                <div style="height: 8px; background: #4caf50; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>In Progress</span>
+                                                <div style="height: 8px; background: #ff9800; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Pending</span>
+                                                <div style="height: 8px; background: #9e9e9e; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                    </div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 15px; text-align: right;" id="taskStatusTotal">0 total tasks</div>
+                                </div>
+
+                                <!-- Top Cost Drivers -->
+                                <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                    <h4 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333;">Top Cost Drivers</h4>
+                                    <div id="costDriversList" style="color: #666; font-size: 13px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
+                                            <span>No budget items</span>
+                                        </div>
+                                    </div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 15px; text-align: right;" id="costDriversTotal">0 shown</div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div>
+                                <!-- Email Activity -->
+                                <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;">
+                                    <h4 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333;">Email Activity</h4>
+                                    <div id="emailActivityList" style="color: #666; font-size: 13px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Sent</span>
+                                                <div style="height: 8px; background: #2196f3; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Scheduled</span>
+                                                <div style="height: 8px; background: #9c27b0; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Draft</span>
+                                                <div style="height: 8px; background: #bdbdbd; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                    </div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 15px; text-align: right;" id="emailActivityTotal">0 total sends</div>
+                                </div>
+
+                                <!-- Program Coverage -->
+                                <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                    <h4 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333;">Program Coverage</h4>
+                                    <div id="programCoverageList" style="color: #666; font-size: 13px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Timeline Milestones</span>
+                                                <div style="height: 8px; background: #ff9800; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                <span>Program Flow Slots</span>
+                                                <div style="height: 8px; background: #00bcd4; border-radius: 4px; flex: 1;"></div>
+                                            </div>
+                                            <span style="font-weight: 600; min-width: 30px; text-align: right;">0</span>
+                                        </div>
+                                    </div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 15px; text-align: right;" id="programCoverageTotal">0 entries</div>
+                                </div>
+
+                                <!-- KPI Actual vs Target -->
+                                <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 20px;">
+                                    <h4 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333;">KPI Actual vs Target</h4>
+                                    <div style="color: #333; font-size: 20px; font-weight: 700;" id="kpiActualVsTarget">0/0</div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 10px;">Attendance goal progress</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Details Tab -->
+                    <div id="details" class="event-tab-content">
+                        <div class="mb-6">
+                            <h2 class="text-xl font-bold text-gray-900 mb-1">Event Details</h2>
+                            <p class="text-sm text-gray-600">Edit the core event profile.</p>
+                        </div>
+                        <div class="space-y-6">
+                            <!-- Basic Information -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-6">Basic Information</h3>
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Title</label>
+                                        <input type="text" id="detailsEventTitle" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Location</label>
+                                        <input type="text" id="detailsEventLocation" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
+                                        <input type="date" id="detailsEventDate" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                                        <input type="text" id="detailsStartTime" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                                        <input type="text" id="detailsEndTime" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                                        <input type="number" id="detailsEventCapacity" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Event Description</label>
+                                    <textarea id="detailsEventDescription" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" rows="4"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Registration & Web Links -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-6">Registration & Web Links</h3>
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Registration Link</label>
+                                    <input type="text" id="detailsRegistrationLink" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                </div>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Website</label>
+                                        <input type="text" placeholder="https://" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
+                                        <input type="text" id="detailsEventTypeField" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Privacy Access -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-6">Privacy Access</h3>
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <input type="checkbox" id="privateEventCheck" disabled class="w-4 h-4 text-red-700 rounded cursor-not-allowed">
+                                            <span class="text-sm font-medium text-gray-700">Private Event</span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Private Access Code</label>
+                                        <input type="text" id="detailsPrivateAccessCode" placeholder="—" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed">
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-gray-50 border-l-4 border-red-700 rounded text-sm text-gray-700">
+                                    Code is shared after registration. Disable private event to deactivate access control.
+                                </div>
+                            </div>
+
+                            <!-- Event Image -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-6">Event Image</h3>
+                                <div id="detailsEventImage" class="text-center py-16 px-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+                                    <span class="text-gray-400">📷 No image available</span>
+                                </div>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-4">Notes</h3>
+                                <p class="text-sm text-gray-600 mb-4">Use the fields below to maintain coordinator contacts and other metadata.</p>
+                                <textarea readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" rows="4"></textarea>
+                            </div>
+
+                            <!-- Coordinators -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-4">Coordinators</h3>
+                                <p class="text-sm text-gray-600 mb-6">Assign team members and contacts to maintain coordinator contacts and other metadata.</p>
+                                <div class="flex justify-between items-center mb-6">
+                                    <div></div>
+                                    <button onclick="openLookupCoordinatorEventModal()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">🔍 Lookup Coordinator</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50 border-b-2 border-gray-200">
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Coordinator Name</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Email Address</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Contact Number</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="coordinatorsTable">
+                                            <tr><td colspan="4" class="px-4 py-4 text-center text-gray-500 text-sm">No coordinators assigned</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Other Information -->
+                            <div class="bg-white rounded-lg p-6 shadow-sm">
+                                <h3 class="text-lg font-semibold text-red-700 mb-4">Other Information</h3>
+                                <p class="text-sm text-gray-600 mb-6">Track custom metadata linked to this event.</p>
+                                <div class="flex justify-between items-center mb-6">
+                                    <div></div>
+                                    <button onclick="addOtherInfo()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Create Field</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50 border-b-2 border-gray-200">
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Field</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Value</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="otherInfoTable">
+                                            <tr><td colspan="3" class="px-4 py-4 text-center text-gray-500 text-sm">No custom information added</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-3 pt-6">
+                                <button class="px-6 py-2 bg-red-700 text-white font-medium rounded-lg hover:bg-red-800 transition-colors" onclick="editEvent()">Save Event Details</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendees Tab -->
+                    <div id="attendees" class="event-tab-content">
+                        <!-- Header with Sub-tabs and Controls on Same Row -->
+                        <div class="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
+                            <!-- Left: Title and Description -->
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900 mb-1">Attendees</h2>
+                                <p class="text-sm text-gray-600">Manage attendee lists and quickly switch between stages.</p>
+                            </div>
+                            
+                            <!-- Right: Sub-tabs, Search, and Action Buttons -->
+                            <div class="flex items-center gap-4">
+                                <!-- Sub-tabs: Initial List vs Actual Attendees -->
+                                <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                                    <button id="initialListBtn" onclick="switchAttendeesTab('initial')" class="px-6 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap">
+                                        Initial List <span id="initialCount" class="text-blue-100">(0)</span>
+                                    </button>
+                                    <button id="actualAttendeesBtn" onclick="switchAttendeesTab('actual')" class="px-6 py-2 font-semibold text-gray-600 bg-white hover:bg-gray-50 rounded-md transition-colors whitespace-nowrap">
+                                        Actual Attendees <span id="actualCount" class="text-gray-400">(0)</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Search Bar -->
+                                <input type="text" id="attendeesSearchInput" placeholder="Search name, company, job title..." onkeyup="searchAttendees(this.value)" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 w-64">
+                                
+                                <!-- Export and Add Buttons -->
+                                <button onclick="exportAttendees()" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">Export</button>
+                                <button onclick="addAttendees()" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">+ Add</button>
+                            </div>
+                        </div>
+
+                        <!-- Initial List Table -->
+                        <div id="initialListContent" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">NO.</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">FULL NAME</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">COMPANY</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">JOB TITLE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">EMAIL ADDRESS</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">EMPLOYEE CODE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">CONTACT NUMBER</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="initialListBody" class="divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">Loading attendees...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Actual Attendees Table -->
+                        <div id="actualAttendeesContent" class="bg-white rounded-lg border border-gray-200 overflow-hidden" style="display: none;">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">NO.</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">FULL NAME</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">COMPANY</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">JOB TITLE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">EMAIL ADDRESS</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">EMPLOYEE CODE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">CONTACT NUMBER</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="actualAttendeesBody" class="divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">No attendees yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tasks Tab -->
+                    <div id="tasks" class="event-tab-content">
+                        <!-- Header with Title, Description, and Buttons on Same Row -->
+                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                            <!-- Left: Title and Description -->
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-1">Tasks</h2>
+                                <p class="text-sm text-gray-600">Manage event preparation tasks and track completion.</p>
+                            </div>
+                            
+                            <!-- Right: View Toggle and Add Button -->
+                            <div class="flex gap-3 flex-shrink-0 items-center">
+                                <div class="flex gap-2" style="background: #f0f0f0; padding: 6px; border-radius: 20px; display: inline-flex;">
+                                    <button id="tasksListViewBtn" onclick="switchTasksView('list')" class="px-6 py-2 rounded-full text-sm font-medium transition-all bg-blue-400 text-white hover:bg-blue-500">
+                                        📋 List
+                                    </button>
+                                    <button id="tasksCalendarViewBtn" onclick="switchTasksView('calendar')" class="px-6 py-2 rounded-full text-sm font-medium transition-all bg-gray-200 text-gray-700 hover:bg-gray-300">
+                                        📅 Calendar
+                                    </button>
+                                </div>
+                                <button onclick="openAddTaskModal()" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                    + Add Task
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- List View -->
+                        <div id="tasksListView" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">DUE DATE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">TASK</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">RESPONSIBLE</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">STATUS</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">REMARKS</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tasksTableBody" class="divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">Loading tasks...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Calendar View -->
+                        <div id="tasksCalendarView" style="display: none;">
+                            <div class="flex gap-8">
+                                <!-- Calendar -->
+                                <div class="bg-white rounded-lg border border-gray-200 p-6" style="flex: 1 1 75%;">
+                                    <p class="text-sm text-gray-600 mb-4">Task due dates and mock deadlines are displayed on this calendar.</p>
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="previousMonth()" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">‹</button>
+                                            <button onclick="goToToday()" class="px-3 py-1 text-gray-600 hover:text-gray-900 text-sm font-medium">today</button>
+                                            <button onclick="nextMonth()" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">›</button>
+                                            <span id="calendarMonthYear" class="font-bold text-lg text-blue-600 ml-4">February 2026</span>
+                                        </div>
+                                        <div class="flex gap-2" style="background: #f0f0f0; padding: 6px; border-radius: 20px; display: inline-flex;">
+                                            <button id="calendarMonthBtn" onclick="toggleCalendarView('month')" class="px-6 py-2 rounded-full text-sm font-medium transition-all hover:opacity-80" style="background: #60a5fa; color: white;">month</button>
+                                            <button id="calendarListBtn" onclick="toggleCalendarView('list')" class="px-6 py-2 rounded-full text-sm font-medium transition-all hover:opacity-80" style="background: #e5e7eb; color: #374151;">list</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px;">
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">SUN</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">MON</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">TUE</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">WED</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">THU</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">FRI</div>
+                                        <div style="text-align: center; font-weight: 600; color: #999; font-size: 11px;">SAT</div>
+                                    </div>
+                                    <div id="calendarDaysContainer" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                                        <!-- Calendar days will be rendered here -->
+                                    </div>
+                                </div>
+
+                                <!-- Deadline Details Sidebar -->
+                                <div class="bg-gray-50 rounded-lg border border-gray-200 p-6" style="flex: 0 0 35%; overflow-y: auto; max-height: 600px;">
+                                    <h3 class="text-base font-bold text-gray-900 mb-2">Deadline Details</h3>
+                                    <p id="deadlineCount" class="text-sm text-gray-600 mb-6">No tasks found</p>
+                                    <div id="deadlineDetailsContainer" class="space-y-4">
+                                        <p class="text-sm text-gray-500">Select a date or view all upcoming deadlines</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    <!-- Add/Edit Task Modal -->
+    <div id="addTaskModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="taskModalTitle" style="margin: 0; color: #333; font-size: 20px; font-weight: 600;">Add Task</h2>
+                <button type="button" onclick="closeAddTaskModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">✕</button>
+            </div>
+
+            <form id="taskForm" onsubmit="handleTaskFormSubmit(event)">
+                <input type="hidden" id="task_id" value="">
+                <input type="hidden" id="event_id_hidden" value="">
+
+                <!-- Date of Completion / Due Date -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px;">Date of Completion / Due Date *</label>
+                    <input type="date" id="task_due_date" name="due_date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;" required>
+                </div>
+
+                <!-- Task -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px;">Task *</label>
+                    <input type="text" id="task_name" name="task_name" placeholder="Enter task description" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;" required>
+                </div>
+
+                <!-- Party Responsible -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px;">Party Responsible</label>
+                    <input type="text" id="party_responsible" name="party_responsible" placeholder="Enter responsible person/team" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+                </div>
+
+                <!-- Status -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px;">Status</label>
+                    <select id="task_status" name="status" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Done">Done</option>
+                    </select>
+                </div>
+
+                <!-- Remarks -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px;">Remarks</label>
+                    <textarea id="task_remarks" name="remarks" placeholder="Enter any remarks or notes" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; min-height: 80px; resize: vertical; font-family: 'Poppins', sans-serif;"></textarea>
+                </div>
+
+                <!-- Error Message -->
+                <div id="taskErrorMessage" style="display: none; margin-bottom: 15px; padding: 10px; background: #ffebee; border: 1px solid #ef5350; border-radius: 4px; color: #c62828; font-size: 13px;"></div>
+
+                <!-- Buttons -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeAddTaskModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">Cancel</button>
+                    <button type="submit" id="taskSubmitBtn" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Event Modal -->
+    <div id="editEventModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 700px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin: 40px auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #333; font-size: 20px; font-weight: 600;">Edit Event</h2>
+                <button type="button" onclick="closeEditEventModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">✕</button>
+            </div>
+
+            <form id="editEventForm" onsubmit="handleEditEventSubmit(event)" style="max-height: 70vh; overflow-y: auto;">
+                <input type="hidden" id="editEventId" value="">
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Event Title *</label>
+                    <input type="text" id="editEventTitle" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Event Date *</label>
+                        <input type="date" id="editEventDate" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Capacity *</label>
+                        <input type="number" id="editEventCapacity" required min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Start Time</label>
+                        <input type="time" id="editStartTime" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">End Time</label>
+                        <input type="time" id="editEndTime" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Location *</label>
+                    <input type="text" id="editEventLocation" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Description</label>
+                    <textarea id="editEventDescription" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 120px; resize: vertical;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Event Image</label>
+                    <div id="editEventImagePreview" style="width: 100%; min-height: 200px; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; overflow: hidden;">
+                        <span style="color: #999; text-align: center;">📷 No image</span>
+                    </div>
+                    <input type="file" id="editEventImage" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <small style="color: #999; display: block; margin-top: 4px;">Max 5MB. Formats: JPG, PNG, GIF, WebP</small>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+                    <button type="button" onclick="closeEditEventModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">Cancel</button>
+                    <button type="submit" id="editEventSubmitBtn" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lookup Coordinator Event Modal -->
+    <div id="lookupCoordinatorEventModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #1f2937;">Assign Coordinator to Event</h2>
+                <button type="button" onclick="closeLookupCoordinatorEventModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+            </div>
+
+            <div style="padding: 20px;">
+                <!-- Search and Filter -->
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="coordinatorSearchEvent" placeholder="Search coordinator name or email..." onkeyup="filterCoordinatorsEventList()" style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                </div>
+
+                <!-- Coordinators List -->
+                <div id="coordinatorsEventList" style="display: flex; flex-direction: column; gap: 12px;">
+                    <p style="text-align: center; color: #9ca3af; padding: 20px;">Loading pending setup coordinators...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Confirm Logout</h2>
+            <p>Are you sure you want to logout?</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="closeLogoutConfirmModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/event-details.js"></script>
+</body>
+</html>

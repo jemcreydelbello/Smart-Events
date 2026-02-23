@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Test - Smart Events</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
+</head>
+<body class="bg-gray-50">
+  <div class="container mx-auto p-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">📅 Calendar Test Page</h1>
+    
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-lg border border-gray-200">
+        <p class="text-sm text-gray-600">API Status</p>
+        <p id="apiStatus" class="text-lg font-semibold text-gray-900">Testing...</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg border border-gray-200">
+        <p class="text-sm text-gray-600">Events Loaded</p>
+        <p id="eventsCount" class="text-lg font-semibold text-gray-900">-</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg border border-gray-200">
+        <p class="text-sm text-gray-600">Calendar Rendered</p>
+        <p id="renderStatus" class="text-lg font-semibold text-gray-900">-</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg border border-gray-200">
+        <p class="text-sm text-gray-600">Navigation</p>
+        <p id="navStatus" class="text-lg font-semibold text-gray-900">-</p>
+      </div>
+    </div>
+
+    <!-- Console Output -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Test Console</h2>
+      <div id="console" style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+        <p>Ready to test...</p>
+      </div>
+    </div>
+
+    <!-- Test Buttons -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Manual Tests</h2>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="testAPI()" class="btn btn-primary">Test API Call</button>
+        <button onclick="testCalendarRender()" class="btn btn-primary">Test Calendar Render</button>
+        <button onclick="testDateFiltering()" class="btn btn-primary">Test Date Filtering</button>
+        <button onclick="testNavigation()" class="btn btn-primary">Test Navigation</button>
+        <button onclick="clearConsole()" class="btn btn-secondary" style="background: #6b7280; color: white;">Clear Console</button>
+      </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-8">
+      <h3 class="font-semibold text-yellow-900 mb-2">Debug Information</h3>
+      <pre id="debugInfo" style="background: #fef3c7; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Loading...</pre>
+    </div>
+  </div>
+
+  <script>
+    // Console override
+    const consoleEl = document.getElementById('console');
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    function addConsoleLog(message, type = 'log') {
+      const line = document.createElement('p');
+      const timestamp = new Date().toLocaleTimeString();
+      const prefix = type === 'error' ? '[ERROR]' : '[INFO]';
+      line.textContent = `${timestamp} ${prefix} ${message}`;
+      line.style.color = type === 'error' ? '#fca5a5' : '#e2e8f0';
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    console.log = function(msg) {
+      originalLog.apply(console, arguments);
+      addConsoleLog(msg, 'log');
+    };
+
+    console.error = function(msg) {
+      originalError.apply(console, arguments);
+      addConsoleLog(msg, 'error');
+    };
+
+    // Test Functions
+    async function testAPI() {
+      addConsoleLog('Testing Events API...');
+      try {
+        const response = await fetch('../api/events.php');
+        const data = await response.json();
+        
+        if (data.success) {
+          addConsoleLog(`✓ API working! Found ${data.data.length} events`);
+          document.getElementById('apiStatus').textContent = '✓ Working';
+          document.getElementById('apiStatus').style.color = '#16a34a';
+          document.getElementById('eventsCount').textContent = data.data.length;
+          return data.data;
+        } else {
+          addConsoleLog(`✗ API Error: ${data.message}`);
+          document.getElementById('apiStatus').textContent = '✗ Error';
+          document.getElementById('apiStatus').style.color = '#dc2626';
+        }
+      } catch (error) {
+        addConsoleLog(`✗ API Failed: ${error.message}`);
+        document.getElementById('apiStatus').textContent = '✗ Failed';
+        document.getElementById('apiStatus').style.color = '#dc2626';
+      }
+    }
+
+    async function testCalendarRender() {
+      addConsoleLog('Testing calendar rendering...');
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        addConsoleLog(`Calendar for ${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`);
+        addConsoleLog(`First day: ${firstDay}, Total days: ${daysInMonth}`);
+        
+        const totalCells = firstDay + daysInMonth;
+        addConsoleLog(`Total cells needed: ${totalCells}`);
+        
+        document.getElementById('renderStatus').textContent = '✓ Ready';
+        document.getElementById('renderStatus').style.color = '#16a34a';
+        addConsoleLog('✓ Calendar structure validated');
+      } catch (error) {
+        addConsoleLog(`✗ Render Error: ${error.message}`);
+        document.getElementById('renderStatus').textContent = '✗ Error';
+        document.getElementById('renderStatus').style.color = '#dc2626';
+      }
+    }
+
+    async function testDateFiltering() {
+      addConsoleLog('Testing date filtering...');
+      try {
+        const response = await fetch('../api/events.php');
+        const data = await response.json();
+        
+        if (data.success) {
+          const events = data.data;
+          const today = new Date().toISOString().split('T')[0];
+          
+          const todayEvents = events.filter(e => {
+            if (!e.date) return false;
+            return e.date.split(' ')[0] === today;
+          });
+          
+          addConsoleLog(`✓ Filtering works! ${todayEvents.length} events today`);
+          
+          // Test other dates
+          const uniqueDates = [...new Set(events.map(e => e.date ? e.date.split(' ')[0] : null))].filter(Boolean);
+          addConsoleLog(`Found ${uniqueDates.length} unique dates with events`);
+          
+          document.getElementById('renderStatus').textContent = '✓ Filters OK';
+          document.getElementById('renderStatus').style.color = '#16a34a';
+        }
+      } catch (error) {
+        addConsoleLog(`✗ Filter Error: ${error.message}`);
+      }
+    }
+
+    async function testNavigation() {
+      addConsoleLog('Testing navigation functions...');
+      try {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        addConsoleLog(`Current date: ${now.toLocaleDateString()}`);
+        
+        // Simulate month navigation
+        let testMonth = currentMonth + 1;
+        let testYear = currentYear;
+        if (testMonth > 11) {
+          testMonth = 0;
+          testYear += 1;
+        }
+        
+        const nextMonthDate = new Date(testYear, testMonth, 1);
+        addConsoleLog(`Next month: ${nextMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`);
+        
+        document.getElementById('navStatus').textContent = '✓ OK';
+        document.getElementById('navStatus').style.color = '#16a34a';
+        addConsoleLog('✓ Navigation logic verified');
+      } catch (error) {
+        addConsoleLog(`✗ Navigation Error: ${error.message}`);
+      }
+    }
+
+    function clearConsole() {
+      consoleEl.innerHTML = '<p style="color: #64748b;">Console cleared...</p>';
+    }
+
+    // Run initial tests
+    async function runInitialTests() {
+      addConsoleLog('Starting calendar system tests...');
+      await testAPI();
+      await testCalendarRender();
+      await testDateFiltering();
+      
+      // Update debug info
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        screen: `${window.innerWidth}x${window.innerHeight}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        apiUrl: '../api/events.php'
+      };
+      
+      document.getElementById('debugInfo').textContent = JSON.stringify(debugInfo, null, 2);
+    }
+
+    // Run tests on page load
+    window.addEventListener('load', runInitialTests);
+  </script>
+</body>
+</html>

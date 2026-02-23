@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details - Smart Events Admin</title>
+    <link rel="icon" type="image/png" href="../assets/logo2.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .back-button {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: #f9f9f9;
+            border-color: #C41E3A;
+        }
+
+        h1 {
+            margin-bottom: 0px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .tab-btn {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #C41E3A;
+            color: white;
+            border-color: #C41E3A;
+        }
+
+        .tab-btn:hover {
+            border-color: #C41E3A;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .debug-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #bee5eb;
+            font-size: 12px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <button class="back-button" onclick="backToEventsList()">← Back To Events List</button>
+            
+            <h1 id="eventTitle">Loading Event...</h1>
+            <p class="description" id="eventDescription">Please wait...</p>
+
+            <div id="debugInfo" class="debug-info" style="display: none;"></div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="tab-btn" onclick="switchTab('details')">Details</button>
+                <button class="tab-btn" onclick="switchTab('attendees')">Attendees</button>
+                <button class="tab-btn" onclick="switchTab('tasks')">Tasks</button>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <h2>Event Dashboard</h2>
+                <div id="eventData" class="card">
+                    <p id="eventLoadingMsg">Loading event data...</p>
+                </div>
+            </div>
+
+            <!-- Details Tab -->
+            <div id="details" class="tab-content">
+                <h2>Event Details</h2>
+                <div class="card">
+                    <form id="detailsForm">
+                        <div class="form-group">
+                            <label>Event Name</label>
+                            <input type="text" id="eventName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="eventLocation" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="eventDate" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Time</label>
+                            <input type="text" id="eventTime" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="eventDescriptionText" readonly style="height: 100px;"></textarea>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendees Tab -->
+            <div id="attendees" class="tab-content">
+                <h2>Attendees</h2>
+                <div class="card">
+                    <div id="attendeesData">
+                        <p>Loading attendees...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tasks" class="tab-content">
+                <h2>Tasks</h2>
+                <div class="card">
+                    <div id="tasksData">
+                        <p>Loading tasks...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = '../api';
+        let currentEventId = null;
+
+        // Debug function
+        function showDebug(msg) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML += msg + '<br>';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            showDebug('✓ Page loaded');
+
+            // Get event ID from URL
+            const params = new URLSearchParams(window.location.search);
+            currentEventId = params.get('id');
+            showDebug(`✓ Event ID from URL: ${currentEventId}`);
+
+            if (!currentEventId) {
+                showError('No event ID provided in URL');
+                return;
+            }
+
+            // Load event data
+            loadEvent(currentEventId);
+        });
+
+        function loadEvent(eventId) {
+            showDebug(`🔄 Loading event ${eventId}`);
+
+            fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`)
+                .then(r => {
+                    showDebug(`✓ API Response: ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    showDebug(`✓ Data received: ${data.success ? 'Success' : 'Failed'}`);
+
+                    if (data.success && data.data) {
+                        displayEvent(data.data);
+                    } else {
+                        showError('Failed to load event. ' + (data.message || ''));
+                        showDebug(`✗ API Error: ${data.message || 'Unknown'}`);
+                    }
+                })
+                .catch(error => {
+                    showError('Error loading event: ' + error.message);
+                    showDebug(`✗ Fetch error: ${error.message}`);
+                });
+        }
+
+        function displayEvent(event) {
+            showDebug(`✓ Displaying event: ${event.event_name}`);
+
+            // Update header
+            document.getElementById('eventTitle').textContent = event.event_name || 'Event';
+            document.getElementById('eventDescription').textContent = `Manage event details and attendees`;
+
+            // Update details form
+            document.getElementById('eventName').value = event.event_name || '-';
+            document.getElementById('eventLocation').value = event.location || '-';
+            document.getElementById('eventDate').value = event.event_date || '-';
+            document.getElementById('eventTime').value = (event.start_time || '-') + ' to ' + (event.end_time || '-');
+            document.getElementById('eventDescriptionText').value = event.description || '-';
+
+            // Update dashboard
+            const dashboardContent = `
+                <h3>${event.event_name}</h3>
+                <p><strong>Location:</strong> ${event.location}</p>
+                <p><strong>Date:</strong> ${event.event_date}</p>
+                <p><strong>Time:</strong> ${event.start_time} to ${event.end_time}</p>
+                <p><strong>Capacity:</strong> ${event.capacity}</p>
+                <p><strong>Registered:</strong> ${event.total_registrations || 0}</p>
+                <p><strong>Attended:</strong> ${event.attended_count || 0}</p>
+            `;
+            document.getElementById('eventData').innerHTML = dashboardContent;
+
+            // Load attendees
+            loadAttendees(eventId);
+            loadTasks(eventId);
+        }
+
+        function loadAttendees(eventId) {
+            fetch(`${API_BASE}/participants.php?action=list&event_id=${eventId}`)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<table style="width: 100%; border-collapse: collapse;"><tr><th style="border-bottom: 2px solid #ddd; padding: 10px; text-align: left;">Name</th><th style="border-bottom: 2px solid #ddd; padding: 10px; text-align: left;">Status</th></tr>';
+                    if (data.data && data.data.length > 0) {
+                        data.data.forEach(p => {
+                            html += `<tr><td style="border-bottom: 1px solid #ddd; padding: 10px;">${p.full_name}</td><td style="border-bottom: 1px solid #ddd; padding: 10px;">${p.status || 'Registered'}</td></tr>`;
+                        });
+                    } else {
+                        html += '<tr><td colspan="2" style="padding: 10px;">No attendees found</td></tr>';
+                    }
+                    html += '</table>';
+                    document.getElementById('attendeesData').innerHTML = html;
+                })
+                .catch(e => document.getElementById('attendeesData').innerHTML = `<p style="color: red;">Error: ${e.message}</p>`);
+        }
+
+        function loadTasks(eventId) {
+            fetch(`${API_BASE}/tasks.php?action=list&event_id=${eventId}`)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<table style="width: 100%; border-collapse: collapse;"><tr><th style="border-bottom: 2px solid #ddd; padding: 10px; text-align: left;">Task</th><th style="border-bottom: 2px solid #ddd; padding: 10px; text-align: left;">Status</th></tr>';
+                    if (data.data && data.data.length > 0) {
+                        data.data.forEach(t => {
+                            html += `<tr><td style="border-bottom: 1px solid #ddd; padding: 10px;">${t.task_name}</td><td style="border-bottom: 1px solid #ddd; padding: 10px;">${t.status || 'Pending'}</td></tr>`;
+                        });
+                    } else {
+                        html += '<tr><td colspan="2" style="padding: 10px;">No tasks yet</td></tr>';
+                    }
+                    html += '</table>';
+                    document.getElementById('tasksData').innerHTML = html;
+                })
+                .catch(e => document.getElementById('tasksData').innerHTML = `<p style="color: red;">Error: ${e.message}</p>`);
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function backToEventsList() {
+            window.location.href = 'index.html?page=events';
+        }
+
+        function showError(msg) {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.innerHTML = `<div class="error-message"><strong>Error:</strong> ${msg}</div>`;
+        }
+    </script>
+</body>
+</html>

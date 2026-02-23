@@ -142,29 +142,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $input = file_get_contents('php://input');
-        $data = json_decode($input, true);
         
-        $user_id = $data['user_id'] ?? null;
-        $admin_id = $data['admin_id'] ?? null;
-        $action_type = $data['action_type'] ?? null;
-        $action_description = $data['action_description'] ?? null;
-        $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
-        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-        
-        if (!$action_type || !$action_description) {
-            throw new Exception('action_type and action_description are required');
+        // Check if input is empty
+        if (empty($input)) {
+            error_log("Audit log POST - empty input");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Empty request body']);
+            exit;
         }
         
-        $query = "INSERT INTO audit_logs (user_id, admin_id, action_type, action_description, ip_address, user_agent)
-                  VALUES (?, ?, ?, ?, ?, ?)";
+        // Decode JSON
+        $data = json_decode($input, true);
         
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('iissss', $user_id, $admin_id, $action_type, $action_description, $ip_address, $user_agent);
+        // Check for JSON decode errors
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error: " . json_last_error_msg() . " | Input: " . substr($input, 0, 200));
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid JSON: ' . json_last_error_msg()]);
+            exit;
+        }
+        
+        // Log the received data for debugging
+        error_log("Audit log POST data: " . json_encode($data));
+        
+        // Extract and sanitize data
+        $user_id = isset($data['user_id']) && !empty($data['user_id']) ? intval($data['user_id']) : null;
+        $admin_id = isset($data['admin_id']) && !empty($data['admin_id']) ? intval($data['admin_id']) : null;
+        $action_type = isset($data['action_type']) ? trim(strval($data['action_type'])) : '';
+        $action_description = isset($data['action_description']) ? trim(strval($data['action_description'])) : '';
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 500);
+        
+        // Validate required fields
+        if (empty($action_type)) {
+            error_log("Audit log validation failed - action_type is empty");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'action_type is required']);
+            exit;
+        }
+        
+        if (empty($action_description)) {
+            error_log("Audit log validation failed - action_description is empty");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'action_description is required']);
+            exit;
+        }
+        
+        // Build INSERT query based on available IDs
+        if ($user_id && $admin_id) {
+            // Both user and admin
+            $query = "INSERT INTO audit_logs (user_id, admin_id, action_type, action_description, ip_address, user_agent)
+                      VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            $stmt->bind_param('iissss', $user_id, $admin_id, $action_type, $action_description, $ip_address, $user_agent);
+        } elseif ($user_id) {
+            // Only user
+            $query = "INSERT INTO audit_logs (user_id, action_type, action_description, ip_address, user_agent)
+                      VALUES (?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            $stmt->bind_param('issss', $user_id, $action_type, $action_description, $ip_address, $user_agent);
+        } elseif ($admin_id) {
+            // Only admin
+            $query = "INSERT INTO audit_logs (admin_id, action_type, action_description, ip_address, user_agent)
+                      VALUES (?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            $stmt->bind_param('issss', $admin_id, $action_type, $action_description, $ip_address, $user_agent);
+        } else {
+            // Neither user nor admin - still log it
+            $query = "INSERT INTO audit_logs (action_type, action_description, ip_address, user_agent)
+                      VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            $stmt->bind_param('ssss', $action_type, $action_description, $ip_address, $user_agent);
+        }
         
         if (!$stmt->execute()) {
+            error_log("Audit log insert failed: " . $stmt->error);
             throw new Exception('Failed to create audit log: ' . $stmt->error);
         }
         
+        http_response_code(200);
         echo json_encode([
             'success' => true,
             'message' => 'Audit log created successfully',
@@ -172,6 +240,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         
     } catch (Exception $e) {
+        error_log("Audit log exception: " . $e->getMessage());
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }

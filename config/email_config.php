@@ -37,7 +37,7 @@ define('SMTP_PASSWORD', 'ompy vdhm esps eset');   // Your Gmail App Password (NO
 // ============ EMAIL TEMPLATES ============
 define('EMAIL_SUBJECT_PREFIX', '[Event System]');
 define('ORG_NAME', 'Event Management System');
-define('ORG_WEBSITE', 'http://localhost/EventSystem');
+define('ORG_WEBSITE', 'http://localhost/Smart-Events');
 
 ?>
 

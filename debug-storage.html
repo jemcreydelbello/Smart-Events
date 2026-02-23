@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug localStorage & Profile</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .box { 
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .label { 
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        pre { 
+            background: #f5f5f5;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .admin-preview {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            flex-shrink: 0;
+            border: 2px solid #667eea;
+        }
+        .avatar-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .avatar-img {
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
+        }
+        .user-info h3 {
+            margin: 0 0 5px 0;
+            color: #1f2937;
+        }
+        .user-info p {
+            margin: 2px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .button-group {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 localStorage & Profile Diagnostic</h1>
+        
+        <!-- Admin Data -->
+        <div class="box">
+            <div class="label">Admin Data (localStorage['admin'])</div>
+            <div id="adminStatus"></div>
+            <pre id="adminData"></pre>
+        </div>
+        
+        <!-- User Data -->
+        <div class="box">
+            <div class="label">Coordinator Data (localStorage['user'])</div>
+            <div id="userStatus"></div>
+            <pre id="userData"></pre>
+        </div>
+        
+        <!-- Profile Preview -->
+        <div class="box">
+            <div class="label">Profile Preview</div>
+            <div id="profilePreview"></div>
+        </div>
+        
+        <!-- All localStorage -->
+        <div class="box">
+            <div class="label">All localStorage</div>
+            <pre id="fullStorage"></pre>
+        </div>
+        
+        <!-- Actions -->
+        <div class="box button-group">
+            <button onclick="location.reload()">🔄 Refresh Page</button>
+            <button onclick="clearAll()">🗑️ Clear All Data</button>
+            <button onclick="goToLogin()">🔐 Go to Login</button>
+            <button onclick="goToDashboard()">📊 Go to Dashboard</button>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="box">
+            <div class="label">How to Use This Tool</div>
+            <ol>
+                <li>If logged in, you'll see your admin/coordinator data above</li>
+                <li>Check if localStorage contains your full_name and email</li>
+                <li>Check the "Profile Preview" to see what will display in the sidebar</li>
+                <li>If data is empty, login again using the "Go to Login" button</li>
+                <li>Use "Clear All Data" to reset localStorage if something is wrong</li>
+                <li>Open browser DevTools (F12) and check Console tab for error messages</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        function formatJson(obj) {
+            if (typeof obj === 'object' && obj !== null && obj.admin_image && obj.admin_image.startsWith('data:')) {
+                const copy = {...obj};
+                copy.admin_image = copy.admin_image.substring(0, 50) + '...';
+                return JSON.stringify(copy, null, 2);
+            }
+            return JSON.stringify(obj, null, 2);
+        }
+        
+        // Display admin data
+        const adminStr = localStorage.getItem('admin');
+        const adminData = adminStr ? JSON.parse(adminStr) : null;
+        const adminStatus = document.getElementById('adminStatus');
+        
+        if (adminData && adminData.id) {
+            adminStatus.innerHTML = '<div class="status success">✓ Admin logged in</div>';
+            document.getElementById('adminData').textContent = formatJson(adminData);
+        } else if (adminStr) {
+            adminStatus.innerHTML = '<div class="status warning">⚠ Admin data exists but missing required fields</div>';
+            document.getElementById('adminData').textContent = formatJson(adminData);
+        } else {
+            adminStatus.innerHTML = '<div class="status error">✗ No admin data found</div>';
+            document.getElementById('adminData').textContent = 'NULL or empty';
+        }
+        
+        // Display user data
+        const userStr = localStorage.getItem('user');
+        const userData = userStr ? JSON.parse(userStr) : null;
+        const userStatus = document.getElementById('userStatus');
+        
+        if (userData && userData.id) {
+            userStatus.innerHTML = '<div class="status success">✓ Coordinator logged in</div>';
+            document.getElementById('userData').textContent = formatJson(userData);
+        } else if (userStr) {
+            userStatus.innerHTML = '<div class="status warning">⚠ User data exists but missing required fields</div>';
+            document.getElementById('userData').textContent = formatJson(userData);
+        } else {
+            userStatus.innerHTML = '<div class="status error">✗ No coordinator data found</div>';
+            document.getElementById('userData').textContent = 'NULL or empty';
+        }
+        
+        // Display profile preview
+        const profilePreview = document.getElementById('profilePreview');
+        let activeUser = null;
+        
+        if (adminData && adminData.id) {
+            activeUser = {
+                ...adminData,
+                type: 'Admin'
+            };
+        } else if (userData && userData.id) {
+            activeUser = {
+                ...userData,
+                type: 'Coordinator'
+            };
+        }
+        
+        if (activeUser) {
+            const initials = (activeUser.full_name?.split(' ')[0]?.[0] || 'A').toUpperCase();
+            let avatarHtml = '';
+            
+            if (activeUser.admin_image && activeUser.admin_image.startsWith('data:')) {
+                avatarHtml = `<div class="avatar"><img src="${activeUser.admin_image}" class="avatar-img"></div>`;
+            } else if (activeUser.coordinator_image && activeUser.coordinator_image.startsWith('data:')) {
+                avatarHtml = `<div class="avatar"><img src="${activeUser.coordinator_image}" class="avatar-img"></div>`;
+            } else {
+                avatarHtml = `<div class="avatar avatar-bg">${initials}</div>`;
+            }
+            
+            profilePreview.innerHTML = `
+                <div class="admin-preview">
+                    ${avatarHtml}
+                    <div class="user-info">
+                        <h3>${activeUser.full_name || 'User'}</h3>
+                        <p>📧 ${activeUser.email || 'N/A'}</p>
+                        <p>👤 ${activeUser.type} | ID: ${activeUser.id || activeUser.coordinator_id}</p>
+                        <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">This is what appears in the sidebar</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            profilePreview.innerHTML = '<div class="status error">✗ No user logged in</div>';
+        }
+        
+        // Display all localStorage
+        let allStorage = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            let value = localStorage.getItem(key);
+            try {
+                value = JSON.parse(value);
+                // Truncate large base64 strings
+                if (typeof value === 'object' && value.admin_image && typeof value.admin_image === 'string' && value.admin_image.startsWith('data:')) {
+                    value.admin_image = value.admin_image.substring(0, 50) + '...';
+                }
+                if (typeof value === 'object' && value.coordinator_image && typeof value.coordinator_image === 'string' && value.coordinator_image.startsWith('data:')) {
+                    value.coordinator_image = value.coordinator_image.substring(0, 50) + '...';
+                }
+            } catch (e) {
+                // Keep as string if not JSON
+            }
+            allStorage[key] = value;
+        }
+        document.getElementById('fullStorage').textContent = JSON.stringify(allStorage, null, 2);
+        
+        // Functions
+        function clearAll() {
+            if (confirm('Clear all localStorage data? (This will log you out)')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+        
+        function goToLogin() {
+            window.location.href = '../login.html';
+        }
+        
+        function goToDashboard() {
+            window.location.href = './index.html';
+        }
+    </script>
+</body>
+</html>

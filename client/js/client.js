@@ -369,31 +369,36 @@ function displayOngoingEvents(events) {
 
 // ============ LOAD PAST EVENTS (Completed) ============
 function loadPastEvents() {
-    console.log('Loading past events...');
+    console.log('Loading past events from Catalogue...');
     
-    // Use the allEvents array that already has all events loaded
-    if (allEvents.length === 0) {
-        console.log('Events not loaded yet, waiting...');
-        setTimeout(loadPastEvents, 100);
-        return;
-    }
-    
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Filter for past events that are public
-    const pastEvents = allEvents
-        .filter(event => {
-            const eventDate = event.event_date.split(' ')[0];
-            const isPublic = event.is_private != 1;
-            const isPast = eventDate < today;
-            console.log(`Past events check: ${event.event_name}, date: ${eventDate}, is past: ${isPast}, public: ${isPublic}`);
-            return isPast && isPublic;
+    // Load from CATALOGUE API (only events added by admin)
+    fetch(`${API_BASE}/catalogue.php?action=list`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                // Filter for past events that are PUBLIC (is_private = 0)
+                const today = new Date().toISOString().split('T')[0];
+                const pastEvents = data.data
+                    .filter(event => {
+                        const eventDate = event.event_date.split(' ')[0];
+                        const isPublic = event.is_private == 0 || event.is_private === "0";
+                        const isPast = eventDate < today;
+                        console.log(`Catalogue past event: ${event.event_name}, date: ${eventDate}, isPast: ${isPast}, isPublic: ${isPublic}`);
+                        return isPast && isPublic;
+                    })
+                    .sort((a, b) => new Date(b.event_date) - new Date(a.event_date)); // Most recent first
+                
+                console.log('Found', pastEvents.length, 'past public events from catalogue');
+                displayPastEvents(pastEvents);
+            } else {
+                console.error('Failed to load catalogue:', data.message);
+                displayPastEvents([]);
+            }
         })
-        .sort((a, b) => new Date(b.event_date) - new Date(a.event_date)); // Most recent first
-    
-    console.log('Found', pastEvents.length, 'past public events');
-    displayPastEvents(pastEvents);
+        .catch(error => {
+            console.error('Error loading past events from catalogue:', error);
+            displayPastEvents([]);
+        });
 }
 
 // ============ DISPLAY PAST EVENTS ============
@@ -757,6 +762,9 @@ function displayEventModal(event) {
     document.getElementById('modalAttended').textContent = event.attended_count || 0;
     document.getElementById('registrationEventId').value = event.event_id;
     
+    // Load Other Information metadata
+    loadClientEventMetadata(event.event_id);
+    
     const privateBadge = document.getElementById('modalPrivateBadge');
     if (event.is_private == 1) {
         privateBadge.style.display = 'block';
@@ -892,43 +900,28 @@ function continueWithRegistration(currentEventDetail) {
     // Display event name in modal
     document.getElementById('modalEventName').textContent = currentEventDetail.event_name || 'Event';
     
-    // Handle private events - lock department and store private code
+    // Handle private events - store private code
     const registrationPrivateCode = document.getElementById('registrationPrivateCode');
-    const departmentSelect = document.getElementById('participantDepartment');
     
     if (currentEventDetail.is_private == 1 && currentEventDetail.private_code) {
         // Store private code in hidden field
         registrationPrivateCode.value = currentEventDetail.private_code;
-        
-        // Auto-fill and lock department for private events
-        if (currentEventDetail.department) {
-            departmentSelect.value = currentEventDetail.department;
-            departmentSelect.disabled = true; // Lock the department field to prevent changes
-            // Add visual indicator that this field is locked
-            departmentSelect.style.backgroundColor = '#FFF5F5';
-            departmentSelect.style.cursor = 'not-allowed';
-            departmentSelect.title = `This event is exclusive to the ${currentEventDetail.department} department`;
-            console.log('✓ Private event department locked to:', currentEventDetail.department);
-        }
         console.log('✓ Private event code locked:', currentEventDetail.private_code);
     } else {
         // Clear hidden field for public events
         registrationPrivateCode.value = '';
-        departmentSelect.disabled = false; // Unlock department for public events
-        departmentSelect.style.backgroundColor = 'white';
-        departmentSelect.style.cursor = 'pointer';
-        departmentSelect.title = '';
     }
     
     closeEventModal();
     document.getElementById('registrationModal').style.display = 'block';
     
-    // Clear form inputs (but preserve hidden event_id and department for private events)
+    // Clear form inputs
     document.getElementById('participantName').value = '';
+    document.getElementById('participantCompany').value = '';
+    document.getElementById('participantJobTitle').value = '';
     document.getElementById('participantEmail').value = '';
-    // Don't clear department - it should be set above for private events, or empty for public
+    document.getElementById('participantEmployeeCode').value = '';
     document.getElementById('participantPhone').value = '';
-    document.getElementById('agreeTerms').checked = false;
 }
 
 function submitRegistration(e) {
@@ -945,31 +938,28 @@ function submitRegistration(e) {
     const eventId = document.getElementById('registrationEventId').value;
     const participantName = document.getElementById('participantName').value;
     const participantEmail = document.getElementById('participantEmail').value;
-    const participantDepartment = document.getElementById('participantDepartment').value || '';
-    const participantPhone = document.getElementById('participantPhone').value || '';
-    const agreeTerms = document.getElementById('agreeTerms').checked;
+    const participantCompany = document.getElementById('participantCompany').value;
+    const participantJobTitle = document.getElementById('participantJobTitle').value;
+    const participantEmployeeCode = document.getElementById('participantEmployeeCode').value;
+    const participantPhone = document.getElementById('participantPhone').value;
     
     // Validate required fields
-    if (!eventId || !participantName || !participantEmail) {
-        showNotification('Please fill in all required fields (Name and Email)', 'error');
+    if (!eventId || !participantName || !participantEmail || !participantCompany || !participantJobTitle || !participantEmployeeCode || !participantPhone) {
+        showNotification('Please fill in all required fields', 'error');
         return false;
     }
     
-    // For private events with department restriction, validate department selection
-    if (currentEventDetail && currentEventDetail.is_private == 1 && currentEventDetail.department) {
-        if (!participantDepartment) {
-            showNotification(`This is an exclusive event for the ${currentEventDetail.department} department. You must select your department to register.`, 'error');
-            return false;
-        }
-        
-        if (participantDepartment !== currentEventDetail.department) {
-            showNotification(`This event is exclusive to the ${currentEventDetail.department} department. You cannot register with another department.`, 'error');
-            return false;
-        }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(participantEmail)) {
+        showNotification('Please enter a valid email address', 'error');
+        return false;
     }
     
-    if (!agreeTerms) {
-        showNotification('Please agree to the event terms and conditions', 'error');
+    // Validate phone format
+    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+    if (!phoneRegex.test(participantPhone)) {
+        showNotification('Please enter a valid phone number', 'error');
         return false;
     }
     
@@ -977,7 +967,9 @@ function submitRegistration(e) {
         event_id: parseInt(eventId),
         participant_name: participantName,
         participant_email: participantEmail,
-        participant_department: participantDepartment,
+        company: participantCompany,
+        job_title: participantJobTitle,
+        employee_code: participantEmployeeCode,
         participant_phone: participantPhone,
         status: 'REGISTERED'
     };
@@ -1160,8 +1152,72 @@ function showNotification(message, type = 'success') {
     notification.textContent = message;
     notification.className = `notification show ${type}`;
     
-    // Auto-hide after 3 seconds
+    // Auto-hide notification after 3 seconds
     setTimeout(() => {
         notification.classList.remove('show');
     }, 3000);
+}
+
+// ============ OTHER INFORMATION (METADATA) ============
+function loadClientEventMetadata(eventId) {
+    fetch(`${API_BASE}/metadata.php?action=list&event_id=${eventId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                displayClientEventMetadata(data.data);
+            }
+        })
+        .catch(error => console.error('Error loading metadata:', error));
+}
+
+function displayClientEventMetadata(metadata) {
+    const container = document.getElementById('otherInformation') || createOtherInformationSection();
+    
+    if (!metadata || metadata.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    const metadataContent = container.querySelector('.metadata-content') || document.createElement('div');
+    metadataContent.className = 'metadata-content';
+    
+    const html = metadata.map(item => `
+        <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-weight: 600; color: #374151; margin-bottom: 8px;">${escapeHtml(item.field_name)}</div>
+            <div style="color: #6b7280; word-wrap: break-word; white-space: pre-wrap;">${escapeHtml(item.field_value)}</div>
+        </div>
+    `).join('');
+    
+    metadataContent.innerHTML = html;
+    if (!container.querySelector('.metadata-content')) {
+        container.appendChild(metadataContent);
+    }
+}
+
+function createOtherInformationSection() {
+    const modal = document.getElementById('eventModal');
+    if (!modal) return null;
+    
+    const section = document.createElement('div');
+    section.id = 'otherInformation';
+    section.style.cssText = 'margin-top: 24px; padding-top: 24px; border-top: 2px solid #e5e7eb;';
+    section.innerHTML = `
+        <h3 style="font-size: 18px; font-weight: 600; color: #111; margin-bottom: 16px;">Other Information</h3>
+        <div class="metadata-content"></div>
+    `;
+    
+    // Insert before confirmation details
+    const modalBody = modal.querySelector('.event-details') || modal.querySelector('.modal-body');
+    if (modalBody) {
+        modalBody.appendChild(section);
+    }
+    
+    return section;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

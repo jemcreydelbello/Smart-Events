@@ -1,8 +1,9 @@
 <?php
+// Output buffering to catch any unexpected output
+ob_start();
+
 // Set proper headers before any output
-if (!headers_sent()) {
-    header('Content-Type: application/json; charset=utf-8');
-}
+header('Content-Type: application/json; charset=utf-8');
 
 // Enable error logging but hide from output
 error_reporting(E_ALL);
@@ -11,26 +12,35 @@ ini_set('log_errors', 1);
 
 // Set error handler to JSON output
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    ob_end_clean(); // Clear any buffered output
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $errstr,
-        'error' => true
+        'file' => $errfile,
+        'line' => $errline
     ]);
     exit;
 });
 
-require_once '../db_config.php';
+// Set fatal error handler
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_end_clean();
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Fatal error: ' . $error['message'],
+            'file' => $error['file'],
+            'line' => $error['line']
+        ]);
+    } else {
+        ob_end_flush();
+    }
+});
 
-// Check if database connection exists
-if (!isset($conn) || !$conn) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database connection failed'
-    ]);
-    exit;
-}
+require_once '../db_config.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -60,6 +70,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'success' => true,
                 'data' => $admins,
                 'total' => count($admins)
+            ]);
+        } else if ($action === 'detail') {
+            // Get single admin by ID
+            $admin_id = intval($_GET['admin_id'] ?? 0);
+            if (!$admin_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Admin ID is required']);
+                exit;
+            }
+            
+            $query = "SELECT admin_id as user_id, email, full_name, created_at, status, admin_image
+                      FROM admins 
+                      WHERE admin_id = ?";
+            
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $stmt->bind_param('i', $admin_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Admin not found']);
+                exit;
+            }
+            
+            $admin = $result->fetch_assoc();
+            
+            // Add full image URL if image exists
+            if ($admin['admin_image']) {
+                $admin['admin_image'] = '../uploads/' . $admin['admin_image'];
+            }
+            
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'data' => $admin
             ]);
         } else if ($action === 'search' && isset($_GET['q'])) {
             $searchTerm = '%' . $_GET['q'] . '%';
@@ -105,34 +155,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // POST - Create new admin
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $input = file_get_contents('php://input');
-        $data = json_decode($input, true);
+        // Handle both JSON and FormData
+        $is_multipart = strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false;
         
-        $full_name = trim($data['full_name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $password = trim($data['password'] ?? '');
-        $admin_image = isset($data['admin_image']) ? $data['admin_image'] : null;
+        if ($is_multipart) {
+            // FormData (with file upload)
+            $full_name = trim($_POST['full_name'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $password = trim($_POST['password'] ?? '');
+            $image_file = $_FILES['image'] ?? null;
+            $imageFilename = null;
+        } else {
+            // JSON
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true);
+            
+            $full_name = trim($data['full_name'] ?? '');
+            $email = trim($data['email'] ?? '');
+            $password = trim($data['password'] ?? '');
+            $admin_image = isset($data['admin_image']) ? $data['admin_image'] : null;
+            $image_file = null;
+            $imageFilename = null;
+            
+            // Process image if provided (save to uploads folder) - base64 format
+            if ($admin_image && strpos($admin_image, 'data:image') === 0) {
+                // Extract base64 data from data URI
+                $imageData = explode(',', $admin_image);
+                if (count($imageData) === 2) {
+                    $imageBlob = base64_decode($imageData[1]);
+                    // Generate unique filename
+                    $imageFilename = 'admin_' . time() . '_' . uniqid() . '.jpg';
+                    $uploadPath = '../uploads/' . $imageFilename;
+                    
+                    // Create uploads folder if it doesn't exist
+                    if (!is_dir('../uploads')) {
+                        mkdir('../uploads', 0755, true);
+                    }
+                    
+                    // Save image file
+                    if (!file_put_contents($uploadPath, $imageBlob)) {
+                        throw new Exception('Failed to save image file');
+                    }
+                }
+            }
+        }
         
-        // Process image if provided (save to uploads folder)
-        $imageFilename = null;
-        if ($admin_image && strpos($admin_image, 'data:image') === 0) {
-            // Extract base64 data from data URI
-            $imageData = explode(',', $admin_image);
-            if (count($imageData) === 2) {
-                $imageBlob = base64_decode($imageData[1]);
-                // Generate unique filename
-                $imageFilename = 'admin_' . time() . '_' . uniqid() . '.jpg';
-                $uploadPath = '../uploads/' . $imageFilename;
-                
-                // Create uploads folder if it doesn't exist
-                if (!is_dir('../uploads')) {
-                    mkdir('../uploads', 0755, true);
-                }
-                
-                // Save image file
-                if (!file_put_contents($uploadPath, $imageBlob)) {
-                    throw new Exception('Failed to save image file');
-                }
+        // Handle FormData file upload
+        if ($image_file && $image_file['size'] > 0) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($image_file['type'], $allowed_types)) {
+                throw new Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed');
+            }
+            
+            if ($image_file['size'] > 5 * 1024 * 1024) {
+                throw new Exception('File size must not exceed 5MB');
+            }
+            
+            // Create upload directory if it doesn't exist
+            $upload_dir = '../uploads/admins/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            } elseif (!is_dir('../uploads')) {
+                mkdir('../uploads', 0755, true);
+            }
+            
+            // Generate unique filename
+            $file_ext = pathinfo($image_file['name'], PATHINFO_EXTENSION);
+            $imageFilename = 'admin_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file_ext;
+            $upload_path = $upload_dir . $imageFilename;
+            
+            if (!move_uploaded_file($image_file['tmp_name'], $upload_path)) {
+                throw new Exception('Failed to upload image');
             }
         }
         
@@ -172,6 +265,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Insert new admin into admins table
         if ($imageFilename) {
+            // Store relative path for admin_image
+            $image_path = (strpos($imageFilename, 'admin_') === 0 && strpos($imageFilename, '/')) ? $imageFilename : 'admins/' . $imageFilename;
+            
             $insertQuery = "INSERT INTO admins (username, email, password_hash, full_name, admin_image, status) 
                            VALUES (?, ?, ?, ?, ?, 'active')";
             $insertStmt = $conn->prepare($insertQuery);
@@ -180,7 +276,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
             
-            $insertStmt->bind_param('sssss', $username, $email, $hashedPassword, $full_name, $imageFilename);
+            $insertStmt->bind_param('sssss', $username, $email, $hashedPassword, $full_name, $image_path);
         } else {
             $insertQuery = "INSERT INTO admins (username, email, password_hash, full_name, status) 
                            VALUES (?, ?, ?, ?, 'active')";
@@ -520,6 +616,4 @@ else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
-
 $conn->close();
-?>

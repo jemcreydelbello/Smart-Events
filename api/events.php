@@ -2,13 +2,87 @@
 // Error handling - ensure all output is JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
+
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error in $errfile:$errline - $errstr");
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
     exit;
 });
 
+set_exception_handler(function($exception) {
+    error_log("Exception: " . $exception->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'API Error: ' . $exception->getMessage()]);
+    exit;
+});
+
 require_once '../db_config.php';
+
+// Helper function to get user role and info from request headers or session
+function getUserInfo() {
+    $userInfo = [
+        'role' => 'GUEST',
+        'user_id' => null,
+        'coordinator_id' => null
+    ];
+    
+    // Check if role is passed in header
+    if (isset($_SERVER['HTTP_X_USER_ROLE'])) {
+        $userInfo['role'] = $_SERVER['HTTP_X_USER_ROLE'];
+    }
+    if (isset($_SERVER['HTTP_X_USER_ID'])) {
+        $userInfo['user_id'] = intval($_SERVER['HTTP_X_USER_ID']);
+    }
+    if (isset($_SERVER['HTTP_X_COORDINATOR_ID'])) {
+        $userInfo['coordinator_id'] = intval($_SERVER['HTTP_X_COORDINATOR_ID']);
+    }
+    
+    return $userInfo;
+}
+
+// Helper function to check if coordinator has access to an event
+function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
+    $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('ii', $event_id, $coordinator_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->num_rows > 0;
+}
+
+// Helper function to check event access based on role
+function checkEventAccess($conn, $event_id, $userInfo) {
+    // Admins have access to all events
+    if ($userInfo['role'] === 'ADMIN' || $userInfo['role'] === 'admin') {
+        return true;
+    }
+    
+    // Coordinators can only access their assigned events
+    if ($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') {
+        return coordinatorHasAccessToEvent($conn, $event_id, $userInfo['coordinator_id']);
+    }
+    
+    // For local development/testing: allow localhost access
+    if (isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] === '127.0.0.1') {
+        return true;
+    }
+    if (isset($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Helper function to generate access codes
+function generateAccessCode() {
+    $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $code = '';
+    for ($i = 0; $i < 6; $i++) {
+        $code .= $chars[rand(0, strlen($chars) - 1)];
+    }
+    return $code;
+}
 
 // Helper function to normalize event data types for JSON response
 function normalizeEventData($event) {
@@ -30,21 +104,42 @@ function normalizeEventsArray($events) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $action = $_GET['action'] ?? '';
+    $action = $_GET['action'] ?? 'list_all';  // Default to list_all for calendar and dashboard
     
     if ($action === 'list') {
         // Get all UPCOMING/ACTIVE events (not past events - those go to Catalogue)
         $today = date('Y-m-d');
-        $query = "SELECT e.*, u.full_name as created_by_name,
-                  COUNT(DISTINCT r.registration_id) as total_registrations,
-                  SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                  (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                  FROM events e
-                  LEFT JOIN users u ON e.created_by = u.user_id
-                  LEFT JOIN registrations r ON e.event_id = r.event_id
-                  WHERE e.event_date >= ?
-                  GROUP BY e.event_id
-                  ORDER BY e.event_date ASC";
+        
+        // Check if coordinators table exists
+        $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
+        $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
+        
+        if ($hasCoordinators) {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.event_date >= ?
+                      GROUP BY e.event_id
+                      ORDER BY e.event_date ASC";
+        } else {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.event_date >= ?
+                      GROUP BY e.event_id
+                      ORDER BY e.event_date ASC";
+        }
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param('s', $today);
@@ -63,15 +158,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
     elseif ($action === 'list_all') {
         // Get ALL events (including past ones) - for calendar and dashboard
-        $query = "SELECT e.*, u.full_name as created_by_name,
-                  COUNT(DISTINCT r.registration_id) as total_registrations,
-                  SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                  (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                  FROM events e
-                  LEFT JOIN users u ON e.created_by = u.user_id
-                  LEFT JOIN registrations r ON e.event_id = r.event_id
-                  GROUP BY e.event_id
-                  ORDER BY e.event_date DESC";
+        $userInfo = getUserInfo();
+        
+        // Check if coordinators table exists
+        $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
+        $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
+        
+        if ($hasCoordinators) {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id";
+            
+            // Filter by coordinator if user is a coordinator
+            if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
+                $query .= " WHERE e.coordinator_id = " . intval($userInfo['coordinator_id']);
+            }
+            
+            $query .= " GROUP BY e.event_id
+                      ORDER BY e.event_date DESC";
+        } else {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      GROUP BY e.event_id
+                      ORDER BY e.event_date DESC";
+        }
         
         $result = $conn->query($query);
         $events = [];
@@ -87,16 +209,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     } 
     elseif ($action === 'detail') {
         $event_id = intval($_GET['event_id']);
+        $userInfo = getUserInfo();
         
-        $query = "SELECT e.*, u.full_name as created_by_name,
-                  COUNT(DISTINCT r.registration_id) as total_registrations,
-                  SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                  (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                  FROM events e
-                  LEFT JOIN users u ON e.created_by = u.user_id
-                  LEFT JOIN registrations r ON e.event_id = r.event_id
-                  WHERE e.event_id = ?
-                  GROUP BY e.event_id";
+        // First fetch the event to check permissions
+        $permissionQuery = "SELECT event_id, coordinator_id FROM events WHERE event_id = ?";
+        $permStmt = $conn->prepare($permissionQuery);
+        $permStmt->bind_param('i', $event_id);
+        $permStmt->execute();
+        $permResult = $permStmt->get_result();
+        $eventPerm = $permResult->fetch_assoc();
+        
+        // Check access - coordinators can only see their assigned events
+        if (!checkEventAccess($conn, $event_id, $userInfo)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Access denied. You do not have permission to view this event.']);
+            exit;
+        }
+        
+        // Check if coordinators table exists
+        $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
+        $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
+        
+        if ($hasCoordinators) {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
+                      MAX(eac.access_code) as access_code,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id AND eac.is_active = 1
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.event_id = ?
+                      GROUP BY e.event_id";
+        } else {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
+                      MAX(eac.access_code) as access_code,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id AND eac.is_active = 1
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.event_id = ?
+                      GROUP BY e.event_id";
+        }
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param('i', $event_id);
@@ -112,6 +273,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode(['success' => false, 'message' => 'Event not found']);
         }
     }
+    elseif ($action === 'access_code') {
+        // Get access code for a private event
+        $event_id = isset($_GET['event_id']) ? intval($_GET['event_id']) : null;
+        
+        if (!$event_id) {
+            echo json_encode(['success' => false, 'message' => 'Event ID required']);
+            exit;
+        }
+        
+        // Check if event is private and get access code
+        $query = "SELECT eac.access_code 
+                  FROM event_access_codes eac
+                  JOIN events e ON eac.event_id = e.event_id
+                  WHERE e.event_id = ? AND e.is_private = 1 AND eac.is_active = 1
+                  LIMIT 1";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $event_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        
+        if ($row && $row['access_code']) {
+            echo json_encode(['success' => true, 'access_code' => $row['access_code']]);
+        } else {
+            echo json_encode(['success' => true, 'access_code' => null]);
+        }
+    }
 } 
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if this is a file upload request or JSON request
@@ -125,13 +314,17 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location = $_POST['location'] ?? '';
         $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
         $is_private = isset($_POST['is_private']) ? intval($_POST['is_private']) : 0;
-        $private_code = ($is_private && isset($_POST['private_code'])) ? $_POST['private_code'] : NULL;
         $department = isset($_POST['department']) ? $_POST['department'] : NULL;
+        $coordinator_id = isset($_POST['coordinator_id']) && $_POST['coordinator_id'] ? intval($_POST['coordinator_id']) : NULL;
         
         $image_url = null;
         
+        // Debug: Log file upload details
+        error_log('EVENT CREATE - FILES array: ' . json_encode($_FILES));
+        error_log('EVENT CREATE - FILE[image] size: ' . $_FILES['image']['size'] . ', error: ' . $_FILES['image']['error']);
+        
         // Handle file upload
-        if ($_FILES['image']['size'] > 0) {
+        if ($_FILES['image']['size'] > 0 && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $upload_dir = '../uploads/';
             $uploads_path = dirname(__DIR__) . '/uploads/';
             
@@ -160,22 +353,63 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Move uploaded file
             if (move_uploaded_file($_FILES['image']['tmp_name'], $filepath)) {
-                $image_url = 'uploads/' . $filename;
+                // Store with absolute path that works from any location
+                $image_url = '/Smart-Events/uploads/' . $filename;
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
                 exit;
             }
         }
         
-        // Insert event with image
-        $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, private_code, department)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Log image_url status before insert
+        error_log('EVENT CREATE - After file handling, image_url: ' . ($image_url ? $image_url : 'NULL (no file uploaded)'));
         
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('sssssssiiss', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $private_code, $department);
+        // Insert event with image
+        // Check if coordinator_id column exists in events table
+        $columnsResult = $conn->query("SHOW COLUMNS FROM events LIKE 'coordinator_id'");
+        $hasCoordinatorColumn = $columnsResult && $columnsResult->num_rows > 0;
+        
+        if ($hasCoordinatorColumn && $coordinator_id) {
+            $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, department, coordinator_id, created_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('sssssssiisi', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department, $coordinator_id);
+        } else {
+            $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, department, created_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('sssssssiis', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department);
+        }
         
         if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Event created successfully', 'event_id' => $conn->insert_id]);
+            $event_id = $conn->insert_id;
+            
+            $access_code = null;
+            
+            // If event is private, generate and create access code
+            if ($is_private) {
+                $access_code = generateAccessCode();
+                $code_query = "INSERT INTO event_access_codes (event_id, access_code, is_active) VALUES (?, ?, 1)";
+                $code_stmt = $conn->prepare($code_query);
+                $code_stmt->bind_param('is', $event_id, $access_code);
+                $code_stmt->execute();
+                $code_stmt->close();
+            }
+            
+            $response = [
+                'success' => true, 
+                'message' => 'Event created successfully',
+                'event_id' => $event_id,
+                'image_uploaded' => !empty($image_url),
+                'is_private' => $is_private,
+                'access_code' => $access_code
+            ];
+            
+            if (empty($image_url)) {
+                $response['warning'] = 'No image was provided. Event created without cover image.';
+            }
+            
+            echo json_encode($response);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to create event: ' . $stmt->error]);
         }
@@ -191,18 +425,43 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location = $data['location'] ?? '';
         $capacity = isset($data['capacity']) ? intval($data['capacity']) : 0;
         $is_private = isset($data['is_private']) ? intval($data['is_private']) : 0;
-        $private_code = ($is_private && isset($data['private_code'])) ? $data['private_code'] : NULL;
         $department = isset($data['department']) ? $data['department'] : NULL;
+        $coordinator_id = isset($data['coordinator_id']) && $data['coordinator_id'] ? intval($data['coordinator_id']) : NULL;
         $image_url = null;
         
-        $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, private_code, department)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Insert event (JSON fallback)
+        // Check if coordinator_id column exists in events table
+        $columnsResult = $conn->query("SHOW COLUMNS FROM events LIKE 'coordinator_id'");
+        $hasCoordinatorColumn = $columnsResult && $columnsResult->num_rows > 0;
         
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('sssssssiiss', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $private_code, $department);
+        if ($hasCoordinatorColumn && $coordinator_id) {
+            $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, department, coordinator_id, created_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('sssssssiisi', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department, $coordinator_id);
+        } else {
+            $query = "INSERT INTO events (event_name, description, event_date, start_time, end_time, location, image_url, capacity, is_private, department, created_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('sssssssiis', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department);
+        }
         
         if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Event created successfully', 'event_id' => $conn->insert_id]);
+            $event_id = $conn->insert_id;
+            
+            $access_code = null;
+            
+            // If event is private, generate and create access code
+            if ($is_private) {
+                $access_code = generateAccessCode();
+                $code_query = "INSERT INTO event_access_codes (event_id, access_code, is_active) VALUES (?, ?, 1)";
+                $code_stmt = $conn->prepare($code_query);
+                $code_stmt->bind_param('is', $event_id, $access_code);
+                $code_stmt->execute();
+                $code_stmt->close();
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Event created successfully', 'event_id' => $event_id, 'is_private' => $is_private, 'access_code' => $access_code]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to create event: ' . $stmt->error]);
         }
@@ -291,13 +550,50 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
     
     $event_id = intval($data['event_id'] ?? 0);
+    $action = $data['action'] ?? 'update';
+    
     if (!$event_id) {
         echo json_encode(['success' => false, 'message' => 'Event ID required']);
         exit;
     }
     
-    // Get existing event to preserve image if not updating
-    $query = "SELECT image_url FROM events WHERE event_id = ?";
+    // Handle assign_coordinator action
+    if ($action === 'assign_coordinator') {
+        $coordinator_id = intval($data['coordinator_id'] ?? 0);
+        
+        if (!$coordinator_id) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Coordinator ID required']);
+            exit;
+        }
+        
+        // Update event with coordinator_id
+        $updateQuery = "UPDATE events SET coordinator_id = ? WHERE event_id = ?";
+        $stmt = $conn->prepare($updateQuery);
+        
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+            exit;
+        }
+        
+        $stmt->bind_param('ii', $coordinator_id, $event_id);
+        
+        if ($stmt->execute()) {
+            http_response_code(200);
+            echo json_encode(['success' => true, 'message' => 'Coordinator assigned successfully']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to assign coordinator: ' . $stmt->error]);
+        }
+        exit;
+    }
+    
+    // Get existing event to preserve image and check privacy status
+    $query = "SELECT e.image_url, e.is_private, eac.access_code 
+              FROM events e 
+              LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id AND eac.is_active = 1 
+              WHERE e.event_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('i', $event_id);
     $stmt->execute();
@@ -317,8 +613,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $location = $data['location'] ?? '';
     $capacity = isset($data['capacity']) ? intval($data['capacity']) : 0;
     $is_private = isset($data['is_private']) ? intval($data['is_private']) : 0;
-    $private_code = ($is_private && isset($data['private_code'])) ? $data['private_code'] : $existing['private_code'] ?? NULL;
     $department = isset($data['department']) ? $data['department'] : NULL;
+    $coordinator_id = isset($data['coordinator_id']) && $data['coordinator_id'] ? intval($data['coordinator_id']) : NULL;
     
     $image_url = $existing['image_url']; // Keep existing by default
     
@@ -365,11 +661,18 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             // Clean up temp file after successful copy
             @unlink($files['image']['tmp_name']);
             
-            $image_url = 'uploads/' . $filename;
+            $image_url = '/Smart-Events/uploads/' . $filename;
             
             // Delete old image if exists
             if ($existing['image_url']) {
-                $old_path = dirname(__DIR__) . '/' . $existing['image_url'];
+                // Handle both old relative path and new absolute path formats
+                if (strpos($existing['image_url'], '/') === 0) {
+                    // Absolute path - remove leading slash for filesystem
+                    $old_path = dirname(__DIR__) . $existing['image_url'];
+                } else {
+                    // Relative path (old format)
+                    $old_path = dirname(__DIR__) . '/' . $existing['image_url'];
+                }
                 if (file_exists($old_path)) {
                     unlink($old_path);
                 }
@@ -381,25 +684,68 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         }
     }
     
-    $query = "UPDATE events SET 
-              event_name = ?, 
-              description = ?, 
-              event_date = ?, 
-              start_time = ?, 
-              end_time = ?, 
-              location = ?, 
-              image_url = ?,
-              capacity = ?, 
-              is_private = ?,
-              private_code = ?,
-              department = ?
-              WHERE event_id = ?";
+    // Check if coordinator_id column exists
+    $columnsResult = $conn->query("SHOW COLUMNS FROM events LIKE 'coordinator_id'");
+    $hasCoordinatorColumn = $columnsResult && $columnsResult->num_rows > 0;
     
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('sssssssiissi', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $private_code, $department, $event_id);
+    if ($hasCoordinatorColumn) {
+        $query = "UPDATE events SET 
+                  event_name = ?, 
+                  description = ?, 
+                  event_date = ?, 
+                  start_time = ?, 
+                  end_time = ?, 
+                  location = ?, 
+                  image_url = ?,
+                  capacity = ?, 
+                  is_private = ?,
+                  department = ?,
+                  coordinator_id = ?
+                  WHERE event_id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('sssssssiiiii', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department, $coordinator_id, $event_id);
+    } else {
+        $query = "UPDATE events SET 
+                  event_name = ?, 
+                  description = ?, 
+                  event_date = ?, 
+                  start_time = ?, 
+                  end_time = ?, 
+                  location = ?, 
+                  image_url = ?,
+                  capacity = ?, 
+                  is_private = ?,
+                  department = ?
+                  WHERE event_id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('sssssssiiisi', $event_name, $description, $event_date, $start_time, $end_time, $location, $image_url, $capacity, $is_private, $department, $event_id);
+    }
     
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
+            // Handle access code changes when privacy status changes
+            $privacy_changed_to_private = ($is_private == 1 && $existing['is_private'] == 0);
+            $privacy_changed_to_public = ($is_private == 0 && $existing['is_private'] == 1);
+            
+            if ($privacy_changed_to_private) {
+                // Event became private, generate new access code
+                $access_code = generateAccessCode();
+                $code_query = "INSERT INTO event_access_codes (event_id, access_code, is_active) VALUES (?, ?, 1)";
+                $code_stmt = $conn->prepare($code_query);
+                $code_stmt->bind_param('is', $event_id, $access_code);
+                $code_stmt->execute();
+                $code_stmt->close();
+            } elseif ($privacy_changed_to_public && $existing['access_code']) {
+                // Event is no longer private, deactivate existing code
+                $code_query = "UPDATE event_access_codes SET is_active = 0 WHERE event_id = ? AND is_active = 1";
+                $code_stmt = $conn->prepare($code_query);
+                $code_stmt->bind_param('i', $event_id);
+                $code_stmt->execute();
+                $code_stmt->close();
+            }
+            
             echo json_encode(['success' => true, 'message' => 'Event updated successfully']);
         } else {
             echo json_encode(['success' => false, 'message' => 'No event found to update']);

@@ -12,18 +12,84 @@ require_once '../db_config.php';
 require_once '../config/email_config.php';
 require_once '../includes/SimpleMailer.php';
 
+// Helper function to check if coordinator has access to an event
+function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
+    $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('ii', $event_id, $coordinator_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->num_rows > 0;
+}
+
+// Helper function to get user role and info from request headers
+function getUserInfo() {
+    $userInfo = [
+        'role' => 'GUEST',
+        'user_id' => null,
+        'coordinator_id' => null
+    ];
+    
+    if (isset($_SERVER['HTTP_X_USER_ROLE'])) {
+        $userInfo['role'] = $_SERVER['HTTP_X_USER_ROLE'];
+    }
+    if (isset($_SERVER['HTTP_X_USER_ID'])) {
+        $userInfo['user_id'] = intval($_SERVER['HTTP_X_USER_ID']);
+    }
+    if (isset($_SERVER['HTTP_X_COORDINATOR_ID'])) {
+        $userInfo['coordinator_id'] = intval($_SERVER['HTTP_X_COORDINATOR_ID']);
+    }
+    
+    return $userInfo;
+}
+
+// Helper function to check event access based on role
+function checkEventAccess($conn, $event_id, $userInfo) {
+    // Admins have access to all events
+    if ($userInfo['role'] === 'ADMIN' || $userInfo['role'] === 'admin') {
+        return true;
+    }
+    
+    // Coordinators can only access their assigned events
+    if ($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') {
+        return coordinatorHasAccessToEvent($conn, $event_id, $userInfo['coordinator_id']);
+    }
+    
+    // For local development/testing: allow localhost access
+    if (isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] === '127.0.0.1') {
+        return true;
+    }
+    if (isset($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)) {
+        return true;
+    }
+    
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $action = $_GET['action'] ?? '';
+    $action = $_GET['action'] ?? 'list'; // Default to 'list' if not specified
     
     if ($action === 'list') {
         $event_id = isset($_GET['event_id']) ? intval($_GET['event_id']) : null;
         $status = isset($_GET['status']) ? $_GET['status'] : null;
         $event_type = isset($_GET['event_type']) ? $_GET['event_type'] : null; // 'public' or 'private'
         $department_id = isset($_GET['department_id']) ? intval($_GET['department_id']) : null; // department filter
+        $userInfo = getUserInfo();
         
-        // If filtering by event_id, we want only registered participants
+        // If filtering by event_id, check access
         if ($event_id) {
+            // Check if user has access to this event
+            if (!checkEventAccess($conn, $event_id, $userInfo)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Access denied']);
+                exit;
+            }
+            
             $query = "SELECT DISTINCT u.user_id, u.full_name, u.email, u.department_id, d.department_name,
+                      IFNULL(u.company, '') as company, 
+                      IFNULL(u.job_title, '') as job_title, 
+                      IFNULL(u.phone, '') as phone,
+                      IFNULL(u.employee_code, '') as employee_code,
                       e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM registrations r
                       JOIN users u ON r.user_id = u.user_id
@@ -40,8 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $param_types .= 's';
             }
         } else {
-            // Standard participant list
+            // Standard participant list - filter by coordinator if user is a coordinator
             $query = "SELECT u.user_id, u.full_name, u.email, u.department_id, d.department_name,
+                      IFNULL(u.company, '') as company, 
+                      IFNULL(u.job_title, '') as job_title, 
+                      IFNULL(u.phone, '') as phone,
+                      IFNULL(u.employee_code, '') as employee_code,
                       e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM users u
                       LEFT JOIN departments d ON u.department_id = d.department_id
@@ -51,6 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             
             $params = [];
             $param_types = '';
+            
+            // Filter by coordinator's events if user is a coordinator
+            if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
+                $query .= " AND e.coordinator_id = ?";
+                $params[] = $userInfo['coordinator_id'];
+                $param_types .= 'i';
+            }
             
             if ($status) {
                 $query .= " AND r.status = ?";
@@ -73,19 +150,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         $query .= " ORDER BY u.full_name ASC";
         
-        if (!empty($params)) {
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param($param_types, ...$params);
-            $result = $stmt->execute() ? $stmt->get_result() : null;
-        } else {
-            $result = $conn->query($query);
-        }
-        
         $participants = [];
-        if ($result) {
+        $error = null;
+        
+        try {
+            if (!empty($params)) {
+                $stmt = $conn->prepare($query);
+                if (!$stmt) {
+                    throw new Exception("Prepare failed: " . $conn->error);
+                }
+                
+                if (!$stmt->bind_param($param_types, ...$params)) {
+                    throw new Exception("Bind param failed: " . $stmt->error);
+                }
+                
+                if (!$stmt->execute()) {
+                    throw new Exception("Execute failed: " . $stmt->error);
+                }
+                
+                $result = $stmt->get_result();
+                if (!$result) {
+                    throw new Exception("Get result failed: " . $stmt->error);
+                }
+            } else {
+                $result = $conn->query($query);
+                if (!$result) {
+                    throw new Exception("Query failed: " . $conn->error);
+                }
+            }
+            
             while ($row = $result->fetch_assoc()) {
                 $participants[] = $row;
             }
+        } catch (Exception $e) {
+            error_log("Participants API error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error fetching participants: ' . $e->getMessage()]);
+            exit;
         }
         
         echo json_encode(['success' => true, 'data' => $participants]);
@@ -121,31 +222,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         $query .= " ORDER BY u.full_name ASC LIMIT 20";
         
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param($param_types, ...$params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $participants = [];
-        while ($row = $result->fetch_assoc()) {
-            $participants[] = $row;
+        try {
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            if (!$stmt->bind_param($param_types, ...$params)) {
+                throw new Exception("Bind param failed: " . $stmt->error);
+            }
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+            
+            $result = $stmt->get_result();
+            if (!$result) {
+                throw new Exception("Get result failed: " . $stmt->error);
+            }
+            
+            $participants = [];
+            while ($row = $result->fetch_assoc()) {
+                $participants[] = $row;
+            }
+            
+            echo json_encode(['success' => true, 'data' => $participants]);
+        } catch (Exception $e) {
+            error_log("Participants search error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error searching participants: ' . $e->getMessage()]);
+            exit;
         }
-        
-        echo json_encode(['success' => true, 'data' => $participants]);
     }
     elseif ($action === 'get_departments') {
         // Get list of all departments
-        $query = "SELECT department_id, department_name FROM departments ORDER BY department_name ASC";
-        $result = $conn->query($query);
-        
-        $departments = [];
-        if ($result) {
+        try {
+            $query = "SELECT department_id, department_name FROM departments ORDER BY department_name ASC";
+            $result = $conn->query($query);
+            
+            if (!$result) {
+                throw new Exception("Query failed: " . $conn->error);
+            }
+            
+            $departments = [];
             while ($row = $result->fetch_assoc()) {
                 $departments[] = $row;
             }
+            
+            echo json_encode(['success' => true, 'data' => $departments]);
+        } catch (Exception $e) {
+            error_log("Get departments error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error fetching departments: ' . $e->getMessage()]);
+            exit;
         }
-        
-        echo json_encode(['success' => true, 'data' => $departments]);
+    } else {
+        // Unknown action
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Unknown action: ' . $action]);
+        exit;
     }
 }
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -241,13 +376,15 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $event_id = intval($data['event_id'] ?? 0);
         $participant_name = trim($data['participant_name'] ?? '');
         $participant_email = trim($data['participant_email'] ?? '');
-        $participant_department = trim($data['participant_department'] ?? '');
+        $company = trim($data['company'] ?? '');
+        $job_title = trim($data['job_title'] ?? '');
+        $employee_code = trim($data['employee_code'] ?? '');
         $participant_phone = trim($data['participant_phone'] ?? '');
         $status = $data['status'] ?? 'REGISTERED';
         
         // Validate required fields
-        if (!$event_id || !$participant_name || !$participant_email) {
-            throw new Exception('Event ID, name, and email are required');
+        if (!$event_id || !$participant_name || !$participant_email || !$company || !$job_title || !$employee_code || !$participant_phone) {
+            throw new Exception('Event ID, name, email, company, job title, employee code, and phone are required');
         }
         
         // Validate email format
@@ -304,30 +441,16 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $temp_password = bin2hex(random_bytes(8));
             $hashed_password = hash('sha256', $temp_password);
             
-            // Get department_id if provided
+            // Department_id is not provided in new registration form
             $department_id = null;
-            if ($participant_department) {
-                $dept_query = "SELECT department_id FROM departments WHERE LOWER(department_name) = LOWER(?)";
-                $dept_stmt = $conn->prepare($dept_query);
-                if ($dept_stmt) {
-                    $dept_stmt->bind_param('s', $participant_department);
-                    if ($dept_stmt->execute()) {
-                        $dept_result = $dept_stmt->get_result();
-                        if ($dept_result->num_rows > 0) {
-                            $dept_row = $dept_result->fetch_assoc();
-                            $department_id = $dept_row['department_id'];
-                        }
-                    }
-                }
-            }
             
-            $insert_user = "INSERT INTO users (full_name, email, password_hash, role_id, department_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
+            $insert_user = "INSERT INTO users (full_name, email, password_hash, role_id, department_id, company, job_title, employee_code, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
             $stmt = $conn->prepare($insert_user);
             if (!$stmt) {
                 throw new Exception('Prepare user insert failed: ' . $conn->error);
             }
             
-            $stmt->bind_param('sssii', $participant_name, $participant_email, $hashed_password, $role_id, $department_id);
+            $stmt->bind_param('sssiiisss', $participant_name, $participant_email, $hashed_password, $role_id, $department_id, $company, $job_title, $employee_code, $participant_phone);
             
             if (!$stmt->execute()) {
                 throw new Exception('Failed to create participant account: ' . $stmt->error);
@@ -460,8 +583,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         error_log('═══════════════════════════════════════');
         
         $data = json_decode($input, true);
+        $userInfo = getUserInfo();
         
         error_log('Parsed data: ' . json_encode($data));
+        error_log('User Info: ' . json_encode($userInfo));
         error_log('JSON error: ' . json_last_error_msg());
         
         if (!$data) {
@@ -480,58 +605,170 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             throw new Exception('Registration code is required');
         }
         
-        // Find registration by code and update status (case-insensitive)
-        $query = "UPDATE registrations SET status = ? WHERE UPPER(registration_code) = UPPER(?)";
-        error_log('Query: ' . $query);
-        error_log('Params: status=' . $status . ', registration_code=' . $registration_code);
+        // First, verify the registration exists and get its details
+        $verify_query = "SELECT r.registration_id, r.event_id, r.status as current_status, 
+                                e.coordinator_id, u.full_name, u.email, e.event_name
+                         FROM registrations r
+                         JOIN events e ON r.event_id = e.event_id
+                         LEFT JOIN users u ON r.user_id = u.user_id
+                         WHERE UPPER(r.registration_code) = UPPER(?)";
         
-        $stmt = $conn->prepare($query);
+        error_log('Verify query: ' . $verify_query);
+        error_log('Verify param: ' . $registration_code);
         
-        if (!$stmt) {
+        $verify_stmt = $conn->prepare($verify_query);
+        if (!$verify_stmt) {
             error_log('Prepare failed: ' . $conn->error);
             throw new Exception('Prepare statement failed: ' . $conn->error);
         }
         
-        $stmt->bind_param('ss', $status, $registration_code);
-        
-        if (!$stmt->execute()) {
-            error_log('Execute failed: ' . $stmt->error);
-            throw new Exception('Failed to update registration: ' . $stmt->error);
+        $verify_stmt->bind_param('s', $registration_code);
+        if (!$verify_stmt->execute()) {
+            error_log('Execute failed: ' . $verify_stmt->error);
+            throw new Exception('Failed to verify registration: ' . $verify_stmt->error);
         }
         
-        error_log('Rows affected: ' . $stmt->affected_rows);
+        $result = $verify_stmt->get_result();
+        error_log('Verify query returned: ' . $result->num_rows . ' rows');
         
-        if ($stmt->affected_rows === 0) {
+        if ($result->num_rows === 0) {
             error_log('ERROR: No registration found for code: ' . $registration_code);
+            // Log sample codes for debugging
+            $sample_query = "SELECT registration_code FROM registrations LIMIT 5";
+            $sample_result = $conn->query($sample_query);
+            if ($sample_result) {
+                error_log('Sample registration codes in database:');
+                while ($sample_row = $sample_result->fetch_assoc()) {
+                    error_log('  - ' . $sample_row['registration_code']);
+                }
+            }
             throw new Exception('Registration code not found: ' . $registration_code);
         }
         
-        // Get updated registration details (case-insensitive)
-        $query = "SELECT u.full_name, u.email, e.event_name, r.registration_code, r.status
-                  FROM registrations r
-                  LEFT JOIN users u ON r.user_id = u.user_id
-                  LEFT JOIN events e ON r.event_id = e.event_id
-                  WHERE UPPER(r.registration_code) = UPPER(?)";
+        $registration_data = $result->fetch_assoc();
+        error_log('Found registration: ' . json_encode($registration_data));
         
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('s', $registration_code);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $registration = $result->fetch_assoc();
+        // Check coordinator access (if user is a coordinator)
+        // Admins bypass this check
+        if ($userInfo['role'] === 'COORDINATOR' && $userInfo['coordinator_id']) {
+            // Verify coordinator has access to this event
+            if ((int)$registration_data['coordinator_id'] !== (int)$userInfo['coordinator_id']) {
+                error_log('ERROR: Coordinator ' . $userInfo['coordinator_id'] . ' does not have access to event ' . $registration_data['event_id'] . ' (event assigned to coordinator: ' . ($registration_data['coordinator_id'] ?? 'None') . ')');
+                throw new Exception('You do not have access to check in participants for this event. Event is assigned to a different coordinator.');
+            }
+            error_log('✓ Coordinator ' . $userInfo['coordinator_id'] . ' verified for event ' . $registration_data['event_id']);
+        } elseif ($userInfo['role'] !== 'ADMIN' && $userInfo['role'] !== 'admin') {
+            error_log('ERROR: User with role ' . $userInfo['role'] . ' cannot check in participants');
+            throw new Exception('Only admins and coordinators can check in participants');
+        }
         
-        error_log('SUCCESS: Updated registration: ' . json_encode($registration));
+        // Now update the registration status
+        $update_query = "UPDATE registrations SET status = ? WHERE UPPER(registration_code) = UPPER(?)";
+        error_log('Update query: ' . $update_query);
+        error_log('Update params: status=' . $status . ', registration_code=' . $registration_code);
+        
+        $update_stmt = $conn->prepare($update_query);
+        
+        if (!$update_stmt) {
+            error_log('Prepare failed: ' . $conn->error);
+            throw new Exception('Prepare statement failed: ' . $conn->error);
+        }
+        
+        $update_stmt->bind_param('ss', $status, $registration_code);
+        
+        if (!$update_stmt->execute()) {
+            error_log('Execute failed: ' . $update_stmt->error);
+            throw new Exception('Failed to update registration: ' . $update_stmt->error);
+        }
+        
+        $rows_affected = $update_stmt->affected_rows;
+        error_log('Rows affected: ' . $rows_affected);
+        
+        // If no rows were affected, the status might already be ATTENDED
+        // This is OK - they're already checked in
+        if ($rows_affected === 0) {
+            if ($registration_data['current_status'] === $status) {
+                error_log('✓ Registration already has status: ' . $status);
+                // Person is already checked in - that's fine, return success
+            } else {
+                error_log('⚠ Update affected 0 rows, but status is: ' . $registration_data['current_status']);
+            }
+        } else {
+            error_log('✓ Updated registration status from ' . $registration_data['current_status'] . ' to ' . $status);
+        }
+        
+        error_log('SUCCESS: Check-in processed for registration ' . $registration_code);
         error_log('═══════════════════════════════════════');
+        
+        // Return the registration details
+        $response_data = [
+            'registration_id' => $registration_data['registration_id'],
+            'registration_code' => $registration_code,
+            'full_name' => $registration_data['full_name'],
+            'email' => $registration_data['email'],
+            'event_name' => $registration_data['event_name'],
+            'status' => $status,
+            'previous_status' => $registration_data['current_status'],
+            'already_checked_in' => ($rows_affected === 0 && $registration_data['current_status'] === $status)
+        ];
         
         http_response_code(200);
         echo json_encode([
             'success' => true,
-            'message' => 'Registration status updated to ' . $status,
-            'data' => $registration
+            'message' => 'Registration status is ' . $status,
+            'data' => $response_data
         ]);
         
     } catch (Exception $e) {
         error_log('EXCEPTION: ' . $e->getMessage());
         error_log('═══════════════════════════════════════');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    try {
+        // Delete a participant from an event
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        if (!$data) {
+            throw new Exception('Invalid JSON received');
+        }
+        
+        $registration_id = isset($data['registration_id']) ? intval($data['registration_id']) : 0;
+        $registration_code = trim($data['registration_code'] ?? '');
+        
+        if (!$registration_id && !$registration_code) {
+            throw new Exception('Registration ID or code is required');
+        }
+        
+        // Determine which column to use for deletion
+        if ($registration_id > 0) {
+            $query = "DELETE FROM registrations WHERE registration_id = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('i', $registration_id);
+        } else {
+            $query = "DELETE FROM registrations WHERE UPPER(registration_code) = UPPER(?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('s', $registration_code);
+        }
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to delete participant: ' . $stmt->error);
+        }
+        
+        if ($stmt->affected_rows === 0) {
+            throw new Exception('Participant not found');
+        }
+        
+        http_response_code(200);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Participant deleted successfully'
+        ]);
+        
+    } catch (Exception $e) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }

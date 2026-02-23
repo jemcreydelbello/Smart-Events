@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration System Health Check</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-card h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .test-result {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .test-result.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        .test-result.loading {
+            background: #e7f3ff;
+            color: #004085;
+            border-left: 4px solid #0066cc;
+        }
+        .icon {
+            font-size: 20px;
+            min-width: 30px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #0066cc;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button {
+            background: #1F4CC4;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .button:hover {
+            background: #1538A0;
+        }
+        .code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin: 30px 0 15px 0;
+            border-bottom: 2px solid #1F4CC4;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Registration System Health Check</h1>
+
+        <!-- API Tests -->
+        <div class="section-title">🔌 API Endpoints</div>
+        
+        <div class="test-card">
+            <h2>1. Events API Test</h2>
+            <button class="button" onclick="testEventsAPI()">Test Events API</button>
+            <div id="events-result"></div>
+        </div>
+
+        <div class="test-card">
+            <h2>2. Participants API Test</h2>
+            <button class="button" onclick="testParticipantsAPI()">Test Participants API</button>
+            <div id="participants-result"></div>
+        </div>
+
+        <div class="test-card">
+            <h2>3. Event Details API Test</h2>
+            <button class="button" onclick="testEventDetailsAPI()">Test Event Details API</button>
+            <div id="event-details-result"></div>
+        </div>
+
+        <!-- Database Tests -->
+        <div class="section-title">💾 Database Status</div>
+
+        <div class="test-card">
+            <h2>4. Check Registrations in Database</h2>
+            <button class="button" onclick="checkRegistrations()">Check Registrations</button>
+            <div id="registrations-result"></div>
+        </div>
+
+        <!-- Current State -->
+        <div class="section-title">📊 Current System State</div>
+
+        <div class="test-card">
+            <h2>5. System Status</h2>
+            <button class="button" onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+            <div id="diagnostic-result"></div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="section-title">🔗 Quick Actions</div>
+
+        <div class="test-card">
+            <p style="margin: 10px 0;">
+                <a href="../client/" style="display: inline-block; background: #1F4CC4; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: 600;">
+                    📱 Go to Client
+                </a>
+                <a href="verify-registrations.html" style="display: inline-block; background: #1F4CC4; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: 600; margin-left: 10px;">
+                    📋 View Registrations
+                </a>
+                <a href="event-details-simple.html?id=9" style="display: inline-block; background: #1F4CC4; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: 600; margin-left: 10px;">
+                    🎯 Event 9 Details
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = './api';
+
+        function addResult(elementId, message, type = 'loading') {
+            const el = document.getElementById(elementId);
+            const iconMap = {
+                'success': '✓',
+                'error': '✗',
+                'loading': '<span class="spinner"></span>'
+            };
+            const icon = iconMap[type] || '•';
+            el.innerHTML = `<div class="test-result ${type}"><span class="icon">${icon}</span><span>${message}</span></div>` + (el.innerHTML || '');
+        }
+
+        function testEventsAPI() {
+            const resultEl = 'events-result';
+            document.getElementById(resultEl).innerHTML = '';
+            addResult(resultEl, 'Testing Events API...', 'loading');
+
+            fetch(`${API_BASE}/events.php?action=list_all`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        addResult(resultEl, `✓ API responded successfully - Found ${data.data.length} events`, 'success');
+                        let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Registrations</th></tr></thead><tbody>';
+                        data.data.slice(0, 5).forEach(e => {
+                            let regCount = 0;
+                            html += `<tr><td>${e.event_id}</td><td>${e.event_name}</td><td>${e.event_date}</td><td>${e.total_registrations || 0}</td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                        document.getElementById(resultEl).innerHTML += html;
+                    } else {
+                        addResult(resultEl, 'API returned no data', 'error');
+                    }
+                })
+                .catch(e => addResult(resultEl, `API Error: ${e.message}`, 'error'));
+        }
+
+        function testParticipantsAPI() {
+            const resultEl = 'participants-result';
+            document.getElementById(resultEl).innerHTML = '';
+            addResult(resultEl, 'Testing Participants API (Event 9)...', 'loading');
+
+            fetch(`${API_BASE}/participants.php?action=list&event_id=9`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        addResult(resultEl, `✓ API responded - Found ${data.data.length} participants for Event 9`, 'success');
+                        let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>';
+                        data.data.forEach(p => {
+                            html += `<tr><td>${p.full_name}</td><td>${p.email}</td><td>${p.status}</td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                        document.getElementById(resultEl).innerHTML += html;
+                    } else {
+                        addResult(resultEl, 'No participants found for Event 9', 'error');
+                    }
+                })
+                .catch(e => addResult(resultEl, `API Error: ${e.message}`, 'error'));
+        }
+
+        function testEventDetailsAPI() {
+            const resultEl = 'event-details-result';
+            document.getElementById(resultEl).innerHTML = '';
+            addResult(resultEl, 'Testing Event Details API (Event 9)...', 'loading');
+
+            fetch(`${API_BASE}/events.php?action=detail&event_id=9`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const e = data.data;
+                        addResult(resultEl, `✓ Event Details retrieved: "${e.event_name}"`, 'success');
+                        let html = `
+                            <table>
+                                <tr><td><strong>Field</strong></td><td><strong>Value</strong></td></tr>
+                                <tr><td>Event ID</td><td>${e.event_id}</td></tr>
+                                <tr><td>Event Name</td><td>${e.event_name}</td></tr>
+                                <tr><td>Date</td><td>${e.event_date}</td></tr>
+                                <tr><td>Total Registrations</td><td>${e.total_registrations || 0}</td></tr>
+                                <tr><td>Attended</td><td>${e.attended_count || 0}</td></tr>
+                            </table>
+                        `;
+                        document.getElementById(resultEl).innerHTML += html;
+                    } else {
+                        addResult(resultEl, 'Event not found', 'error');
+                    }
+                })
+                .catch(e => addResult(resultEl, `API Error: ${e.message}`, 'error'));
+        }
+
+        function checkRegistrations() {
+            const resultEl = 'registrations-result';
+            document.getElementById(resultEl).innerHTML = '';
+            addResult(resultEl, 'Fetching registration data...', 'loading');
+
+            // Call a PHP script to get registration data
+            fetch('./api/participants.php?action=list&event_id=9')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        addResult(resultEl, `✓ Found ${data.data.length} registrations in database`, 'success');
+                        let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Registered</th></tr></thead><tbody>';
+                        data.data.forEach(p => {
+                            html += `<tr>
+                                <td>${p.full_name}</td>
+                                <td>${p.email}</td>
+                                <td>${p.company || '-'}</td>
+                                <td>${p.status}</td>
+                                <td>${p.registered_at ? p.registered_at.split(' ')[0] : '-'}</td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table>';
+                        document.getElementById(resultEl).innerHTML += html;
+                    } else {
+                        addResult(resultEl, '⚠️ No registrations found in database', 'error');
+                    }
+                })
+                .catch(e => addResult(resultEl, `Error: ${e.message}`, 'error'));
+        }
+
+        function runFullDiagnostic() {
+            const resultEl = 'diagnostic-result';
+            document.getElementById(resultEl).innerHTML = '';
+            
+            addResult(resultEl, '🔍 Running full system diagnostic...', 'loading');
+            
+            Promise.all([
+                fetch(`${API_BASE}/events.php?action=list_all`).then(r => r.json()),
+                fetch(`${API_BASE}/participants.php?action=list&event_id=9`).then(r => r.json())
+            ])
+            .then(([eventsData, participantsData]) => {
+                let messages = [];
+                
+                if (eventsData.success) {
+                    addResult(resultEl, `✓ Events API: ${eventsData.data.length} events found`, 'success');
+                } else {
+                    addResult(resultEl, '✗ Events API: Failed to fetch', 'error');
+                }
+                
+                if (participantsData.success && participantsData.data) {
+                    addResult(resultEl, `✓ Participants API: ${participantsData.data.length} registrations for Event 9`, 'success');
+                } else {
+                    addResult(resultEl, '✗ Participants API: No data or error', 'error');
+                }
+                
+                // Summary
+                if (eventsData.success && participantsData.data && participantsData.data.length > 0) {
+                    addResult(resultEl, '✓ SYSTEM STATUS: All checks passed! Registrations are connected and retrievable.', 'success');
+                } else {
+                    addResult(resultEl, '⚠️ SYSTEM STATUS: Some checks failed. Review above for details.', 'error');
+                }
+            })
+            .catch(e => {
+                addResult(resultEl, `✗ Diagnostic Error: ${e.message}`, 'error');
+            });
+        }
+
+        // Auto-run diagnostic on load
+        document.addEventListener('DOMContentLoaded', runFullDiagnostic);
+    </script>
+</body>
+</html>

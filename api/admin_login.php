@@ -4,6 +4,12 @@ require_once '../db_config.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
+// Handle CORS preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // LOGIN - Admin authentication
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
     try {
@@ -127,15 +133,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
         
         // Return success with admin data
         $adminData = [
+            'id' => $admin['admin_id'],
             'admin_id' => $admin['admin_id'],
             'username' => $admin['username'],
             'email' => $admin['email'],
-            'full_name' => $admin['full_name']
+            'full_name' => $admin['full_name'],
+            'role' => 'ADMIN',
+            'role_name' => 'ADMIN'
         ];
         
         // Include admin_image as base64 if available
         if ($admin['admin_image']) {
-            $adminData['admin_image'] = 'data:image/jpeg;base64,' . base64_encode($admin['admin_image']);
+            // Build the correct path to the image file
+            $image_path = '../uploads/' . $admin['admin_image'];
+            
+            // If the path doesn't start with 'admins/', add it
+            if (strpos($admin['admin_image'], 'admins/') !== 0) {
+                $image_path = '../uploads/admins/' . $admin['admin_image'];
+            }
+            
+            // Read the image file from disk
+            if (file_exists($image_path)) {
+                $image_data = file_get_contents($image_path);
+                if ($image_data) {
+                    // Determine MIME type
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime_type = finfo_file($finfo, $image_path);
+                    finfo_close($finfo);
+                    $adminData['admin_image'] = 'data:' . $mime_type . ';base64,' . base64_encode($image_data);
+                }
+            }
         }
         
         echo json_encode([
@@ -143,10 +170,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             'message' => 'Login successful',
             'admin' => $adminData
         ]);
+        exit;
         
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
+// COORDINATOR LOGIN - Coordinator authentication
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
+    try {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        $email = trim($data['email'] ?? '');
+        $password = trim($data['password'] ?? '');
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
+        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        
+        if (!$email || !$password) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Email/Username and password are required']);
+            exit;
+        }
+        
+        // Query coordinator by email or username
+        $query = "SELECT coordinator_id, coordinator_name, email, password_hash, is_active, coordinator_image
+                  FROM coordinators 
+                  WHERE email = ? OR coordinator_name = ?";
+        
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            throw new Exception('Database error: ' . $conn->error);
+        }
+        
+        $stmt->bind_param('ss', $email, $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Invalid email/username or password']);
+            exit;
+        }
+        
+        $coordinator = $result->fetch_assoc();
+        
+        // Check if coordinator account is active
+        if (!$coordinator['is_active']) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Your account is pending setup. Please contact an administrator.']);
+            exit;
+        }
+        
+        // Verify password
+        if (!password_verify($password, $coordinator['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Invalid email/username or password']);
+            exit;
+        }
+        
+        // Return success with coordinator data
+        $userData = [
+            'user_id' => $coordinator['coordinator_id'],
+            'id' => $coordinator['coordinator_id'],
+            'email' => $coordinator['email'],
+            'full_name' => $coordinator['coordinator_name'],
+            'role' => 'COORDINATOR',
+            'role_name' => 'COORDINATOR',
+            'coordinator_id' => $coordinator['coordinator_id']
+        ];
+        
+        // Include coordinator_image as base64 if available
+        if ($coordinator['coordinator_image']) {
+            $image_path = '../uploads/coordinators/' . $coordinator['coordinator_image'];
+            if (file_exists($image_path)) {
+                $image_data = file_get_contents($image_path);
+                if ($image_data) {
+                    // Determine MIME type
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime_type = finfo_file($finfo, $image_path);
+                    finfo_close($finfo);
+                    $userData['coordinator_image'] = 'data:' . $mime_type . ';base64,' . base64_encode($image_data);
+                }
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Login successful',
+            'user' => $userData
+        ]);
+        exit;
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+        exit;
     }
 }
 
@@ -171,10 +293,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'logout') {
         }
         
         echo json_encode(['success' => true, 'message' => 'Logout successful']);
+        exit;
         
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Logout error: ' . $e->getMessage()]);
+        exit;
     }
 }
 
@@ -201,20 +325,24 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 }
                 
                 echo json_encode(['success' => true, 'data' => $admin]);
+                exit;
             } else {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'message' => 'Admin not found']);
+                exit;
             }
         }
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        exit;
     }
 }
 
 else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
 }
 
 $conn->close();
