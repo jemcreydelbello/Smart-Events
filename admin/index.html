@@ -12,6 +12,47 @@
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <link rel="icon" type="image/png" href="../assets/logo2.png">
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
+  <link rel="stylesheet" href="../client/css/styles.css">
+  
+  <!-- Early page restoration script - runs before deferred admin.js -->
+  <script>
+    (function() {
+      // This runs immediately, before DOM content loads
+      // When DOM is ready, set up the right page BEFORE admin.js takes over
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restorePageEarly);
+      } else {
+        restorePageEarly();
+      }
+      
+      function restorePageEarly() {
+        // Check URL params or localStorage for saved page
+        const urlParams = new URLSearchParams(window.location.search);
+        let pageToLoad = urlParams.get('page');
+        
+        if (!pageToLoad) {
+          pageToLoad = localStorage.getItem('adminLastPage') || 'calendar';
+        }
+        
+        // Verify page exists
+        const targetPage = document.getElementById(pageToLoad);
+        if (!targetPage) {
+          pageToLoad = 'calendar';
+        }
+        
+        // Immediately set active on correct page BEFORE admin.js
+        const allPages = document.querySelectorAll('.page');
+        allPages.forEach(p => p.classList.remove('active'));
+        
+        const correctPage = document.getElementById(pageToLoad);
+        if (correctPage) {
+          correctPage.classList.add('active');
+          console.log('⚡ Early page restore: ' + pageToLoad);
+        }
+      }
+    })();
+  </script>
+  
   <script src="./js/admin.js" defer></script>
   
   <style>
@@ -21,6 +62,13 @@
     }
     .qr-scanning {
       animation: scannerPulse 2s infinite;
+    }
+    /* Hide all pages by default - only active page shows */
+    .page {
+      display: none !important;
+    }
+    .page.active {
+      display: block !important;
     }
   </style>
   
@@ -57,13 +105,12 @@
     };
   </script>
 </head>
-<body class="bg-gray-50">
-  <div class="flex">
+<body class="bg-gray-50 flex flex-row">
     <!-- Sidebar Container - Loads from sidebar-nav.php -->
-    <div id="sidebarContainer"></div>
+    <div id="sidebarContainer" style="flex-shrink: 0; width: 260px;"></div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content flex-1">
       <!-- Header - Hidden -->
       <div class="bg-white border-b border-gray-200 sticky top-0 z-30" style="display: none;">
         <div class="px-8 py-4">
@@ -76,7 +123,7 @@
       <div class="p-8">
         <!-- Dashboard Page -->
         <!-- Calendar Page -->
-        <div id="calendar" class="page active">
+        <div id="calendar" class="page">
           <!-- Page Title and Description -->
           <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Calendar</h1>
@@ -88,7 +135,7 @@
             <!-- Left: Calendar Section (Flexible Width) -->
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <!-- Calendar Controls -->
-              <div class="bg-white rounded-lg p-6 border border-gray-200">
+              <div class="bg-white rounded-lg p-6 border border-gray-200" style="min-height: 600px; display: flex; flex-direction: column;">
                 <div class="flex items-center justify-between mb-6">
                   <!-- Navigation Arrows and Today Button -->
                   <div class="flex items-center gap-4">
@@ -110,7 +157,7 @@
                 </div>
 
                 <!-- Calendar Grid -->
-                <div id="monthViewContainer" style="display: block;">
+                <div id="monthViewContainer" style="display: block; flex: 1;">
                   <div id="calendarGrid" class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e5e7eb; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
                     <!-- Days of week header -->
                     <div class="day-header" style="background: #f9fafb; padding: 12px; font-weight: 600; text-align: center; font-size: 12px; color: #666;">SUN</div>
@@ -125,8 +172,8 @@
                 </div>
 
                 <!-- List View -->
-                <div id="listViewContainer" style="display: none;">
-                  <div id="eventsList" class="space-y-3">
+                <div id="listViewContainer" style="display: none; flex: 1;">
+                  <div id="eventsList" class="space-y-3" style="max-height: 550px; overflow-y: auto;">
                     <!-- Events list will be populated here -->
                   </div>
                 </div>
@@ -172,23 +219,59 @@
         <!-- Events Page -->
         <div id="events" class="page">
           <!-- Page Title and Description -->
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
-            <div>
-              <h1 class="text-3xl font-bold text-gray-900 mb-2">Events</h1>
-              <p class="text-gray-600">Manage all your events and view their details.</p>
-            </div>
-            <button class="btn btn-primary" onclick="openCreateEventModal()" style="white-space: nowrap; flex-shrink: 0;">+ Create New Event</button>
+          <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Events</h1>
+            <p class="text-gray-600">Manage all upcoming and past events.</p>
           </div>
 
-          <!-- Main Events Layout -->
-          <div class="bg-white border border-gray-200" style="padding: 16px; margin: 0 -100vw -32px 0; width: calc(100vw - 280px); border-radius: 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-              <h3 class="text-lg font-semibold text-gray-900">Events List</h3>
-              <p class="text-sm text-gray-600">Click a card to view event details or manage the event.</p>
+          <!-- Events Management Panel -->
+          <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <!-- Header with Controls -->
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+              <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-1">Events List</h2>
+                <p class="text-sm text-gray-600">View and manage all events in the system.</p>
+              </div>
+              
+              <!-- Controls -->
+              <div class="flex items-center gap-3">
+                <!-- Search -->
+                <input 
+                  type="text" 
+                  id="eventSearch" 
+                  placeholder="Search events..." 
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  style="width: 200px;"
+                >
+                
+                <!-- Filter by Type -->
+                <select 
+                  id="eventTypeFilter" 
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  onchange="filterEventsByTypeUI(this.value)"
+                >
+                  <option value="all">All Types</option>
+                  <option value="public">Public Events</option>
+                  <option value="private">Private Events</option>
+                </select>
+                
+                <!-- Sort Options -->
+                <select 
+                  id="eventSortBy" 
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  onchange="sortEventsByUI(this.value)"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                </select>
+              </div>
             </div>
-            
-            <div id="eventsGrid" class="grid grid-cols-3 gap-4">
-              <!-- Event cards will be loaded here -->
+
+            <!-- Events List -->
+            <div id="eventsList" class="space-y-3" style="max-height: 600px; overflow-y: auto;">
+              <div class="spinner" style="padding: 50px; text-align: center;">Loading events...</div>
             </div>
           </div>
         </div>
@@ -457,7 +540,7 @@
                     <th style="padding: 12px 16px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody id="usersTable" style="divide-y divide-gray-200;">
+                <tbody id="usersTable">
                   <!-- Users will be loaded here -->
                 </tbody>
               </table>
@@ -488,7 +571,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <!-- Create Event Modal -->
   <div id="createEventModal" class="modal">
@@ -502,7 +584,7 @@
         <!-- Event Title -->
         <div>
           <label class="block text-sm font-medium text-gray-900 mb-2">Event Title *</label>
-          <input type="text" id="createEventTitle" required 
+          <input type="text" id="eventName" name="event_name" required 
                  class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                  placeholder="Enter event name">
         </div>
@@ -511,12 +593,12 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-900 mb-2">Event Date *</label>
-            <input type="date" id="createEventDate" required
+            <input type="date" id="eventDate" name="event_date" required
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-900 mb-2">Capacity *</label>
-            <input type="number" id="createEventCapacity" required min="1"
+            <input type="number" id="eventCapacity" name="capacity" required min="1"
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                    placeholder="0">
           </div>
@@ -526,12 +608,12 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-900 mb-2">Start Time</label>
-            <input type="time" id="createStartTime"
+            <input type="time" id="eventStartTime" name="start_time"
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-900 mb-2">End Time</label>
-            <input type="time" id="createEndTime"
+            <input type="time" id="eventEndTime" name="end_time"
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
@@ -539,7 +621,7 @@
         <!-- Location -->
         <div>
           <label class="block text-sm font-medium text-gray-900 mb-2">Location *</label>
-          <input type="text" id="createEventLocation" required
+          <input type="text" id="eventLocation" name="location" required
                  class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                  placeholder="Enter venue location">
         </div>
@@ -547,7 +629,7 @@
         <!-- Description -->
         <div>
           <label class="block text-sm font-medium text-gray-900 mb-2">Description</label>
-          <textarea id="createEventDescription"
+          <textarea id="eventDescription" name="description"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Event description (optional)"
                     rows="4" style="resize: vertical;"></textarea>
@@ -559,7 +641,7 @@
           <div id="createEventImagePreview" class="w-full aspect-video bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center mb-3 overflow-hidden">
             <span class="text-4xl text-gray-400">📷</span>
           </div>
-          <input type="file" id="createEventImage" accept="image/*"
+          <input type="file" id="eventImage" name="image" accept="image/*"
                  class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                  onchange="previewEventImage(event)">
           <small class="text-gray-500 block mt-2">Max 5MB. Formats: JPG, PNG, GIF, WebP</small>
@@ -708,7 +790,7 @@
           <h2 class="text-2xl font-bold text-gray-900 mb-2">Add Past Event</h2>
           <p class="text-sm text-gray-600">Publish a past event to the catalogue.</p>
         </div>
-        <button type="button" onclick="document.getElementById('addPastEventModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink-0;">×</button>
+        <button type="button" onclick="document.getElementById('addPastEventModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink: 0;">×</button>
       </div>
       
       <form id="addPastEventForm" style="display: flex; flex-direction: column; gap: 16px;">
@@ -769,7 +851,7 @@
           <h2 class="text-2xl font-bold text-gray-900 mb-2">Lookup Events</h2>
           <p class="text-sm text-gray-600">Search past events and add them to the catalogue.</p>
         </div>
-        <button type="button" onclick="CatalogueManager.closeLookupModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink-0;">×</button>
+        <button type="button" onclick="CatalogueManager.closeLookupModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink: 0;">×</button>
       </div>
       
       <!-- Search Bar -->
@@ -843,14 +925,13 @@
         
         <!-- Image Upload Input -->
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Event Image *</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Event Image (Optional)</label>
           <input 
             type="file" 
             id="lookupEventImage" 
             accept="image/*" 
             onchange="previewLookupImage(event)"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           >
           <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF, WebP</p>
         </div>
@@ -1197,10 +1278,15 @@
 
     // Open lookup image modal for past events
     function openLookupImageModal(eventId, eventName) {
+      // Open modal to allow optional image upload/replacement
       document.getElementById('lookupImageEventId').value = eventId;
       document.getElementById('lookupImageEventName').value = eventName;
+      
+      // Reset the form
       document.getElementById('lookupEventImage').value = '';
       document.getElementById('lookupImagePreview').innerHTML = '<span class="text-4xl text-gray-400">📷</span>';
+      
+      // Show the modal
       document.getElementById('lookupImageModal').classList.add('active');
     }
 
@@ -1224,15 +1310,12 @@
       const eventName = document.getElementById('lookupImageEventName').value;
       const imageFile = document.getElementById('lookupEventImage').files[0];
       
-      if (!imageFile) {
-        alert('Please select an image for this event');
-        return;
-      }
-      
       const formData = new FormData();
       formData.append('action', 'add_with_image');
       formData.append('event_id', eventId);
-      formData.append('image', imageFile);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
       
       const headers = getUserHeaders();
       delete headers['Content-Type'];
@@ -1524,17 +1607,17 @@
       e.preventDefault();
       
       const formData = new FormData();
-      formData.append('event_name', document.getElementById('createEventTitle').value);
-      formData.append('event_date', document.getElementById('createEventDate').value);
-      formData.append('capacity', document.getElementById('createEventCapacity').value);
-      formData.append('start_time', document.getElementById('createStartTime').value || null);
-      formData.append('end_time', document.getElementById('createEndTime').value || null);
-      formData.append('location', document.getElementById('createEventLocation').value);
-      formData.append('description', document.getElementById('createEventDescription').value);
+      formData.append('event_name', document.getElementById('eventName').value);
+      formData.append('event_date', document.getElementById('eventDate').value);
+      formData.append('capacity', document.getElementById('eventCapacity').value);
+      formData.append('start_time', document.getElementById('eventStartTime').value || null);
+      formData.append('end_time', document.getElementById('eventEndTime').value || null);
+      formData.append('location', document.getElementById('eventLocation').value);
+      formData.append('description', document.getElementById('eventDescription').value);
       formData.append('is_private', document.getElementById('createEventPrivate').checked ? 1 : 0);
       
       // Add image file if selected
-      const imageFile = document.getElementById('createEventImage').files[0];
+      const imageFile = document.getElementById('eventImage').files[0];
       if (imageFile) {
         formData.append('image', imageFile);
       }
@@ -1784,7 +1867,16 @@
           })
         });
         
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse API response:', responseText);
+          showQRResult('✗ Server error - invalid response', false);
+          return;
+        }
         
         if (data.success) {
           console.log('✓ Check-in successful:', data.data);
@@ -1792,11 +1884,18 @@
           // Check if already checked in
           if (data.data.already_checked_in) {
             showQRResult(`✓ ${data.data.full_name} (Already checked in)`, true);
+            console.log('Note: Participant was already marked as attended');
           } else {
             showQRResult(`✓ ${data.data.full_name} checked in!`, true);
+            console.log('Participant marked as attended');
           }
           
-          addCheckInRecord(data.data);
+          // Only add to table if it exists
+          try {
+            addCheckInRecord(data.data);
+          } catch (addError) {
+            console.log('Could not add to check-in table (may not be visible):', addError);
+          }
         } else {
           console.log('✗ Check-in failed:', data.message);
           showQRResult('✗ ' + (data.message || 'Invalid registration code'), false);
@@ -1843,6 +1942,17 @@
       const resultDiv = document.getElementById('qrResult');
       const resultText = document.getElementById('resultText');
       
+      // If result elements don't exist on this page, log to console instead
+      if (!resultDiv || !resultText) {
+        console.log('QR Result: ' + message);
+        if (success) {
+          console.log('✓ ' + message);
+        } else {
+          console.warn('✗ ' + message);
+        }
+        return;
+      }
+      
       resultDiv.style.display = 'block';
       resultDiv.style.background = success ? '#E8F5E9' : '#FFEBEE';
       resultDiv.style.borderLeft = '4px solid ' + (success ? '#4CAF50' : '#F44336');
@@ -1857,34 +1967,51 @@
     }
 
     function addCheckInRecord(data) {
-      const tbody = document.getElementById('recentCheckinsTable');
-      
-      // Remove empty state message if it exists
-      if (tbody.innerHTML.includes('No check-ins yet')) {
-        tbody.innerHTML = '';
-      }
-      
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
-      const row = document.createElement('tr');
-      row.style.borderBottom = '1px solid #e8e8e8';
-      row.innerHTML = `
-        <td style="padding: 12px 15px; color: #333; font-size: 13px;">${timeStr}</td>
-        <td style="padding: 12px 15px; color: #333; font-size: 13px;">${data.full_name}</td>
-        <td style="padding: 12px 15px; color: #333; font-size: 13px;">${data.event_name || '-'}</td>
-        <td style="padding: 12px 15px;">
-          <span style="display: inline-block; background: #C8E6C9; color: #388E3C; padding: 5px 12px; border-radius: 3px; font-size: 12px; font-weight: 500;">
-            Attended
-          </span>
-        </td>
-      `;
-      
-      tbody.insertBefore(row, tbody.firstChild);
-      
-      // Keep only last 10 check-ins
-      while (tbody.children.length > 10) {
-        tbody.removeChild(tbody.lastChild);
+      try {
+        const tbody = document.getElementById('recentCheckinsTable');
+        
+        // If the table doesn't exist, skip adding the record
+        if (!tbody) {
+          console.log('✓ Check-in saved (table not available on this page)');
+          return;
+        }
+        
+        // Remove empty state message if it exists (safely)
+        try {
+          if (tbody.innerHTML && tbody.innerHTML.includes('No check-ins yet')) {
+            tbody.innerHTML = '';
+          }
+        } catch (e) {
+          console.log('Could not clear empty state message');
+        }
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #e8e8e8';
+        row.innerHTML = `
+          <td style="padding: 12px 15px; color: #333; font-size: 13px;">${timeStr}</td>
+          <td style="padding: 12px 15px; color: #333; font-size: 13px;">${data.full_name || 'Unknown'}</td>
+          <td style="padding: 12px 15px; color: #333; font-size: 13px;">${data.event_name || '-'}</td>
+          <td style="padding: 12px 15px;">
+            <span style="display: inline-block; background: #C8E6C9; color: #388E3C; padding: 5px 12px; border-radius: 3px; font-size: 12px; font-weight: 500;">
+              Attended
+            </span>
+          </td>
+        `;
+        
+        tbody.insertBefore(row, tbody.firstChild);
+        
+        // Keep only last 10 check-ins
+        while (tbody.children.length > 10) {
+          tbody.removeChild(tbody.lastChild);
+        }
+        
+        console.log('✓ Added check-in record to table');
+      } catch (error) {
+        console.error('Error adding check-in record:', error);
+        // Don't throw - this is non-critical
       }
     }
 

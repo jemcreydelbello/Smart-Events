@@ -53,12 +53,21 @@ function ensureCatalogueTableExists($conn) {
             description TEXT,
             image_url VARCHAR(255),
             is_private BOOLEAN DEFAULT FALSE,
+            is_published BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE SET NULL
         )";
         
         if (!$conn->query($create_query)) {
             throw new Exception('Failed to create catalogue table: ' . $conn->error);
+        }
+    } else {
+        // Add is_published column if it doesn't exist
+        $check_col = "SHOW COLUMNS FROM catalogue LIKE 'is_published'";
+        $col_result = $conn->query($check_col);
+        if ($col_result->num_rows == 0) {
+            $alter_query = "ALTER TABLE catalogue ADD COLUMN is_published BOOLEAN DEFAULT FALSE";
+            $conn->query($alter_query); // Ignore error if column already exists
         }
     }
 }
@@ -70,7 +79,7 @@ try {
         
         if ($action === 'list') {
             ensureCatalogueTableExists($conn);
-            $query = "SELECT * FROM catalogue ORDER BY event_date DESC";
+            $query = "SELECT * FROM catalogue WHERE is_published = 1 ORDER BY event_date DESC";
             $result = $conn->query($query);
             if (!$result) {
                 throw new Exception('Query failed: ' . $conn->error);
@@ -82,20 +91,86 @@ try {
             }
             echo json_encode(['success' => true, 'data' => $events]);
         } 
-        elseif ($action === 'lookup') {
+        elseif ($action === 'sync_completed') {
+            // Automatically add all completed (past) events to catalogue that aren't already there
             ensureCatalogueTableExists($conn);
             $today = date('Y-m-d');
-            $query = "SELECT e.event_id, e.event_name, e.event_date, e.location, e.image_url, e.is_private, e.description
-                      FROM events e
-                      WHERE e.event_date < ?
-                      AND e.event_id NOT IN (SELECT COALESCE(event_id, -1) FROM catalogue WHERE event_id IS NOT NULL)
-                      ORDER BY e.event_date DESC";
+            
+            // Get all past events not in catalogue
+            $select_query = "SELECT e.event_id, e.event_name, e.event_date, e.location, e.description, e.image_url, e.is_private
+                            FROM events e
+                            WHERE e.event_date < ?
+                            AND e.event_id NOT IN (SELECT COALESCE(event_id, -1) FROM catalogue WHERE event_id IS NOT NULL)
+                            ORDER BY e.event_date DESC";
+            
+            $stmt = $conn->prepare($select_query);
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            $stmt->bind_param('s', $today);
+            if (!$stmt->execute()) {
+                throw new Exception('Execute failed: ' . $stmt->error);
+            }
+            $result = $stmt->get_result();
+            $completed_events = [];
+            $sync_count = 0;
+            
+            while ($event = $result->fetch_assoc()) {
+                $completed_events[] = $event;
+            }
+            $stmt->close();
+            
+            // Insert all completed events into catalogue
+            if (count($completed_events) > 0) {
+                $insert_query = "INSERT INTO catalogue (event_id, event_name, event_date, location, description, image_url, is_private) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $insert_stmt = $conn->prepare($insert_query);
+                if (!$insert_stmt) {
+                    throw new Exception('Prepare insert failed: ' . $conn->error);
+                }
+                
+                foreach ($completed_events as $event) {
+                    $event_id = $event['event_id'];
+                    $event_name = $event['event_name'];
+                    $event_date = $event['event_date'];
+                    $location = $event['location'];
+                    $description = $event['description'];
+                    $image_url = $event['image_url'];
+                    $is_private = intval($event['is_private']);
+                    
+                    $insert_stmt->bind_param('isssssi', $event_id, $event_name, $event_date, $location, $description, $image_url, $is_private);
+                    
+                    if ($insert_stmt->execute()) {
+                        $sync_count++;
+                    }
+                }
+                $insert_stmt->close();
+                
+                // Mark synced events as archived in the events table
+                $archive_query = "UPDATE events SET archived = 1 WHERE event_id IN (SELECT event_id FROM catalogue WHERE is_published = 0)";
+                if (!$conn->query($archive_query)) {
+                    error_log("Warning: Could not archive synced events: " . $conn->error);
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Auto-sync complete',
+                'synced_count' => $sync_count,
+                'data' => $completed_events
+            ]);
+        }
+        elseif ($action === 'lookup') {
+            ensureCatalogueTableExists($conn);
+            // Show catalogue events that haven't been published to frontend yet
+            $query = "SELECT catalogue_id, event_id, event_name, event_date, location, image_url, is_private, description
+                      FROM catalogue 
+                      WHERE is_published = 0
+                      ORDER BY event_date DESC";
             
             $stmt = $conn->prepare($query);
             if (!$stmt) {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
-            $stmt->bind_param('s', $today);
             if (!$stmt->execute()) {
                 throw new Exception('Execute failed: ' . $stmt->error);
             }
@@ -140,7 +215,7 @@ try {
             }
             
             // Get event details
-            $event_query = "SELECT event_id, event_name, event_date, location, is_private, description FROM events WHERE event_id = ?";
+            $event_query = "SELECT event_id, event_name, event_date, location, is_private, description, image_url FROM events WHERE event_id = ?";
             $stmt = $conn->prepare($event_query);
             if (!$stmt) {
                 throw new Exception('Prepare failed: ' . $conn->error);
@@ -157,7 +232,8 @@ try {
                 exit;
             }
             
-            $image_url = null;
+            $image_url = $event['image_url']; // Use existing image from events table
+            $new_image_uploaded = false;
             
             // Handle image upload if provided
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
@@ -184,24 +260,66 @@ try {
                 }
                 
                 $image_url = 'uploads/' . $file_name;
+                $new_image_uploaded = true;
             }
             
-            // Insert into catalogue
-            $insert_query = "INSERT INTO catalogue (event_id, event_name, event_date, location, description, image_url, is_private) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $insert_stmt = $conn->prepare($insert_query);
-            if (!$insert_stmt) {
-                throw new Exception('Prepare failed: ' . $conn->error);
+            // Check if event already in catalogue
+            $check_query = "SELECT catalogue_id FROM catalogue WHERE event_id = ?";
+            $check_stmt = $conn->prepare($check_query);
+            if (!$check_stmt) {
+                throw new Exception('Prepare check failed: ' . $conn->error);
             }
-            // Use the event's original privacy status (public/private stays the same)
-            $is_private = intval($event['is_private']);
-            $insert_stmt->bind_param('isssssi', $event_id, $event['event_name'], $event['event_date'], $event['location'], $event['description'], $image_url, $is_private);
+            $check_stmt->bind_param('i', $event_id);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
             
-            if ($insert_stmt->execute()) {
-                echo json_encode(['success' => true, 'message' => 'Event added to catalogue']);
+            if ($check_result->num_rows > 0) {
+                // Event already in catalogue - update image if provided and mark as published
+                $catalogue_row = $check_result->fetch_assoc();
+                $catalogue_id = $catalogue_row['catalogue_id'];
+                
+                // Update query - include image_url only if a new image was uploaded
+                if ($new_image_uploaded) {
+                    $update_query = "UPDATE catalogue SET is_published = 1, image_url = ? WHERE catalogue_id = ?";
+                    $update_stmt = $conn->prepare($update_query);
+                    if (!$update_stmt) {
+                        throw new Exception('Prepare update failed: ' . $conn->error);
+                    }
+                    $update_stmt->bind_param('si', $image_url, $catalogue_id);
+                } else {
+                    $update_query = "UPDATE catalogue SET is_published = 1 WHERE catalogue_id = ?";
+                    $update_stmt = $conn->prepare($update_query);
+                    if (!$update_stmt) {
+                        throw new Exception('Prepare update failed: ' . $conn->error);
+                    }
+                    $update_stmt->bind_param('i', $catalogue_id);
+                }
+                
+                if ($update_stmt->execute()) {
+                    echo json_encode(['success' => true, 'message' => 'Event published to catalogue']);
+                } else {
+                    throw new Exception('Failed to publish event: ' . $update_stmt->error);
+                }
+                $update_stmt->close();
             } else {
-                throw new Exception('Failed to add event: ' . $insert_stmt->error);
+                // Event not in catalogue yet - insert with is_published = 1
+                $insert_query = "INSERT INTO catalogue (event_id, event_name, event_date, location, description, image_url, is_private, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
+                $insert_stmt = $conn->prepare($insert_query);
+                if (!$insert_stmt) {
+                    throw new Exception('Prepare insert failed: ' . $conn->error);
+                }
+                // Use the event's original privacy status (public/private stays the same)
+                $is_private = intval($event['is_private']);
+                $insert_stmt->bind_param('isssss i', $event_id, $event['event_name'], $event['event_date'], $event['location'], $event['description'], $image_url, $is_private);
+                
+                if ($insert_stmt->execute()) {
+                    echo json_encode(['success' => true, 'message' => 'Event added to catalogue']);
+                } else {
+                    throw new Exception('Failed to add event: ' . $insert_stmt->error);
+                }
+                $insert_stmt->close();
             }
-            $insert_stmt->close();
+            $check_stmt->close();
         } 
         elseif ($action === 'add_manual') {
             ensureCatalogueTableExists($conn);

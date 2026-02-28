@@ -1,3 +1,120 @@
+.event-tabs-wrapper {
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+    overflow-x: auto;
+    padding: 0 20px;
+}
+.event-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #f0f0f0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.event-tab-btn {
+    padding: 15px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #999;
+    font-size: 14px;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+.event-tab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+.event-tab-btn:hover {
+    color: #2563eb;
+}
+.event-tab-content {
+    background: white;
+    border-radius: 8px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+.event-tab-content.active {
+    display: block;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+.stat-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+    text-align: center;
+}
+.stat-card.purple {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.stat-card.pink {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.stat-card.cyan {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+.stat-card.green {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+}
+.overview-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e8e8e8;
+}
+.overview-card h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+.overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.overview-item {
+    margin-bottom: 15px;
+}
+.overview-item strong {
+    display: block;
+    color: #333;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+.overview-item span {
+    color: #666;
+    font-size: 14px;
+}
+.tab-content-wrapper {
+    padding: 30px 20px;
+}
 /* ========================================
    EVENT DETAILS PAGE - ADMIN PANEL
    ======================================== */

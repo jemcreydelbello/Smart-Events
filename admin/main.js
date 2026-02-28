@@ -1,53 +1,70 @@
-// API Base URL - Updated for nested folder structure
+/* ============================================
+   SMART EVENTS - ADMIN MAIN LOADER
+   Loads core admin.js and provides page initialization
+   This file ensures all admin functions are loaded globally
+   ============================================ */
+
+// API Base URL
 const API_BASE = '../api';
 
-// Chart instances
+// Chart instances (defined globally for dashboard)
 let registrationChart = null;
 let attendanceChart = null;
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded');
-    loadDashboard();
-    setupNavigation();
-    setupFormHandlers();
+// Initialize page once DOM is ready and admin.js is loaded
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Main loader: DOM loaded');
+    
+    // Ensure admin.js functions are available
+    if (typeof loadDashboard === 'undefined') {
+        console.warn('Admin functions not loaded yet. admin.js may not be loaded');
+        return;
+    }
+    
+    try {
+        loadDashboard();
+        setupNavigation();
+        setupFormHandlers();
+        console.log('✓ Admin initialization complete');
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
 });
 
-function setupFormHandlers() {
-    console.log('Setting up form handlers...');
-    
-    // Setup create event form
-    const createForm = document.getElementById('createEventForm');
-    if (createForm) {
-        console.log('Found createEventForm, adding submit handler');
-        createForm.addEventListener('submit', function(e) {
-            console.log('Form submit event fired');
-            createEvent(e);
+// Dashboard setup function
+function loadDashboard() {
+    fetch(`${API_BASE}/dashboard.php`)
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON but got: ${contentType}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                updateDashboardStats(data.data);
+                if (typeof drawRegistrationTrends === 'function') {
+                    drawRegistrationTrends(data.data.registrationTrends);
+                    drawAttendanceChart(data.data.attendanceStatus);
+                }
+            } else {
+                console.error('Dashboard API error:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading dashboard:', error);
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) {
+                dashboard.innerHTML = `<div style="color: red; padding: 20px;">Error loading dashboard: ${error.message}</div>`;
+            }
         });
-    } else {
-        console.error('createEventForm not found!');
-    }
-    
-    // Setup edit event form
-    const editForm = document.getElementById('editEventForm');
-    if (editForm) {
-        console.log('Found editEventForm, adding submit handler');
-        editForm.addEventListener('submit', function(e) {
-            console.log('Edit form submit event fired');
-            updateEvent(e);
-        });
-    } else {
-        console.log('editEventForm not yet available');
-    }
 }
 
-function setupNavigation() {
-    const navLinks = document.querySelectorAll('.sidebar-menu a');
-    
-    // Load user info from localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    navLinks.forEach(link => {
+// Note: All other admin functions are loaded from admin.js in the js folder
+// This file serves as the entry point for the admin dashboard
+
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const page = this.getAttribute('data-page');

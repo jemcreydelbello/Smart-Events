@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - localStorage Check</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', monospace; background: #1a1a1a; color: #0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #00ff00; margin-bottom: 20px; }
+        .section { background: #222; padding: 20px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; }
+        .key { color: #ffaa00; font-weight: bold; }
+        .value { color: #00ff00; }
+        .error { color: #ff5555; }
+        .success { color: #55ff55; }
+        pre { background: #111; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+        button { background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 DEBUG: localStorage Content</h1>
+        
+        <div class="section">
+            <h2>📦 Raw localStorage Data</h2>
+            <div id="localStorage-content"></div>
+        </div>
+
+        <div class="section">
+            <h2>👤 Admin Data (Parsed)</h2>
+            <div id="admin-data"></div>
+        </div>
+
+        <div class="section">
+            <h2>👥 User/Coordinator Data (Parsed)</h2>
+            <div id="user-data"></div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Sidebar Test</h2>
+            <div id="sidebar-test"></div>
+        </div>
+
+        <div class="section">
+            <button onclick="location.href='./index.html'">Go to Dashboard</button>
+            <button onclick="location.href='./login.html'">Go to Login</button>
+            <button onclick="clearStorage()">Clear localStorage</button>
+        </div>
+    </div>
+
+    <script>
+        function displayLocalStorage() {
+            const container = document.getElementById('localStorage-content');
+            const admin = localStorage.getItem('admin');
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+
+            let html = '<pre>';
+            html += '<span class="key">admin:</span> ' + (admin ? admin : '<span class="error">NOT SET</span>') + '\n\n';
+            html += '<span class="key">user:</span> ' + (user ? user : '<span class="error">NOT SET</span>') + '\n\n';
+            html += '<span class="key">token:</span> ' + (token ? token : '<span class="error">NOT SET</span>') + '\n';
+            html += '</pre>';
+
+            container.innerHTML = html;
+        }
+
+        function displayAdminData() {
+            const container = document.getElementById('admin-data');
+            const admin = localStorage.getItem('admin');
+
+            if (!admin) {
+                container.innerHTML = '<span class="error">❌ No admin data in localStorage</span>';
+                return;
+            }
+
+            try {
+                const adminObj = JSON.parse(admin);
+                let html = '<pre>';
+                html += JSON.stringify(adminObj, null, 2);
+                html += '</pre>';
+                
+                html += '<div style="margin-top: 10px;">';
+                html += '<p><span class="key">full_name:</span> ' + (adminObj.full_name || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">email:</span> ' + (adminObj.email || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">name:</span> ' + (adminObj.name || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">id:</span> ' + (adminObj.id || adminObj.admin_id || '<span class="error">MISSING</span>') + '</p>';
+                html += '</div>';
+
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<span class="error">Error parsing admin data: ' + e.message + '</span>';
+            }
+        }
+
+        function displayUserData() {
+            const container = document.getElementById('user-data');
+            const user = localStorage.getItem('user');
+
+            if (!user) {
+                container.innerHTML = '<span class="error">❌ No user/coordinator data in localStorage</span>';
+                return;
+            }
+
+            try {
+                const userObj = JSON.parse(user);
+                let html = '<pre>';
+                html += JSON.stringify(userObj, null, 2);
+                html += '</pre>';
+                
+                html += '<div style="margin-top: 10px;">';
+                html += '<p><span class="key">full_name:</span> ' + (userObj.full_name || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">email:</span> ' + (userObj.email || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">name:</span> ' + (userObj.name || '<span class="error">MISSING</span>') + '</p>';
+                html += '<p><span class="key">id:</span> ' + (userObj.id || userObj.user_id || userObj.coordinator_id || '<span class="error">MISSING</span>') + '</p>';
+                html += '</div>';
+
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<span class="error">Error parsing user data: ' + e.message + '</span>';
+            }
+        }
+
+        function testSidebar() {
+            const container = document.getElementById('sidebar-test');
+            const nameEl = document.getElementById('userNameDisplay');
+            const emailEl = document.getElementById('userEmail');
+
+            let html = '<p><span class="key">Sidebar DOM Elements Found:</span></p>';
+            html += '<p>• userNameDisplay: ' + (nameEl ? '<span class="success">✓ FOUND</span>' : '<span class="error">✗ NOT FOUND</span>') + '</p>';
+            html += '<p>• userEmail: ' + (emailEl ? '<span class="success">✓ FOUND</span>' : '<span class="error">✗ NOT FOUND</span>') + '</p>';
+
+            if (nameEl) {
+                html += '<p><span class="key">Name element content:</span> <span class="value">' + nameEl.textContent + '</span></p>';
+            }
+            if (emailEl) {
+                html += '<p><span class="key">Email element content:</span> <span class="value">' + emailEl.textContent + '</span></p>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function clearStorage() {
+            if (confirm('Clear all localStorage data?')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Run on load
+        window.addEventListener('load', () => {
+            displayLocalStorage();
+            displayAdminData();
+            displayUserData();
+            testSidebar();
+        });
+    </script>
+</body>
+</html>

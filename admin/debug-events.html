@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Events Debug Test</title>
+    <script>
+        // Test the full flow
+        function runTest() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing...</p>';
+            
+            // Set fake admin in localStorage
+            localStorage.setItem('admin', JSON.stringify({
+                id: 1,
+                username: 'admin',
+                email: 'admin@example.com',
+                role: 'ADMIN',
+                full_name: 'Admin User'
+            }));
+            
+            // Test 1: Check localStorage
+            const admin = JSON.parse(localStorage.getItem('admin'));
+            let html = '<h3>Test 1: localStorage</h3>';
+            html += '<p>✓ Admin stored: ' + (admin ? admin.username : 'FAILED') + '</p>';
+            
+            // Test 2: Fetch sidebar
+            html += '<h3>Test 2: Sidebar</h3>';
+            fetch('sidebar-nav.php')
+                .then(r => {
+                    html += '<p>✓ sidebar-nav.php status: ' + r.status + '</p>';
+                    return r.text();
+                })
+                .then(text => {
+                    html += '<p>✓ Got ' + text.length + ' bytes of sidebar HTML</p>';
+                    results.innerHTML += html;
+                })
+                .catch(e => {
+                    html += '<p>✗ Sidebar error: ' + e.message + '</p>';
+                    results.innerHTML += html;
+                });
+            
+            // Test 3: Fetch API
+            html += '<h3>Test 3: Events API</h3>';
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-User-Role': 'ADMIN',
+                'X-User-Id': '1'
+            };
+            fetch('../api/events.php?action=list', { headers })
+                .then(r => {
+                    html += '<p>✓ API status: ' + r.status + '</p>';
+                    return r.json();
+                })
+                .then(data => {
+                    html += '<p>✓ API success: ' + data.success + '</p>';
+                    html += '<p>✓ Events count: ' + (data.data ? data.data.length : 0) + '</p>';
+                    if (data.data && data.data.length > 0) {
+                        html += '<p>✓ First event: ' + data.data[0].event_name + '</p>';
+                    }
+                    results.innerHTML += html;
+                })
+                .catch(e => {
+                    html += '<p>✗ API error: ' + e.message + '</p>';
+                    results.innerHTML += html;
+                });
+        }
+        
+        window.addEventListener('load', runTest);
+    </script>
+</head>
+<body>
+    <h1>Events Debug Test</h1>
+    <div id="results" style="border: 1px solid #ccc; padding: 20px; margin-top: 20px;"></div>
+</body>
+</html>

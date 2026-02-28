@@ -202,10 +202,78 @@ function logActivity(actionType, actionDescription) {
 // SECTION 2: SIDEBAR & NAVIGATION
 // ================================================================================
 
+// Update user profile in sidebar from localStorage
+function updateUserProfile() {
+    console.log('[PROFILE-UPDATE] Starting profile update...');
+    try {
+        var adminStr = localStorage.getItem('admin');
+        var userStr = localStorage.getItem('user');
+        console.log('[PROFILE-UPDATE] admin data length:', adminStr ? adminStr.length : 0);
+        console.log('[PROFILE-UPDATE] user data length:', userStr ? userStr.length : 0);
+        
+        var profile = null;
+        var isAdmin = false;
+        var isCoordinator = false;
+        
+        if (adminStr) {
+            profile = JSON.parse(adminStr);
+            isAdmin = true;
+            console.log('[PROFILE-UPDATE] Parsed admin profile:', profile);
+        } else if (userStr) {
+            profile = JSON.parse(userStr);
+            isCoordinator = true;
+            console.log('[PROFILE-UPDATE] Parsed coordinator profile:', profile);
+        }
+        
+        if (profile && profile.full_name) {
+            var nameEl = document.getElementById('userNameDisplay');
+            var emailEl = document.getElementById('userEmail');
+            var roleEl = document.getElementById('userRole');
+            var accountTypeEl = document.getElementById('userAccountType');
+            
+            if (nameEl) {
+                nameEl.textContent = profile.full_name;
+                console.log('[PROFILE-UPDATE] Updated name to:', profile.full_name);
+            }
+            if (emailEl) {
+                emailEl.textContent = profile.email || 'user@smartevents.com';
+                console.log('[PROFILE-UPDATE] Updated email to:', profile.email);
+            }
+            if (accountTypeEl) {
+                if (isAdmin) {
+                    accountTypeEl.textContent = 'Admin';
+                    accountTypeEl.className = 'session-meta text-blue-600 font-semibold';
+                    console.log('[PROFILE-UPDATE] Set account type to Admin');
+                } else if (isCoordinator) {
+                    accountTypeEl.textContent = 'Coordinator';
+                    accountTypeEl.className = 'session-meta text-purple-600 font-semibold';
+                    console.log('[PROFILE-UPDATE] Set account type to Coordinator');
+                }
+            }
+            if (roleEl) {
+                if (isAdmin) {
+                    roleEl.textContent = 'Admin View';
+                    roleEl.className = 'session-badge text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700';
+                    console.log('[PROFILE-UPDATE] Set role to Admin');
+                } else if (isCoordinator) {
+                    roleEl.textContent = 'Coordinator View';
+                    roleEl.className = 'session-badge text-xs font-semibold px-2 py-1 rounded bg-purple-100 text-purple-700';
+                    console.log('[PROFILE-UPDATE] Set role to Coordinator');
+                }
+            }
+            console.log('[PROFILE-UPDATE] SUCCESS: Profile updated!');
+        } else {
+            console.log('[PROFILE-UPDATE] No profile name found in data');
+        }
+    } catch (e) {
+        console.error('[PROFILE-UPDATE] Error:', e);
+    }
+}
+
 function loadSidebarNavigation() {
     return new Promise((resolve, reject) => {
         console.log('Loading sidebar navigation...');
-        fetch('sidebar-nav.html')
+        fetch('sidebar-nav.php')
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load sidebar: ${response.status}`);
@@ -217,6 +285,7 @@ function loadSidebarNavigation() {
                 if (sidebarContainer) {
                     sidebarContainer.innerHTML = html;
                     console.log('✓ Sidebar loaded successfully');
+                    updateUserProfile();
                     setupNavigation();
                     resolve();
                 } else {
@@ -236,7 +305,7 @@ function loadSidebarNavigation() {
 }
 
 function setupNavigation() {
-    const navLinks = document.querySelectorAll('.sidebar-menu a');
+    const navLinks = document.querySelectorAll('.nav-item');
     
     let userInfo = null;
     let admin = JSON.parse(localStorage.getItem('admin') || '{}');
@@ -250,10 +319,20 @@ function setupNavigation() {
         navLinks.forEach(link => {
             const page = link.getAttribute('data-page');
             if (page !== 'events') {
-                link.parentElement.style.display = 'none';
+                link.style.display = 'none';
             }
         });
     }
+    
+    // Add click handlers to set active state
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            // Remove active class from all links
+            navLinks.forEach(l => l.classList.remove('active'));
+            // Add active class to clicked link
+            this.classList.add('active');
+        });
+    });
     
     if (userInfo && userInfo.email) {
         const adminNameEl = document.getElementById('adminName');
@@ -303,23 +382,19 @@ function setupNavigation() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const page = this.getAttribute('data-page');
-            
-            if ((userRole === 'COORDINATOR' || userRole === 'coordinator') && page !== 'events') {
-                alert('You do not have permission to access this page.');
-                return;
-            }
-            
             navigateToPage(page);
         });
     });
 }
 
 function navigateToPage(page) {
-    console.log('Navigating to page:', page);
+    console.log('🔄 Navigating to page:', page);
     
+    // Save current page to localStorage
     localStorage.setItem('adminLastPage', page);
+    console.log('💾 Saved to localStorage: adminLastPage =', page);
     
-    const navLinks = document.querySelectorAll('.sidebar-menu a');
+    const navLinks = document.querySelectorAll('.sidebar-menu a, a[data-page]');
     navLinks.forEach(l => {
         if (l.getAttribute('data-page') === page) {
             l.classList.add('active');
@@ -348,6 +423,8 @@ function navigateToPage(page) {
             loadActivityLogs();
             loadActionTypes();
         }
+    } else {
+        console.warn('⚠️  Page not found:', page);
     }
 }
 
@@ -396,20 +473,54 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Only navigate to page if we're on index.html (multi-page layout)
-        const isMainPage = document.getElementById('events') !== null;
+        const isMainPage = document.getElementById('calendar') !== null;
         if (isMainPage) {
-            const lastPage = localStorage.getItem('adminLastPage') || 'calendar';
-            console.log('Restoring page:', lastPage);
-            // Small delay to ensure sidebar DOM is fully ready
-            setTimeout(() => navigateToPage(lastPage), 50);
+            // Check URL params first
+            const urlParams = new URLSearchParams(window.location.search);
+            let pageToLoad = urlParams.get('page');
+            
+            // If no URL param, get from localStorage
+            if (!pageToLoad) {
+                pageToLoad = localStorage.getItem('adminLastPage') || 'calendar';
+            }
+            
+            // Fallback to calendar if stored page doesn't exist
+            const pageExists = document.getElementById(pageToLoad) !== null;
+            const finalPage = pageExists ? pageToLoad : 'calendar';
+            
+            console.log('📄 Restoring page:', finalPage, '(from', pageToLoad === urlParams.get('page') ? 'URL' : 'localStorage', ')');
+            console.log('📄 Saved pages available:', Array.from(document.querySelectorAll('.page')).map(p => p.id).join(', '));
+            
+            // Check if page is already active (from early script)
+            const currentActivePage = document.querySelector('.page.active');
+            const isAlreadyCorrect = currentActivePage && currentActivePage.id === finalPage;
+            
+            if (isAlreadyCorrect) {
+                console.log('✅ Page already correct, loading page content only');
+                // Just load the page content without delay
+                if (finalPage === 'calendar') loadCalendar();
+                else if (finalPage === 'participants') loadParticipants();
+                else if (finalPage === 'catalogue') loadCatalogue();
+                else if (finalPage === 'reports') loadReports();
+                else if (finalPage === 'qr-scanner') initQRScannerPage();
+                else if (finalPage === 'users') loadAllUsers();
+                else if (finalPage === 'logs') {
+                    loadActivityLogs();
+                    loadActionTypes();
+                }
+            } else {
+                // Only delay if we need to switch pages
+                console.log('🔄 Switching to different page');
+                setTimeout(() => navigateToPage(finalPage), 10);
+            }
         }
         
         console.log('✓ Initialization complete');
     } catch (error) {
         console.error('✗ Initialization error:', error);
         // Only navigate if this is the main page
-        if (document.getElementById('events')) {
-            setTimeout(() => navigateToPage('dashboard'), 100);
+        if (document.getElementById('calendar')) {
+            setTimeout(() => navigateToPage('calendar'), 100);
         }
     }
 });
@@ -787,9 +898,9 @@ let allEventsData = [];
 
 function loadEvents() {
     console.log('✓ loadEvents() called');
-    const container = document.getElementById('eventsGrid');
+    const container = document.getElementById('eventsList');
     if (!container) {
-        console.error('✗ eventsGrid not found');
+        console.error('✗ eventsList not found');
         return;
     }
     
@@ -894,10 +1005,10 @@ function sortEventsArray(events) {
 function renderEvents(events) {
     console.log('✓ renderEvents() called with', events.length, 'events');
     
-    const container = document.getElementById('eventsGrid');
+    const container = document.getElementById('eventsList');
     
     if (!container) {
-        console.error('✗ eventsGrid not found');
+        console.error('✗ eventsList not found');
         return;
     }
     
@@ -934,6 +1045,15 @@ function renderEvents(events) {
     
     container.innerHTML = html;
     console.log('✓ Events rendered to container');
+    console.log('📊 Container HTML length:', container.innerHTML.length);
+    console.log('📊 Container children count:', container.children.length);
+    console.log('📊 Container element:', container);
+    
+    // Force visibility
+    container.style.display = 'grid';
+    container.style.visibility = 'visible';
+    container.style.opacity = '1';
+    container.style.pointerEvents = 'auto';
 }
 
 function searchEventsList(query) {
@@ -1034,6 +1154,18 @@ function sortEvents(sortType) {
     console.log('Setting event sort to:', sortType);
     currentEventSort = sortType;
     
+    renderEvents(sortEventsArray(filterEventsByType(allEventsData)));
+}
+
+function filterEventsByTypeUI(filterType) {
+    console.log('Setting event filter to:', filterType);
+    currentEventFilter = filterType;
+    renderEvents(sortEventsArray(filterEventsByType(allEventsData)));
+}
+
+function sortEventsByUI(sortType) {
+    console.log('Setting event sort to:', sortType);
+    currentEventSort = sortType;
     renderEvents(sortEventsArray(filterEventsByType(allEventsData)));
 }
 
@@ -1722,17 +1854,31 @@ function loadCalendar() {
                 console.log('📅 First event date:', allEventsForCalendar[0].event_date);
             }
             renderCalendarMonth();
-            updateDeadlineDetails([]);
+            
+            // Automatically show today's events in Deadline Details
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const todayEvents = allEventsForCalendar.filter(event => event.event_date === todayStr);
+            
+            if (todayEvents.length > 0) {
+                console.log(`🎯 Found ${todayEvents.length} event(s) for today (${todayStr})`);
+                updateDeadlineDetails(todayEvents);
+            } else {
+                console.log(`📅 No events found for today (${todayStr})`);
+                updateDeadlineDetails([]);
+            }
         } else {
             console.warn('❌ Failed to load calendar events:', data.message);
             allEventsForCalendar = [];
             renderCalendarMonth();
+            updateDeadlineDetails([]);
         }
     })
     .catch(error => {
         console.error('❌ Error loading calendar:', error);
         allEventsForCalendar = [];
         renderCalendarMonth();
+        updateDeadlineDetails([]);
     });
 }
 
@@ -2051,57 +2197,62 @@ function goToToday() {
 
 function updateDeadlineDetails(events) {
     const detailsDiv = document.getElementById('deadlineDetails');
+    const deadlineCountEl = document.getElementById('deadlineCount');
     
     if (!events || events.length === 0) {
         detailsDiv.innerHTML = '<p class="text-gray-500 text-sm">Select an event to view details</p>';
-        document.getElementById('deadlineCount').textContent = `0 mock deadlines and ${allEventsForCalendar.length} events found`;
+        deadlineCountEl.textContent = `0 events happening today`;
         return;
     }
     
-    const event = events[0];
-    const eventDate = new Date(event.event_date);
-    const dateStr = eventDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'long', 
-        day: 'numeric', 
-        year: 'numeric'
+    // Build HTML for ALL events
+    let eventsHTML = '';
+    events.forEach((event, index) => {
+        const eventDate = new Date(event.event_date);
+        const dateStr = eventDate.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            month: 'long', 
+            day: 'numeric', 
+            year: 'numeric'
+        });
+        
+        let timeStr = dateStr;
+        if (event.start_time) {
+            const [hours, mins] = event.start_time.split(':');
+            const startTime = new Date(eventDate);
+            startTime.setHours(parseInt(hours), parseInt(mins));
+            const endTime = event.end_time ? event.end_time.substring(0, 5) : '';
+            
+            timeStr += ` · ${event.start_time.substring(0, 5)}${endTime ? ' - ' + endTime : ''}`;
+        }
+        
+        if (event.location) {
+            timeStr += ` | ${event.location}`;
+        }
+        
+        eventsHTML += `
+            <div class="space-y-3 pb-4 ${index < events.length - 1 ? 'border-b border-gray-200' : ''}">
+                <div>
+                    <h4 class="font-semibold text-gray-900 text-lg mb-2">${escapeHtml(event.event_name)}</h4>
+                    <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #0284c7; border-radius: 4px; font-size: 11px; font-weight: 600;">EVENT</span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <p class="text-gray-700"><strong>📅 Date & Time:</strong> ${timeStr}</p>
+                    ${event.capacity ? `<p class="text-gray-700"><strong>👥 Capacity:</strong> ${event.capacity}</p>` : ''}
+                    ${event.total_registrations !== undefined ? `<p class="text-gray-700"><strong>📊 Registrations:</strong> ${event.total_registrations}/${event.capacity || '∞'}</p>` : ''}
+                    ${event.description ? `<p class="text-gray-700 mt-3 text-justify">${escapeHtml(event.description)}</p>` : ''}
+                </div>
+            </div>
+        `;
     });
     
-    let timeStr = dateStr;
-    if (event.start_time) {
-        const [hours, mins] = event.start_time.split(':');
-        const startTime = new Date(eventDate);
-        startTime.setHours(parseInt(hours), parseInt(mins));
-        const endTime = event.end_time ? event.end_time.substring(0, 5) : '';
-        
-        timeStr += ` · ${event.start_time.substring(0, 5)}${endTime ? ' - ' + endTime : ''}`;
-    }
+    // Wrap with scrolling container if multiple events
+    const scrollStyle = events.length > 2 ? 'max-height: 400px; overflow-y: auto;' : '';
+    detailsDiv.innerHTML = `<div style="${scrollStyle}">${eventsHTML}</div>`;
     
-    if (event.location) {
-        timeStr += ` | ${event.location}`;
-    }
-    
-    detailsDiv.innerHTML = `
-        <div class="space-y-3">
-            <div>
-                <h4 class="font-semibold text-gray-900 text-lg mb-2">${escapeHtml(event.event_name)}</h4>
-                <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #0284c7; border-radius: 4px; font-size: 11px; font-weight: 600;">EVENT</span>
-            </div>
-            <div class="space-y-2 text-sm">
-                <p class="text-gray-700"><strong>📅 Date & Time:</strong> ${timeStr}</p>
-                ${event.capacity ? `<p class="text-gray-700"><strong>👥 Capacity:</strong> ${event.capacity}</p>` : ''}
-                ${event.total_registrations !== undefined ? `<p class="text-gray-700"><strong>📊 Registrations:</strong> ${event.total_registrations}/${event.capacity || '∞'}</p>` : ''}
-                ${event.description ? `<p class="text-gray-700 mt-3 text-justify">${escapeHtml(event.description)}</p>` : ''}
-            </div>
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                <a href="event-details.html?eventId=${event.event_id}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors">
-                    View Full Details →
-                </a>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('deadlineCount').textContent = `0 mock deadlines and ${allEventsForCalendar.length} events found`;
+    // Update count to show events for the selected date
+    const eventCount = events.length;
+    deadlineCountEl.textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''} happening today`;
 }
 
 let currentParticipantFilter = 'all';

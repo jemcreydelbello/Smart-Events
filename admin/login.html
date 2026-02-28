@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Smart Events</title>
+    <title>Smart Events Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -47,34 +47,6 @@
             font-size: 14px;
         }
 
-        .login-type-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            background: #f3f4f6;
-            padding: 6px;
-            border-radius: 8px;
-        }
-
-        .login-type-btn {
-            flex: 1;
-            padding: 10px 16px;
-            border: none;
-            background: transparent;
-            color: #6b7280;
-            font-weight: 600;
-            font-size: 13px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .login-type-btn.active {
-            background: white;
-            color: #1F4CC4;
-            box-shadow: 0 2px 8px rgba(31, 76, 196, 0.15);
-        }
-
         .form-group {
             margin-bottom: 20px;
         }
@@ -101,14 +73,6 @@
             outline: none;
             border-color: #1F4CC4;
             box-shadow: 0 0 0 3px rgba(31, 76, 196, 0.1);
-        }
-
-        .form-section {
-            display: none;
-        }
-
-        .form-section.active {
-            display: block;
         }
 
         .signin-btn {
@@ -198,52 +162,23 @@
 
         <div id="alertBox" class="alert"></div>
 
-        <!-- Login Type Selector -->
-        <div class="login-type-selector">
-            <button type="button" class="login-type-btn active" onclick="switchLoginType('admin')">Admin</button>
-            <button type="button" class="login-type-btn" onclick="switchLoginType('coordinator')">Coordinator</button>
-        </div>
-
-        <!-- Admin Login Form -->
-        <div id="adminForm" class="form-section active">
-            <form onsubmit="handleAdminLogin(event)" id="adminLoginForm">
-                <div class="form-group">
-                    <label>Username or Email</label>
-                    <input type="text" id="admin_username" name="username" placeholder="Enter your username or email" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="admin_password" name="password" placeholder="Enter your password" required>
-                </div>
-
-                <button type="submit" class="signin-btn">Sign In</button>
-            </form>
-
-            <div class="forgot-password">
-                <a href="forget-password.php">Forgot Password?</a>
+        <!-- Unified Login Form -->
+        <form onsubmit="handleLogin(event)" id="loginForm">
+            <div class="form-group">
+                <label>Email or Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your email or username" required>
             </div>
-        </div>
 
-        <!-- Coordinator Login Form -->
-        <div id="coordinatorForm" class="form-section">
-            <form onsubmit="handleCoordinatorLogin(event)" id="coordinatorLoginForm">
-                <div class="form-group">
-                    <label>Email or Username</label>
-                    <input type="text" id="coordinator_email" name="email" placeholder="Enter your email or username" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="coordinator_password" name="password" placeholder="Enter your password" required>
-                </div>
-
-                <button type="submit" class="signin-btn">Sign In</button>
-            </form>
-
-            <div class="forgot-password">
-                <a href="forget-password.php">Forgot Password?</a>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your password" required>
             </div>
+
+            <button type="submit" class="signin-btn">Sign In</button>
+        </form>
+
+        <div class="forgot-password">
+            <a href="forget-password.php">Forgot Password?</a>
         </div>
     </div>
 
@@ -264,43 +199,22 @@
             }
         }
 
-        function switchLoginType(type) {
-            const adminForm = document.getElementById('adminForm');
-            const coordinatorForm = document.getElementById('coordinatorForm');
-            const adminBtn = document.querySelector('[onclick="switchLoginType(\'admin\')"]');
-            const coordBtn = document.querySelector('[onclick="switchLoginType(\'coordinator\')"]');
-
-            if (type === 'admin') {
-                adminForm.classList.add('active');
-                coordinatorForm.classList.remove('active');
-                adminBtn.classList.add('active');
-                coordBtn.classList.remove('active');
-            } else {
-                coordinatorForm.classList.add('active');
-                adminForm.classList.remove('active');
-                coordBtn.classList.add('active');
-                adminBtn.classList.remove('active');
-            }
-
-            document.getElementById('alertBox').className = 'alert';
-            document.getElementById('alertBox').textContent = '';
-        }
-
-        function handleAdminLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
 
-            const username = document.getElementById('admin_username').value.trim();
-            const password = document.getElementById('admin_password').value;
-            const loginBtn = document.querySelector('#adminLoginForm button[type="submit"]');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.querySelector('#loginForm button[type="submit"]');
 
             if (!username || !password) {
-                showAlert('Please enter both username/email and password', 'error');
+                showAlert('Please enter both email/username and password', 'error');
                 return;
             }
 
             loginBtn.disabled = true;
             loginBtn.textContent = 'Signing in...';
 
+            // Try admin login first
             fetch(`${API_BASE}/admin_login.php?action=login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -320,15 +234,15 @@
             })
             .then(data => {
                 if (data.success) {
+                    // Admin login successful
                     localStorage.setItem('admin', JSON.stringify(data.admin));
                     showAlert('Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = './index.html';
                     }, 1000);
                 } else {
-                    showAlert(data.message || 'Login failed. Invalid credentials.', 'error');
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'Sign In';
+                    // Admin login failed, try coordinator login
+                    return tryCoordinatorLogin(username, password, loginBtn);
                 }
             })
             .catch(error => {
@@ -341,22 +255,8 @@
             });
         }
 
-        function handleCoordinatorLogin(event) {
-            event.preventDefault();
-
-            const email = document.getElementById('coordinator_email').value.trim();
-            const password = document.getElementById('coordinator_password').value;
-            const submitBtn = document.querySelector('#coordinatorLoginForm button[type="submit"]');
-
-            if (!email || !password) {
-                showAlert('Please enter both email/username and password', 'error');
-                return;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
-
-            fetch(`${API_BASE}/admin_login.php?action=coordinator_login`, {
+        function tryCoordinatorLogin(email, password, loginBtn) {
+            return fetch(`${API_BASE}/admin_login.php?action=coordinator_login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -367,35 +267,45 @@
             .then(response => {
                 if (response.status === 429) {
                     showAlert('Too many failed login attempts. Account is locked for 30 minutes.', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Sign In';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
                     throw new Error('Account locked');
                 }
                 return response.json();
             })
             .then(data => {
                 if (data.success) {
+                    // Coordinator login successful
                     localStorage.setItem('user', JSON.stringify(data.user));
                     showAlert('Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = './index.html?page=events';
                     }, 1000);
                 } else {
-                    showAlert(data.message || 'Login failed. Invalid credentials.', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Sign In';
+                    // Both admin and coordinator login failed
+                    showAlert('Invalid email/username or password', 'error');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
                 }
             })
             .catch(error => {
-                console.error('Login error:', error);
+                console.error('Coordinator login error:', error);
                 if (error.message !== 'Account locked') {
-                    showAlert('Connection error. Please try again.', 'error');
+                    showAlert('Invalid email/username or password', 'error');
                 }
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign In';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
             });
         }
 
+        // CRITICAL: Detect and fix file:// protocol
+        if (window.location.protocol === 'file:') {
+            console.error('❌ ERROR: You are opening this page as a FILE, not through the web server!');
+            console.log('Redirecting to: http://localhost/Smart-Events/admin/login.html');
+            window.location.href = 'http://localhost/Smart-Events/admin/login.html';
+        }
+
+        // Check if already logged in
         window.addEventListener('load', function() {
             const admin = localStorage.getItem('admin');
             const user = localStorage.getItem('user');
@@ -405,10 +315,10 @@
             }
         });
 
-
-        document.getElementById('coordinator_password')?.addEventListener('keypress', function(e) {
+        // Allow Enter key to submit form
+        document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                document.getElementById('coordinatorLoginForm').dispatchEvent(new Event('submit'));
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
             }
         });
     </script>

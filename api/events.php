@@ -19,6 +19,18 @@ set_exception_handler(function($exception) {
 
 require_once '../db_config.php';
 
+// Helper function to ensure events table has archived column
+function ensureEventsTableArchived($conn) {
+    $check_col = "SHOW COLUMNS FROM events LIKE 'archived'";
+    $col_result = $conn->query($check_col);
+    if ($col_result->num_rows == 0) {
+        $alter_query = "ALTER TABLE events ADD COLUMN archived BOOLEAN DEFAULT FALSE";
+        if (!$conn->query($alter_query)) {
+            error_log("Warning: Could not add archived column: " . $conn->error);
+        }
+    }
+}
+
 // Helper function to get user role and info from request headers or session
 function getUserInfo() {
     $userInfo = [
@@ -108,6 +120,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     if ($action === 'list') {
         // Get all UPCOMING/ACTIVE events (not past events - those go to Catalogue)
+        ensureEventsTableArchived($conn); // Ensure archived column exists
+        
+        // Check if coordinators table exists
+        $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
+        $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
+        
+        if ($hasCoordinators) {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.archived = 0
+                      GROUP BY e.event_id
+                      ORDER BY e.event_date DESC";
+        } else {
+            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
+                      NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
+                      COUNT(DISTINCT r.registration_id) as total_registrations,
+                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                      FROM events e
+                      LEFT JOIN users u ON e.created_by = u.user_id
+                      LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.archived = 0
+                      GROUP BY e.event_id
+                      ORDER BY e.event_date DESC";
+        }
+        
+        $stmt = $conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $events = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            $events[] = $row;
+        }
+        
+        // Normalize data types for JSON response
+        $events = normalizeEventsArray($events);
+        
+        echo json_encode(['success' => true, 'data' => $events]);
+    }
+    elseif ($action === 'list_all') {
+        // Get ALL upcoming events (past events are moved to Catalogue)
+        ensureEventsTableArchived($conn); // Ensure archived column exists
+        $userInfo = getUserInfo();
         $today = date('Y-m-d');
         
         // Check if coordinators table exists
@@ -124,60 +187,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       LEFT JOIN users u ON e.created_by = u.user_id
                       LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
                       LEFT JOIN registrations r ON e.event_id = r.event_id
-                      WHERE e.event_date >= ?
-                      GROUP BY e.event_id
-                      ORDER BY e.event_date ASC";
-        } else {
-            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
-                      NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
-                      COUNT(DISTINCT r.registration_id) as total_registrations,
-                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                      FROM events e
-                      LEFT JOIN users u ON e.created_by = u.user_id
-                      LEFT JOIN registrations r ON e.event_id = r.event_id
-                      WHERE e.event_date >= ?
-                      GROUP BY e.event_id
-                      ORDER BY e.event_date ASC";
-        }
-        
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('s', $today);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $events = [];
-        
-        while ($row = $result->fetch_assoc()) {
-            $events[] = $row;
-        }
-        
-        // Normalize data types for JSON response
-        $events = normalizeEventsArray($events);
-        
-        echo json_encode(['success' => true, 'data' => $events]);
-    }
-    elseif ($action === 'list_all') {
-        // Get ALL events (including past ones) - for calendar and dashboard
-        $userInfo = getUserInfo();
-        
-        // Check if coordinators table exists
-        $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
-        $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
-        
-        if ($hasCoordinators) {
-            $query = "SELECT e.event_id, e.event_name, e.description, e.event_date, e.start_time, e.end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(u.full_name) as created_by_name,
-                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
-                      COUNT(DISTINCT r.registration_id) as total_registrations,
-                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                      FROM events e
-                      LEFT JOIN users u ON e.created_by = u.user_id
-                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
-                      LEFT JOIN registrations r ON e.event_id = r.event_id";
+                      WHERE e.event_date >= ? AND e.archived = 0";
             
             // Filter by coordinator if user is a coordinator
             if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
-                $query .= " WHERE e.coordinator_id = " . intval($userInfo['coordinator_id']);
+                $query .= " AND e.coordinator_id = " . intval($userInfo['coordinator_id']);
             }
             
             $query .= " GROUP BY e.event_id
@@ -191,11 +205,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       FROM events e
                       LEFT JOIN users u ON e.created_by = u.user_id
                       LEFT JOIN registrations r ON e.event_id = r.event_id
+                      WHERE e.event_date >= ? AND e.archived = 0
                       GROUP BY e.event_id
                       ORDER BY e.event_date DESC";
         }
         
-        $result = $conn->query($query);
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('s', $today);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $events = [];
         
         while ($row = $result->fetch_assoc()) {

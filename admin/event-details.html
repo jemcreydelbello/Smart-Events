@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
-    <link rel="stylesheet" href="css/event-details.css">
+    <link rel="stylesheet" href="css/admin.css">
     <style>
         * {
             margin: 0;
@@ -1033,6 +1033,64 @@
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="closeAddTaskModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">Cancel</button>
                     <button type="submit" id="taskSubmitBtn" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Attendee Modal -->
+    <div id="addAttendeeModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin: 40px auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #333; font-size: 20px; font-weight: 600;">Add Attendee</h2>
+                <button type="button" onclick="closeAddAttendeeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">✕</button>
+            </div>
+
+            <form id="addAttendeeForm" onsubmit="handleAddAttendeeSubmit(event)" style="max-height: 70vh; overflow-y: auto;">
+                <input type="hidden" id="addAttendeeEventId" value="">
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Full Name *</label>
+                    <input type="text" id="addAttendeeName" name="full_name" placeholder="Enter attendee's full name" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Email Address *</label>
+                    <input type="email" id="addAttendeeEmail" name="email" placeholder="Enter email address" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Company *</label>
+                        <input type="text" id="addAttendeeCompany" name="company" placeholder="Enter company name" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Job Title *</label>
+                        <input type="text" id="addAttendeeJobTitle" name="job_title" placeholder="Enter job title" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Employee Code *</label>
+                        <input type="text" id="addAttendeeEmployeeCode" name="employee_code" placeholder="Enter employee code" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; color: #333; font-weight: 500; font-size: 14px;">Contact Number *</label>
+                        <input type="tel" id="addAttendeePhone" name="phone" placeholder="Enter phone number" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="addAttendeeErrorMessage" style="display: none; margin-bottom: 15px; padding: 10px; background: #ffebee; border: 1px solid #ef5350; border-radius: 4px; color: #c62828; font-size: 13px;"></div>
+
+                <!-- Success Message -->
+                <div id="addAttendeeSuccessMessage" style="display: none; margin-bottom: 15px; padding: 10px; background: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; color: #2e7d32; font-size: 13px;"></div>
+
+                <!-- Buttons -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeAddAttendeeModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">Cancel</button>
+                    <button type="submit" id="addAttendeeSubmitBtn" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Add Attendee</button>
                 </div>
             </form>
         </div>
