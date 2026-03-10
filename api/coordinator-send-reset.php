@@ -51,25 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $link = ORG_WEBSITE . "/admin/coordinator-reset-password.php?token=" . $token;
 
     $subject = EMAIL_SUBJECT_PREFIX . " Password Reset Request";
-    $html_body = "
-<html>
-<head>
-<meta charset='UTF-8'>
-<style>
-body { font-family: Arial, sans-serif; }
-.container { max-width: 600px; margin: 20px auto; }
-.header { background: #667eea; color: white; padding: 20px; text-align: center; }
-.content { padding: 20px; }
-.button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
-.footer { color: #666; font-size: 12px; margin-top: 30px; }
-</style>
-</head>
-<body>
-<div class='container'>
-<div class='header'><h2>Password Reset Request</h2></div>
-<div class='content'>
-<p>You requested to reset your password. Click the button below to proceed:</p>
-<p><a href=\"" . $link . "\" class='button'>Reset Password</a></p>
+    $html_body = "<html>\n<head>\n<meta charset='UTF-8'>\n<style>\nbody { font-family: Arial, sans-serif; background-color: #f5f5f5; }\n.container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n.header { background: #667eea; color: white; padding: 20px; text-align: center; }\n.content { padding: 20px; line-height: 1.6; }\n.button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }\n.footer { color: #666; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }\n</style>\n</head>\n<body>\n<div class='container'>\n<div class='header'><h2>Password Reset Request</h2></div>\n<div class='content'>\n<p>Hello,</p>\n<p>You requested to reset your password. Click the button below to proceed:</p>\n<p><a href='" . $link . "' class='button'>Reset Password</a></p>
 <p>Or copy this link:</p>
 <p style='word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 3px;'>" . htmlspecialchars($link) . "</p>
 <p><strong>This link will expire in 1 hour.</strong></p>

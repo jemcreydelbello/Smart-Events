@@ -1,6 +1,9 @@
 <?php
 include("../config/db.php");
 
+// Force HTML content type (override any JSON headers from db.php)
+header('Content-Type: text/html; charset=utf-8');
+
 $token = isset($_GET['token']) ? $_GET['token'] : '';
 
 if (empty($token)) {
@@ -264,10 +267,10 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: 'Your password has been set successfully!',
+                        text: 'Your password has been set successfully! Redirecting to login...',
                         allowOutsideClick: false
                     }).then(() => {
-                        window.location.href = './index.html';
+                        window.location.href = './login.html';
                     });
                 } else {
                     const errorMsg = data.replace('Error: ', '').trim();

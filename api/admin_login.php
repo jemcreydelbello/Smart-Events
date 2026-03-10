@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -27,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             exit;
         }
         
-        // Query admin by username or email
-        $query = "SELECT admin_id, username, email, password_hash, full_name, admin_image,
+        // Query admin by username or email (exclude admin_image blob for now)
+        $query = "SELECT admin_id, username, email, password_hash, full_name,
                          status, login_attempts, locked_until 
                   FROM admins 
                   WHERE (username = ? OR email = ?)";
@@ -86,8 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             exit;
         }
         
-        // Verify password
-        if (!password_verify($password, $admin['password_hash'])) {
+        // Verify password (check if password is set first)
+        if (empty($admin['password_hash']) || !password_verify($password, $admin['password_hash'])) {
             // Increment failed login attempts
             $attempts = $admin['login_attempts'] + 1;
             $lockedUntilTime = null;
@@ -141,29 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             'role' => 'ADMIN',
             'role_name' => 'ADMIN'
         ];
-        
-        // Include admin_image as base64 if available
-        if ($admin['admin_image']) {
-            // Build the correct path to the image file
-            $image_path = '../uploads/' . $admin['admin_image'];
-            
-            // If the path doesn't start with 'admins/', add it
-            if (strpos($admin['admin_image'], 'admins/') !== 0) {
-                $image_path = '../uploads/admins/' . $admin['admin_image'];
-            }
-            
-            // Read the image file from disk
-            if (file_exists($image_path)) {
-                $image_data = file_get_contents($image_path);
-                if ($image_data) {
-                    // Determine MIME type
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mime_type = finfo_file($finfo, $image_path);
-                    finfo_close($finfo);
-                    $adminData['admin_image'] = 'data:' . $mime_type . ';base64,' . base64_encode($image_data);
-                }
-            }
-        }
         
         echo json_encode([
             'success' => true,
@@ -225,8 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
             exit;
         }
         
-        // Verify password
-        if (!password_verify($password, $coordinator['password_hash'])) {
+        // Verify password (check if password is set first)
+        if (empty($coordinator['password_hash']) || !password_verify($password, $coordinator['password_hash'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'message' => 'Invalid email/username or password']);
             exit;
@@ -242,21 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
             'role_name' => 'COORDINATOR',
             'coordinator_id' => $coordinator['coordinator_id']
         ];
-        
-        // Include coordinator_image as base64 if available
-        if ($coordinator['coordinator_image']) {
-            $image_path = '../uploads/coordinators/' . $coordinator['coordinator_image'];
-            if (file_exists($image_path)) {
-                $image_data = file_get_contents($image_path);
-                if ($image_data) {
-                    // Determine MIME type
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mime_type = finfo_file($finfo, $image_path);
-                    finfo_close($finfo);
-                    $userData['coordinator_image'] = 'data:' . $mime_type . ';base64,' . base64_encode($image_data);
-                }
-            }
-        }
         
         echo json_encode([
             'success' => true,

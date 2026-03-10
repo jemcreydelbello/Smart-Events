@@ -1,0 +1,46 @@
+
+=== START 2026-03-04 18:57:11 ===
+1. Script started
+2. Headers set
+3. Output buffer cleaned
+4. Starting try block
+5. Connect result: Success
+7. Connection successful, setting charset
+8. Charset set
+9. Querying admins
+10. Admin query executed
+11. Found 2 admins
+12. Coordinator query executed
+13. Found total 7 users
+14. Database connection closed
+15. Users sorted
+16. Response object created
+17. HTTP 200 set
+18. JSON encoded, length: 0
+19. JSON echoed
+20. Output flushed
+=== END ===
+
+
+=== START 2026-03-04 18:57:20 ===
+1. Script started
+2. Headers set
+3. Output buffer cleaned
+4. Starting try block
+5. Connect result: Success
+7. Connection successful, setting charset
+8. Charset set
+9. Querying admins
+10. Admin query executed
+11. Found 2 admins
+12. Coordinator query executed
+13. Found total 7 users
+14. Database connection closed
+15. Users sorted
+16. Response object created
+17. HTTP 200 set
+18. JSON encoded, length: 0
+19. JSON echoed
+20. Output flushed
+=== END ===
+

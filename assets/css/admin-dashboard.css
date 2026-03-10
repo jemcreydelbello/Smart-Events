@@ -3,6 +3,12 @@
   border-bottom: 1px solid #f0f0f0;
   overflow-x: auto;
   padding: 0 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.event-tabs-wrapper::-webkit-scrollbar {
+  display: none;
 }
 .event-tabs {
   display: flex;
@@ -177,9 +183,27 @@
 }
 .event-tab-content.active {
   display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
-#attendees.active, #dashboard.active, #details.active, #tasks.active {
+.event-tab-content:not(.hidden).active {
   display: block !important;
+}
+/* Explicit rules for all event tabs */
+#dashboard.active,
+#details.active, 
+#attendees.active, 
+#tasks.active, 
+#kpi.active, 
+#emails.active, 
+#program.active, 
+#marketing.active, 
+#logistics.active, 
+#finance.active, 
+#postmortem.active {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -262,7 +286,7 @@
 .mb-20 { margin-bottom: 20px; }
 .gap-10 { gap: 10px; }
 .gap-20 { gap: 20px; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 .flex { display: flex; }
 .grid { display: grid; }
 .cursor-pointer { cursor: pointer; }
@@ -280,6 +304,28 @@
 
 body {
   font-family: 'Inter', sans-serif;
+}
+
+/* Main Content Container */
+.main-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Pages Container */
+.main-content > div.p-8 {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+  flex: 1 !important;
 }
 
 /* Sidebar */
@@ -303,13 +349,41 @@ body {
 
 /* Pages */
 .page {
-  display: none;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: visible !important;
 }
 
 .page.active {
-  display: block;
-  width: 100%;
-  min-height: 100vh;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  left: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  z-index: 1 !important;
+  overflow: visible !important;
+}
+
+/* Ensure pages container is always visible */
+.main-content > div.p-8,
+.main-content > div[class*="p-"] {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
 }
 
 #eventsLandingView {
@@ -333,10 +407,12 @@ body {
   gap: 1rem !important;
   visibility: visible !important;
   width: 100% !important;
-  min-height: 800px !important;
+  min-height: 300px !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 1 !important;
+  position: relative !important;
+  background: transparent !important;
 }
 
 #eventsList > div {
@@ -348,6 +424,8 @@ body {
   border: 1px solid #e5e7eb !important;
   border-radius: 8px !important;
   background: white !important;
+  position: relative !important;
+  z-index: auto !important;
 }
 
 /* Navigation Items */
@@ -504,12 +582,12 @@ body {
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #1d4ed8;
+  opacity: 0.9;
 }
 
 .btn-secondary {
@@ -544,10 +622,13 @@ body {
   background: white;
   border-radius: 12px;
   padding: 24px;
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 900px !important;
+  width: 90% !important;
+  max-height: 90vh !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* Spinner */
@@ -583,6 +664,18 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Hide scrollbar in navigation areas */
+.admin-sidebar,
+#adminNav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-sidebar::-webkit-scrollbar,
+#adminNav::-webkit-scrollbar {
+  display: none;
 }
 /* Calendar Styles */
 .calendar-grid {
@@ -713,4 +806,49 @@ body {
     padding: 8px 4px;
     font-size: 11px;
   }
+}
+
+/* ========================================
+   INPUT OVERRIDE RULES FOR EVENT DETAILS
+   ======================================== */
+/* Override the global input styles in client/css/styles.css */
+input[disabled],
+input[disabled]:focus,
+textarea[disabled],
+textarea[disabled]:focus {
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid #d1d5db !important;
+  background: white !important;
+  color: #111827 !important;
+  cursor: not-allowed !important;
+}
+
+/* Additional override for all event details form inputs */
+.event-tab-content input[type="text"],
+.event-tab-content input[type="email"],
+.event-tab-content input[type="date"],
+.event-tab-content input[type="datetime-local"],
+.event-tab-content input[type="time"],
+.event-tab-content input[type="number"],
+.event-tab-content textarea {
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid #d1d5db !important;
+  background: white !important;
+  color: #111827 !important;
+}
+
+.event-tab-content input[type="text"]:focus,
+.event-tab-content input[type="email"]:focus,
+.event-tab-content input[type="date"]:focus,
+.event-tab-content input[type="datetime-local"]:focus,
+.event-tab-content input[type="time"]:focus,
+.event-tab-content input[type="number"]:focus,
+.event-tab-content textarea:focus {
+  border-color: #d1d5db !important;
+  outline: none !important;
+  box-shadow: none !important;
 }

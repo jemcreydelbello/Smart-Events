@@ -8,7 +8,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     exit;
 });
 
-require_once '../db_config.php';
+require_once '../config/db.php';
 require_once '../config/email_config.php';
 require_once '../includes/SimpleMailer.php';
 
@@ -85,11 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 exit;
             }
             
-            $query = "SELECT DISTINCT u.user_id, u.full_name, u.email, u.department_id, d.department_name,
+            $query = "SELECT DISTINCT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.first_name, u.middle_name, u.last_name, u.email, u.department_id, d.department_name,
                       IFNULL(u.company, '') as company, 
                       IFNULL(u.job_title, '') as job_title, 
-                      IFNULL(u.phone, '') as phone,
-                      IFNULL(u.employee_code, '') as employee_code,
+                      IFNULL(u.contact_number, '') as phone,
+                      '' as employee_code,
                       e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM registrations r
                       JOIN users u ON r.user_id = u.user_id
@@ -107,17 +107,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         } else {
             // Standard participant list - filter by coordinator if user is a coordinator
-            $query = "SELECT u.user_id, u.full_name, u.email, u.department_id, d.department_name,
+            $query = "SELECT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email, u.department_id, d.department_name,
                       IFNULL(u.company, '') as company, 
                       IFNULL(u.job_title, '') as job_title, 
-                      IFNULL(u.phone, '') as phone,
-                      IFNULL(u.employee_code, '') as employee_code,
+                      IFNULL(u.contact_number, '') as phone,
+                      '' as employee_code,
                       e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM users u
                       LEFT JOIN departments d ON u.department_id = d.department_id
                       LEFT JOIN registrations r ON u.user_id = r.user_id
                       LEFT JOIN events e ON r.event_id = e.event_id
-                      WHERE u.role_id = (SELECT role_id FROM roles WHERE role_name = 'PARTICIPANT')";
+                      WHERE 1=1";
             
             $params = [];
             $param_types = '';
@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
         
-        $query .= " ORDER BY u.full_name ASC";
+        $query .= " ORDER BY CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) ASC";
         
         $participants = [];
         $error = null;
@@ -196,14 +196,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $event_type = isset($_GET['event_type']) ? $_GET['event_type'] : null; // 'public' or 'private'
         $department_id = isset($_GET['department_id']) ? intval($_GET['department_id']) : null; // department filter
         
-        $query = "SELECT u.user_id, u.full_name, u.email, u.department_id, d.department_name,
+        $query = "SELECT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email, u.department_id, d.department_name,
                   e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                   FROM users u
                   LEFT JOIN departments d ON u.department_id = d.department_id
                   LEFT JOIN registrations r ON u.user_id = r.user_id
                   LEFT JOIN events e ON r.event_id = e.event_id
                   WHERE u.role_id = (SELECT role_id FROM roles WHERE role_name = 'PARTICIPANT')
-                  AND (u.full_name LIKE ? OR u.email LIKE ?)";
+                  AND (CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) LIKE ? OR u.email LIKE ?)";
         
         $params = [$search, $search];
         $param_types = 'ss';
@@ -220,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $param_types .= 'i';
         }
         
-        $query .= " ORDER BY u.full_name ASC LIMIT 20";
+        $query .= " ORDER BY CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) ASC LIMIT 20";
         
         try {
             $stmt = $conn->prepare($query);
@@ -315,7 +315,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Get registration details by code (case-insensitive)
-            $query = "SELECT u.user_id, u.full_name, u.email,
+            $query = "SELECT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email,
                       e.event_id, e.event_name, 
                       r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM registrations r
@@ -374,7 +374,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Handle new registration from client-side
         $event_id = intval($data['event_id'] ?? 0);
-        $participant_name = trim($data['participant_name'] ?? '');
+        $first_name = trim($data['first_name'] ?? '');
+        $middle_name = trim($data['middle_name'] ?? '');
+        $last_name = trim($data['last_name'] ?? '');
         $participant_email = trim($data['participant_email'] ?? '');
         $company = trim($data['company'] ?? '');
         $job_title = trim($data['job_title'] ?? '');
@@ -382,9 +384,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $participant_phone = trim($data['participant_phone'] ?? '');
         $status = $data['status'] ?? 'REGISTERED';
         
-        // Validate required fields
-        if (!$event_id || !$participant_name || !$participant_email || !$company || !$job_title || !$employee_code || !$participant_phone) {
-            throw new Exception('Event ID, name, email, company, job title, employee code, and phone are required');
+        // Create full name from three components for email and display
+        $participant_name = trim($first_name . ' ' . $middle_name . ' ' . $last_name);
+        
+        // Validate required fields (employee_code is optional, not stored anywhere)
+        if (!$event_id || !$first_name || !$last_name || !$participant_email || !$company || !$job_title || !$participant_phone) {
+            throw new Exception('Event ID, first name, last name, email, company, job title, and phone are required');
         }
         
         // Validate email format
@@ -409,7 +414,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Check if user already exists with this email
-        $user_check = "SELECT user_id FROM users WHERE email = ? AND role_id = (SELECT role_id FROM roles WHERE role_name = 'PARTICIPANT')";
+        $user_check = "SELECT user_id FROM users WHERE email = ?";
         $stmt = $conn->prepare($user_check);
         if (!$stmt) {
             throw new Exception('Prepare user check failed: ' . $conn->error);
@@ -427,30 +432,17 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user_id = $user_row['user_id'];
         } else {
             // Create new participant/user
-            $role_query = "SELECT role_id FROM roles WHERE role_name = 'PARTICIPANT'";
-            $role_result = $conn->query($role_query);
-            
-            if (!$role_result) {
-                throw new Exception('Role query failed: ' . $conn->error);
-            }
-            
-            $role_row = $role_result->fetch_assoc();
-            $role_id = $role_row['role_id'] ?? 3; // Default to role_id 3 if not found
-            
-            // Generate a random password for new participants
-            $temp_password = bin2hex(random_bytes(8));
-            $hashed_password = hash('sha256', $temp_password);
-            
             // Department_id is not provided in new registration form
             $department_id = null;
             
-            $insert_user = "INSERT INTO users (full_name, email, password_hash, role_id, department_id, company, job_title, employee_code, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            // Insert into users table with separate name fields
+            $insert_user = "INSERT INTO users (first_name, middle_name, last_name, email, company, job_title, contact_number, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_user);
             if (!$stmt) {
                 throw new Exception('Prepare user insert failed: ' . $conn->error);
             }
             
-            $stmt->bind_param('sssiiisss', $participant_name, $participant_email, $hashed_password, $role_id, $department_id, $company, $job_title, $employee_code, $participant_phone);
+            $stmt->bind_param('sssssssi', $first_name, $middle_name, $last_name, $participant_email, $company, $job_title, $participant_phone, $department_id);
             
             if (!$stmt->execute()) {
                 throw new Exception('Failed to create participant account: ' . $stmt->error);
@@ -596,8 +588,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         
         $registration_code = trim($data['registration_code'] ?? '');
         $status = trim($data['status'] ?? 'ATTENDED');
+        $event_id = intval($data['event_id'] ?? 0);
         
         error_log('Registration code: ' . $registration_code);
+        error_log('Event ID: ' . $event_id);
         error_log('New status: ' . $status);
         
         if (!$registration_code) {
@@ -605,16 +599,22 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             throw new Exception('Registration code is required');
         }
         
+        if ($event_id <= 0) {
+            error_log('ERROR: No event ID provided');
+            throw new Exception('Event ID is required');
+        }
+        
         // First, verify the registration exists and get its details
+        // AND verify it belongs to the selected event
         $verify_query = "SELECT r.registration_id, r.event_id, r.status as current_status, 
-                                e.coordinator_id, u.full_name, u.email, e.event_name
+                                e.coordinator_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email, e.event_name
                          FROM registrations r
                          JOIN events e ON r.event_id = e.event_id
                          LEFT JOIN users u ON r.user_id = u.user_id
-                         WHERE UPPER(r.registration_code) = UPPER(?)";
+                         WHERE UPPER(r.registration_code) = UPPER(?) AND r.event_id = ?";
         
         error_log('Verify query: ' . $verify_query);
-        error_log('Verify param: ' . $registration_code);
+        error_log('Verify params: registration_code=' . $registration_code . ', event_id=' . $event_id);
         
         $verify_stmt = $conn->prepare($verify_query);
         if (!$verify_stmt) {
@@ -622,7 +622,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             throw new Exception('Prepare statement failed: ' . $conn->error);
         }
         
-        $verify_stmt->bind_param('s', $registration_code);
+        $verify_stmt->bind_param('si', $registration_code, $event_id);
         if (!$verify_stmt->execute()) {
             error_log('Execute failed: ' . $verify_stmt->error);
             throw new Exception('Failed to verify registration: ' . $verify_stmt->error);
@@ -632,17 +632,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         error_log('Verify query returned: ' . $result->num_rows . ' rows');
         
         if ($result->num_rows === 0) {
-            error_log('ERROR: No registration found for code: ' . $registration_code);
-            // Log sample codes for debugging
-            $sample_query = "SELECT registration_code FROM registrations LIMIT 5";
-            $sample_result = $conn->query($sample_query);
-            if ($sample_result) {
-                error_log('Sample registration codes in database:');
-                while ($sample_row = $sample_result->fetch_assoc()) {
-                    error_log('  - ' . $sample_row['registration_code']);
-                }
-            }
-            throw new Exception('Registration code not found: ' . $registration_code);
+            error_log('ERROR: No registration found for code: ' . $registration_code . ' in event: ' . $event_id);
+            throw new Exception('Registration code not found for this event');
         }
         
         $registration_data = $result->fetch_assoc();

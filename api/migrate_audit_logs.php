@@ -4,7 +4,7 @@
  * Run this once to update the existing audit_logs table
  */
 
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 try {
     // Check if admin_id column already exists

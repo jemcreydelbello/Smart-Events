@@ -376,15 +376,16 @@ function loadPastEvents() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {
-                // Filter for past events that are PUBLIC (is_private = 0)
+                // Filter for past events that are PUBLIC (is_private = 0) AND PUBLISHED (is_published = 1)
                 const today = new Date().toISOString().split('T')[0];
                 const pastEvents = data.data
                     .filter(event => {
                         const eventDate = event.event_date.split(' ')[0];
                         const isPublic = event.is_private == 0 || event.is_private === "0";
+                        const isPublished = event.is_published == 1 || event.is_published === "1" || event.is_published === true;
                         const isPast = eventDate < today;
-                        console.log(`Catalogue past event: ${event.event_name}, date: ${eventDate}, isPast: ${isPast}, isPublic: ${isPublic}`);
-                        return isPast && isPublic;
+                        console.log(`Catalogue past event: ${event.event_name}, date: ${eventDate}, isPast: ${isPast}, isPublic: ${isPublic}, isPublished: ${isPublished}`);
+                        return isPast && isPublic && isPublished;
                     })
                     .sort((a, b) => new Date(b.event_date) - new Date(a.event_date)); // Most recent first
                 

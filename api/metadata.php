@@ -12,7 +12,7 @@ if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
 }
 
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 if (!isset($conn)) {
     http_response_code(500);

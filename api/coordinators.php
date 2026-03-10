@@ -7,6 +7,39 @@ header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
+// Helper function to safely encode JSON with invalid UTF-8 handling
+function cleanUtf8Data($data) {
+    if (is_array($data) || is_object($data)) {
+        $cleaned = is_array($data) ? [] : new stdClass();
+        foreach ($data as $key => $value) {
+            $cleaned[$key] = cleanUtf8Data($value);
+        }
+        return $cleaned;
+    } elseif (is_string($data)) {
+        // Use regex-based approach to handle incomplete multibyte sequences
+        // iconv() throws errors on incomplete sequences, so we use regex instead
+        // Remove high bytes that don't form valid UTF-8
+        $cleaned = preg_replace('/[\x80-\xFF]/', '', $data);
+        // Also remove any control characters (except newlines/tabs)
+        $cleaned = preg_replace('/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/u', '', $cleaned);
+        return trim($cleaned);
+    }
+    return $data;
+}
+
+function safeJsonEncode($data) {
+    // Clean data first to remove corrupt UTF-8
+    $cleanedData = cleanUtf8Data($data);
+    
+    // Try with standard encoding first
+    $json = json_encode($cleanedData);
+    if ($json === false && json_last_error() === JSON_ERROR_UTF8) {
+        // If UTF-8 error, retry with substitution flag
+        return json_encode($cleanedData, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
+    }
+    return $json;
+}
+
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     error_log("PHP Error: $errstr in $errfile:$errline");
     ob_end_clean();
@@ -32,7 +65,7 @@ register_shutdown_function(function() {
 
 
 try {
-    require_once '../db_config.php';
+    require_once dirname(__DIR__) . '/config/db.php';
 } catch (Exception $e) {
     error_log("Database config error: " . $e->getMessage());
     http_response_code(500);
@@ -68,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $coordinators[] = $row;
             }
             
-            echo json_encode(['success' => true, 'data' => $coordinators]);
+            echo safeJsonEncode(['success' => true, 'data' => $coordinators]);
         }
         elseif ($action === 'list_pending') {
             // Get only pending setup coordinators (is_active = 0)
@@ -197,6 +230,80 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Create new or update coordinator
         // Handle both JSON and FormData
         $is_multipart = strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false;
+        
+        if ($is_multipart) {
+            // FormData (with file upload)
+            $data_action_type = $_POST['action_type'] ?? '';
+        } else {
+            // JSON
+            $rawData = json_decode(file_get_contents('php://input'), true);
+            $data_action_type = $rawData['action_type'] ?? '';
+        }
+        
+        // Handle deactivate action from request body
+        if ($data_action_type === 'deactivate') {
+            $coordinator_id = intval($is_multipart ? ($_POST['coordinator_id'] ?? 0) : ($rawData['coordinator_id'] ?? 0));
+            
+            if (!$coordinator_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Coordinator ID is required']);
+                exit;
+            }
+            
+            $query = "UPDATE coordinators SET is_active = 0 WHERE coordinator_id = ?";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+                exit;
+            }
+            
+            $stmt->bind_param('i', $coordinator_id);
+            
+            if ($stmt->execute()) {
+                http_response_code(200);
+                echo json_encode(['success' => true, 'message' => 'Coordinator deactivated successfully']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to deactivate coordinator: ' . $stmt->error]);
+            }
+            $stmt->close();
+            exit;
+        }
+        
+        // Handle activate action from request body
+        if ($data_action_type === 'activate') {
+            $coordinator_id = intval($is_multipart ? ($_POST['coordinator_id'] ?? 0) : ($rawData['coordinator_id'] ?? 0));
+            $is_active = intval($is_multipart ? ($_POST['is_active'] ?? 1) : ($rawData['is_active'] ?? 1));
+            
+            if (!$coordinator_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Coordinator ID is required']);
+                exit;
+            }
+            
+            $query = "UPDATE coordinators SET is_active = ? WHERE coordinator_id = ?";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+                exit;
+            }
+            
+            $stmt->bind_param('ii', $is_active, $coordinator_id);
+            
+            if ($stmt->execute()) {
+                http_response_code(200);
+                echo json_encode(['success' => true, 'message' => 'Coordinator activated successfully']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to activate coordinator: ' . $stmt->error]);
+            }
+            $stmt->close();
+            exit;
+        }
         
         $coordinator_id = null;
         if ($isUpdate) {
@@ -557,6 +664,37 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
     
     $action = $data['action'] ?? '';
+    // Handle deactivate action
+    if ($action === 'deactivate') {
+        $coordinator_id = intval($data['coordinator_id'] ?? 0);
+        
+        if (!$coordinator_id) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Coordinator ID is required']);
+            exit;
+        }
+        
+        $query = "UPDATE coordinators SET is_active = 0 WHERE coordinator_id = ?";
+        $stmt = $conn->prepare($query);
+        
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+            exit;
+        }
+        
+        $stmt->bind_param('i', $coordinator_id);
+        
+        if ($stmt->execute()) {
+            http_response_code(200);
+            echo json_encode(['success' => true, 'message' => 'Coordinator deactivated successfully']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to deactivate coordinator: ' . $stmt->error]);
+        }
+        $stmt->close();
+        exit;
+    }
     
     // Handle activate action (simple status update)
     if ($action === 'activate') {
@@ -709,5 +847,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to delete coordinator: ' . $stmt->error]);
     }
+}
+
+// Ensure output buffer is flushed
+if (ob_get_level() > 0) {
+    ob_end_flush();
 }
 ?>

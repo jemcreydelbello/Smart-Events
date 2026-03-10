@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 

@@ -1,5 +1,5 @@
 <?php
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'event_summary') {
         $query = "SELECT 
                   COUNT(DISTINCT e.event_id) as total_events,
-                  SUM(CASE WHEN e.event_date >= CURDATE() THEN 1 ELSE 0 END) as upcoming_events,
+                  SUM(CASE WHEN DATE(e.start_event) >= CURDATE() THEN 1 ELSE 0 END) as upcoming_events,
                   COUNT(DISTINCT r.registration_id) as total_registrations,
                   SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as total_attended,
                   ROUND(100.0 * SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) / COUNT(DISTINCT r.registration_id), 2) as attendance_rate
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                   JOIN events e ON r.event_id = e.event_id
                   LEFT JOIN departments d ON u.department_id = d.department_id
                   WHERE r.status != 'ATTENDED'
-                  ORDER BY e.event_date DESC, u.full_name ASC";
+                  ORDER BY e.start_event DESC, u.full_name ASC";
         
         $result = $conn->query($query);
         $absentees = [];

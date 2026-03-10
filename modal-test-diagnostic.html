@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Diagnostic Test - Smart Events</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #1f2937;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-section h2 {
+            color: #374151;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button.primary {
+            background: #1E73BB;
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: #1560a0;
+        }
+        
+        button.danger {
+            background: #dc2626;
+            color: white;
+        }
+        
+        button.danger:hover {
+            background: #b91c1c;
+        }
+        
+        button.info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .log-output {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-top: 15px;
+        }
+        
+        .status {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .status.warning {
+            background: #fef3c7;
+            color: #78350f;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #0c2340;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .details {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 3px solid #d1d5db;
+            font-size: 13px;
+            color: #374151;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .modal-header {
+            color: #dc2626;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+        }
+
+        .modal-message {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer button {
+            padding: 10px 24px;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .modal-footer .cancel {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .modal-footer .delete {
+            background: #dc2626;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Modal System Diagnostic Test</h1>
+        
+        <!-- Test 1: Check Modal HTML Existence -->
+        <div class="test-section">
+            <h2>Test 1: Check Modal HTML Elements in DOM</h2>
+            <p>Verifies if the modal HTML has been injected into the page.</p>
+            <div class="button-group">
+                <button class="primary" onclick="testModalHTMLExistence()">Check Modal HTML</button>
+                <button class="info" onclick="testShowModalByID('deleteOtherInformationModal')">Find Delete Modal</button>
+                <button class="info" onclick="testShowModalByID('removeCoordinatorModal')">Find Remove Modal</button>
+            </div>
+            <div id="test1-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 2: Check JavaScript Functions -->
+        <div class="test-section">
+            <h2>Test 2: Check Function Definitions</h2>
+            <p>Verifies if critical functions exist and can be called.</p>
+            <div class="button-group">
+                <button class="primary" onclick="testFunctionExistence()">Check Functions</button>
+                <button class="info" onclick="testCallFunction('createOtherInformationModals')">Call createOtherInformationModals()</button>
+            </div>
+            <div id="test2-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 3: Simulate Delete Action -->
+        <div class="test-section">
+            <h2>Test 3: Simulate Delete Other Information</h2>
+            <p>Tests the deleteOtherInfo() function with ID 999 (test ID).</p>
+            <div class="button-group">
+                <button class="danger" onclick="testDeleteOtherInfo(999)">Test deleteOtherInfo(999)</button>
+                <button class="warning" onclick="testDeleteOtherInformation(999)">Test deleteOtherInformation(999)</button>
+                <button class="info" onclick="closeAllModals()">Close All Modals</button>
+            </div>
+            <div id="test3-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 4: Simulate Coordinator Remove -->
+        <div class="test-section">
+            <h2>Test 4: Simulate Remove Coordinator</h2>
+            <p>Tests the removeCoordinatorFromEvent() function with test IDs.</p>
+            <div class="button-group">
+                <button class="danger" onclick="testRemoveCoordinator(45, 1)">Test removeCoordinatorFromEvent(45, 1)</button>
+                <button class="warning" onclick="testRemoveCoordinatorSingleParam(45)">Test removeCoordinatorFromEvent(45)</button>
+                <button class="info" onclick="closeAllModals()">Close All Modals</button>
+            </div>
+            <div id="test4-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 5: Check CSS Styles -->
+        <div class="test-section">
+            <h2>Test 5: Check Modal CSS Styles</h2>
+            <p>Verifies computed CSS styles for modals.</p>
+            <div class="button-group">
+                <button class="primary" onclick="testModalCSS()">Check Modal Styles</button>
+                <button class="info" onclick="testZIndex()">Check Z-Index</button>
+            </div>
+            <div id="test5-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 6: Check Console Errors -->
+        <div class="test-section">
+            <h2>Test 6: Browser Console</h2>
+            <p>Open DevTools (F12) to see console logs and any JavaScript errors.</p>
+            <div class="button-group">
+                <button class="info" onclick="logToConsole('🔍 Diagnostic test started - check console')">Log Test Start</button>
+                <button class="info" onclick="window.location.reload()">Reload Page</button>
+            </div>
+            <div id="test6-output" class="log-output">
+Open your browser's Developer Tools (press F12) and check the Console tab for any JavaScript errors or warnings.
+            </div>
+        </div>
+
+        <!-- Test 7: Inspect Page Structure -->
+        <div class="test-section">
+            <h2>Test 7: Page Script Analysis</h2>
+            <p>Analyzes which scripts are loaded and in what order.</p>
+            <div class="button-group">
+                <button class="primary" onclick="testScriptLoading()">Check Loaded Scripts</button>
+                <button class="info" onclick="testGlobalObjects()">Check Global Objects</button>
+            </div>
+            <div id="test7-output" class="log-output"></div>
+        </div>
+
+        <!-- Test 8: Interactive Modal Test -->
+        <div class="test-section">
+            <h2>Test 8: Interactive Modal Interaction</h2>
+            <p>Test modal show/hide/interaction directly.</p>
+            <div class="button-group">
+                <button class="primary" onclick="testInteractiveModal()">Show Test Modal</button>
+                <button class="danger" onclick="testModalDisplay()">Check Modal Display</button>
+                <button class="info" onclick="testVisibility()">Check Visibility</button>
+            </div>
+            <div id="test8-output" class="log-output"></div>
+            <div id="testModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        Test Modal
+                        <button class="modal-close" onclick="closeTestModal()">×</button>
+                    </div>
+                    <div class="modal-message">This is a test modal to verify the modal system is working.</div>
+                    <div class="modal-footer">
+                        <button class="cancel" onclick="closeTestModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="test-section">
+            <h2>📋 Test Summary</h2>
+            <div id="summary-output" class="log-output"></div>
+        </div>
+    </div>
+
+    <script>
+        // Utility function to log output
+        function logOutput(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+                element.scrollTop = element.scrollHeight;
+            }
+            console.log(`[${type}]`, message);
+        }
+
+        function clearOutput(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) element.innerHTML = '';
+        }
+
+        // Test 1: Check Modal HTML
+        function testModalHTMLExistence() {
+            clearOutput('test1-output');
+            logOutput('test1-output', '🔍 Checking for modal HTML elements...', 'info');
+            
+            const modals = {
+                'deleteOtherInformationModal': document.getElementById('deleteOtherInformationModal'),
+                'removeCoordinatorModal': document.getElementById('removeCoordinatorModal'),
+                'testModal': document.getElementById('testModal')
+            };
+            
+            for (const [name, element] of Object.entries(modals)) {
+                if (element) {
+                    logOutput('test1-output', `✅ Found: #${name}`, 'success');
+                    logOutput('test1-output', `   Display: ${getComputedStyle(element).display}`, 'info');
+                    logOutput('test1-output', `   Z-Index: ${getComputedStyle(element).zIndex}`, 'info');
+                } else {
+                    logOutput('test1-output', `❌ NOT FOUND: #${name}`, 'error');
+                }
+            }
+        }
+
+        function testShowModalByID(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                logOutput('test1-output', `\n🔍 Modal #${modalId} found!`, 'success');
+                logOutput('test1-output', `   HTML Length: ${modal.innerHTML.length} chars`, 'info');
+                logOutput('test1-output', `   Current Classes: ${modal.className}`, 'info');
+                logOutput('test1-output', `   Display Style: ${modal.style.display || 'not set'}`, 'info');
+                logOutput('test1-output', `   Z-Index: ${modal.style.zIndex || 'inherited'}`, 'info');
+            } else {
+                logOutput('test1-output', `\n❌ Modal #${modalId} NOT FOUND in DOM!`, 'error');
+            }
+        }
+
+        // Test 2: Check Functions
+        function testFunctionExistence() {
+            clearOutput('test2-output');
+            logOutput('test2-output', '🔍 Checking function definitions...', 'info');
+            
+            const functions = [
+                'deleteOtherInfo',
+                'deleteOtherInformation',
+                'removeCoordinatorFromEvent',
+                'confirmDeleteOtherInformation',
+                'confirmRemoveCoordinator',
+                'createOtherInformationModals',
+                'loadOtherInfo',
+                'loadEventOtherInfo'
+            ];
+            
+            for (const func of functions) {
+                if (typeof window[func] === 'function') {
+                    logOutput('test2-output', `✅ ${func}() is defined`, 'success');
+                } else {
+                    logOutput('test2-output', `❌ ${func}() is NOT defined`, 'error');
+                }
+            }
+        }
+
+        function testCallFunction(funcName) {
+            clearOutput('test2-output');
+            logOutput('test2-output', `🔍 Calling ${funcName}()...`, 'info');
+            
+            try {
+                if (typeof window[funcName] === 'function') {
+                    window[funcName]();
+                    logOutput('test2-output', `✅ ${funcName}() executed successfully`, 'success');
+                    setTimeout(() => testModalHTMLExistence(), 500);
+                } else {
+                    logOutput('test2-output', `❌ ${funcName}() is not a function`, 'error');
+                }
+            } catch (error) {
+                logOutput('test2-output', `❌ Error calling ${funcName}(): ${error.message}`, 'error');
+            }
+        }
+
+        // Test 3: Delete Simulation
+        function testDeleteOtherInfo(metadataId) {
+            clearOutput('test3-output');
+            logOutput('test3-output', `🔍 Calling deleteOtherInfo(${metadataId})...`, 'info');
+            
+            try {
+                if (typeof window.deleteOtherInfo === 'function') {
+                    window.deleteOtherInfo(metadataId);
+                    logOutput('test3-output', `✅ deleteOtherInfo() called successfully`, 'success');
+                    checkModalState('test3-output');
+                } else {
+                    logOutput('test3-output', `❌ deleteOtherInfo() not found`, 'error');
+                }
+            } catch (error) {
+                logOutput('test3-output', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testDeleteOtherInformation(metadataId) {
+            clearOutput('test3-output');
+            logOutput('test3-output', `🔍 Calling deleteOtherInformation(${metadataId})...`, 'info');
+            
+            try {
+                if (typeof window.deleteOtherInformation === 'function') {
+                    window.deleteOtherInformation(metadataId);
+                    logOutput('test3-output', `✅ deleteOtherInformation() called successfully`, 'success');
+                    checkModalState('test3-output');
+                } else {
+                    logOutput('test3-output', `❌ deleteOtherInformation() not found`, 'error');
+                }
+            } catch (error) {
+                logOutput('test3-output', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 4: Coordinator Removal
+        function testRemoveCoordinator(coordinatorId, eventId) {
+            clearOutput('test4-output');
+            logOutput('test4-output', `🔍 Calling removeCoordinatorFromEvent(${coordinatorId}, ${eventId})...`, 'info');
+            
+            try {
+                if (typeof window.removeCoordinatorFromEvent === 'function') {
+                    window.removeCoordinatorFromEvent(coordinatorId, eventId);
+                    logOutput('test4-output', `✅ removeCoordinatorFromEvent() called successfully`, 'success');
+                    checkModalState('test4-output');
+                } else {
+                    logOutput('test4-output', `❌ removeCoordinatorFromEvent() not found`, 'error');
+                }
+            } catch (error) {
+                logOutput('test4-output', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testRemoveCoordinatorSingleParam(coordinatorId) {
+            clearOutput('test4-output');
+            logOutput('test4-output', `🔍 Calling removeCoordinatorFromEvent(${coordinatorId})...`, 'info');
+            
+            try {
+                if (typeof window.removeCoordinatorFromEvent === 'function') {
+                    window.removeCoordinatorFromEvent(coordinatorId);
+                    logOutput('test4-output', `✅ removeCoordinatorFromEvent() called with 1 param`, 'success');
+                    checkModalState('test4-output');
+                } else {
+                    logOutput('test4-output', `❌ removeCoordinatorFromEvent() not found`, 'error');
+                }
+            } catch (error) {
+                logOutput('test4-output', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkModalState(elementId) {
+            logOutput(elementId, '\n📊 Modal State Check:', 'info');
+            
+            const deleteModal = document.getElementById('deleteOtherInformationModal');
+            const removeModal = document.getElementById('removeCoordinatorModal');
+            
+            if (deleteModal) {
+                logOutput(elementId, `   deleteOtherInformationModal:`, 'info');
+                logOutput(elementId, `      Classes: ${deleteModal.className}`, 'info');
+                logOutput(elementId, `      Display: ${getComputedStyle(deleteModal).display}`, 'info');
+                logOutput(elementId, `      Active class: ${deleteModal.classList.contains('active')}`, 'info');
+            }
+            
+            if (removeModal) {
+                logOutput(elementId, `   removeCoordinatorModal:`, 'info');
+                logOutput(elementId, `      Classes: ${removeModal.className}`, 'info');
+                logOutput(elementId, `      Display: ${getComputedStyle(removeModal).display}`, 'info');
+                logOutput(elementId, `      Active class: ${removeModal.classList.contains('active')}`, 'info');
+            }
+        }
+
+        // Test 5: CSS Styles
+        function testModalCSS() {
+            clearOutput('test5-output');
+            logOutput('test5-output', '🔍 Checking modal CSS styles...', 'info');
+            
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                const styles = getComputedStyle(testModal);
+                logOutput('test5-output', `Modal Computed Styles:`, 'info');
+                logOutput('test5-output', `  Position: ${styles.position}`, 'info');
+                logOutput('test5-output', `  Display: ${styles.display}`, 'info');
+                logOutput('test5-output', `  Z-Index: ${styles.zIndex}`, 'info');
+                logOutput('test5-output', `  Background: ${styles.background}`, 'info');
+                logOutput('test5-output', `  Width: ${styles.width}`, 'info');
+                logOutput('test5-output', `  Height: ${styles.height}`, 'info');
+            }
+        }
+
+        function testZIndex() {
+            clearOutput('test5-output');
+            logOutput('test5-output', '🔍 Checking Z-Index values...', 'info');
+            
+            const modals = [
+                'deleteOtherInformationModal',
+                'removeCoordinatorModal',
+                'testModal'
+            ];
+            
+            for (const modalId of modals) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    const modalContent = modal.querySelector('[style*="z-index"]');
+                    logOutput('test5-output', `${modalId}:`, 'info');
+                    logOutput('test5-output', `  Modal Z-Index: ${getComputedStyle(modal).zIndex}`, 'info');
+                    if (modalContent) {
+                        logOutput('test5-output', `  Content Z-Index: ${getComputedStyle(modalContent).zIndex}`, 'info');
+                    }
+                }
+            }
+        }
+
+        // Test 7: Scripts
+        function testScriptLoading() {
+            clearOutput('test7-output');
+            logOutput('test7-output', '🔍 Analyzing script loading...', 'info');
+            
+            const scripts = document.querySelectorAll('script[src]');
+            logOutput('test7-output', `Total scripts loaded: ${scripts.length}\n`, 'info');
+            
+            scripts.forEach((script, index) => {
+                logOutput('test7-output', `${index + 1}. ${script.src}`, 'info');
+            });
+        }
+
+        function testGlobalObjects() {
+            clearOutput('test7-output');
+            logOutput('test7-output', '🔍 Checking window global objects...', 'info');
+            
+            const globals = [
+                'currentEventId',
+                'pendingDeleteMetadataId',
+                'pendingCoordinatorData'
+            ];
+            
+            for (const global of globals) {
+                const value = window[global];
+                if (value !== undefined) {
+                    logOutput('test7-output', `✅ window.${global} = ${JSON.stringify(value)}`, 'success');
+                } else {
+                    logOutput('test7-output', `⚠️ window.${global} is undefined`, 'warning');
+                }
+            }
+        }
+
+        // Test 8: Interactive Modal
+        function testInteractiveModal() {
+            clearOutput('test8-output');
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                testModal.classList.add('active');
+                logOutput('test8-output', `✅ Test modal shown (added .active class)`, 'success');
+                logOutput('test8-output', `   Display: ${getComputedStyle(testModal).display}`, 'info');
+                logOutput('test8-output', `   Z-Index: ${getComputedStyle(testModal).zIndex}`, 'info');
+            } else {
+                logOutput('test8-output', `❌ Test modal not found`, 'error');
+            }
+        }
+
+        function closeTestModal() {
+            const testModal = document.getElementById('testModal');
+            if (testModal) testModal.classList.remove('active');
+        }
+
+        function testModalDisplay() {
+            clearOutput('test8-output');
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                testModal.classList.add('active');
+                setTimeout(() => {
+                    const display = getComputedStyle(testModal).display;
+                    const visibility = getComputedStyle(testModal).visibility;
+                    const opacity = getComputedStyle(testModal).opacity;
+                    
+                    logOutput('test8-output', `📊 Test Modal Display Properties:`, 'info');
+                    logOutput('test8-output', `  Display: ${display}`, 'info');
+                    logOutput('test8-output', `  Visibility: ${visibility}`, 'info');
+                    logOutput('test8-output', `  Opacity: ${opacity}`, 'info');
+                    logOutput('test8-output', `  Classes: ${testModal.className}`, 'info');
+                    
+                    if (display === 'flex') {
+                        logOutput('test8-output', `✅ Modal is visible (display: flex)`, 'success');
+                    } else {
+                        logOutput('test8-output', `❌ Modal is hidden (display: ${display})`, 'error');
+                    }
+                }, 100);
+            }
+        }
+
+        function testVisibility() {
+            clearOutput('test8-output');
+            const testModal = document.getElementById('testModal');
+            const content = testModal ? testModal.querySelector('.modal-content') : null;
+            
+            logOutput('test8-output', `📊 Visibility Analysis:`, 'info');
+            
+            if (testModal) {
+                logOutput('test8-output', `Modal element:`, 'info');
+                logOutput('test8-output', `  Offset Height: ${testModal.offsetHeight}`, 'info');
+                logOutput('test8-output', `  Offset Width: ${testModal.offsetWidth}`, 'info');
+                logOutput('test8-output', `  Z-Index: ${getComputedStyle(testModal).zIndex}`, 'info');
+            }
+            
+            if (content) {
+                logOutput('test8-output', `Content element:`, 'info');
+                logOutput('test8-output', `  Offset Height: ${content.offsetHeight}`, 'info');
+                logOutput('test8-output', `  Offset Width: ${content.offsetWidth}`, 'info');
+                logOutput('test8-output', `  Z-Index: ${getComputedStyle(content).zIndex}`, 'info');
+            }
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+            logOutput('test8-output', '✅ All modals closed', 'success');
+        }
+
+        function logToConsole(message) {
+            console.log(`%c${message}`, 'color: #3b82f6; font-size: 14px; font-weight: bold;');
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            console.log('%c🔍 Modal Diagnostic Test Page Loaded', 'color: #3b82f6; font-size: 16px; font-weight: bold;');
+            console.log('%cOpen browser DevTools (F12) to see detailed debug logs', 'color: #6b7280; font-size: 12px;');
+        });
+    </script>
+</body>
+</html>

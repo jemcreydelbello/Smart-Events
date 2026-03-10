@@ -3,21 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Events - Find & Join Corporate Events</title>
+    <title>Events.Net - Find & Join Corporate Events</title>
     <link rel="icon" type="image/png" href="../assets/logo2.png">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Unified Global Styles -->
-    <link rel="stylesheet" href="../assets/css/global-styles.css">
-    
-    <!-- Legacy CSS (temporary - for transition) -->
     <link rel="stylesheet" href="css/client.css">
 </head>
 <body>
@@ -72,7 +59,7 @@
                         placeholder="Enter your exclusive code"
                         style="flex: 1; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border-color 0.3s; font-family: 'Poppins', sans-serif;"
                     >
-                    <button class="join-btn" onclick="joinPrivateEvent()" style="padding: 10px 24px; background: #1F4CC4; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.3s; white-space: nowrap; font-family: 'Poppins', sans-serif;">Join Event</button>
+                    <button class="join-btn" onclick="joinPrivateEvent()" style="padding: 10px 24px; background: #C41E3A; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.3s; white-space: nowrap; font-family: 'Poppins', sans-serif;">Join Event</button>
                 </div>
             </div>
         </div>
@@ -83,30 +70,48 @@
         <div class="container">
             <div style="display: grid; grid-template-columns: 1fr; gap: 30px; align-items: center;">
                 <!-- Next Event Countdown -->
-                <div class="countdown-card" id="countdownCard" style="background: linear-gradient(135deg, #1F4CC4 0%, #1538A0 100%); color: white; padding: 25px 40px; border-radius: 20px; box-shadow: 0 8px 25px rgba(31, 76, 196, 0.3); display: flex; align-items: center; justify-content: space-between;">
-                    <!-- Left Side: Event Title -->
-                    <div style="flex: 1;">
-                        <p style="text-transform: uppercase; font-size: 11px; letter-spacing: 2px; margin: 0 0 8px 0; opacity: 0.85; font-family: 'Inter', sans-serif;">Next Event Countdown</p>
-                        <h3 id="countdownEventName" style="margin: 0; font-size: 28px; font-weight: bold; font-family: 'Inter', sans-serif;">Loading event...</h3>
-                    </div>
+                <div class="countdown-card" id="countdownCard" style="background: linear-gradient(135deg, #C41E3A 0%, #a01530 100%); color: white; padding: 30px; border-radius: 8px; box-shadow: 0 8px 25px rgba(196, 30, 58, 0.3);">
+                    <p style="text-transform: uppercase; font-size: 12px; letter-spacing: 2px; margin: 0 0 10px 0; opacity: 0.9; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                            <path fill="currentColor" d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z"/>
+                            <rect width="2" height="7" x="11" y="6" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="9s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                            <rect width="2" height="9" x="11" y="11" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="0.75s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                        </svg>
+                        Next Event Countdown
+                    </p>
+                    <h3 id="countdownEventName" style="margin: 0 0 25px 0; font-size: 22px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <span>Loading event...</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                            <path fill="currentColor" d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z"/>
+                            <rect width="2" height="7" x="11" y="6" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="9s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                            <rect width="2" height="9" x="11" y="11" fill="currentColor" rx="1">
+                                <animateTransform attributeName="transform" dur="0.75s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/>
+                            </rect>
+                        </svg>
+                    </h3>
                     
-                    <!-- Right Side: Countdown -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; flex-shrink: 0;">
-                        <div style="text-align: center; background: rgba(0, 0, 0, 0.15); padding: 16px 12px; border-radius: 12px;">
-                            <div id="countdownDays" style="font-size: 40px; font-weight: bold; line-height: 1; font-family: 'Inter', sans-serif;">00</div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-top: 4px; font-family: 'Inter', sans-serif;">Days</div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <div style="text-align: center;">
+                            <div id="countdownDays" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Days</div>
                         </div>
-                        <div style="text-align: center; background: rgba(0, 0, 0, 0.15); padding: 16px 12px; border-radius: 12px;">
-                            <div id="countdownHours" style="font-size: 40px; font-weight: bold; line-height: 1; font-family: 'Inter', sans-serif;">00</div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-top: 4px; font-family: 'Inter', sans-serif;">Hours</div>
+                        <div style="text-align: center;">
+                            <div id="countdownHours" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Hours</div>
                         </div>
-                        <div style="text-align: center; background: rgba(0, 0, 0, 0.15); padding: 16px 12px; border-radius: 12px;">
-                            <div id="countdownMinutes" style="font-size: 40px; font-weight: bold; line-height: 1; font-family: 'Inter', sans-serif;">00</div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-top: 4px; font-family: 'Inter', sans-serif;">Minutes</div>
+                        <div style="text-align: center;">
+                            <div id="countdownMinutes" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Minutes</div>
                         </div>
-                        <div style="text-align: center; background: rgba(0, 0, 0, 0.15); padding: 16px 12px; border-radius: 12px;">
-                            <div id="countdownSeconds" style="font-size: 40px; font-weight: bold; line-height: 1; font-family: 'Inter', sans-serif;">00</div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-top: 4px; font-family: 'Inter', sans-serif;">Seconds</div>
+                        <div style="text-align: center;">
+                            <div id="countdownSeconds" style="font-size: 36px; font-weight: bold;">00</div>
+                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Seconds</div>
                         </div>
                     </div>
                 </div>
@@ -271,44 +276,43 @@
                     <input type="hidden" id="registrationEventId">
                     <input type="hidden" id="registrationPrivateCode">
 
-                    <!-- Full Name -->
                     <div class="form-group" style="margin-bottom: 18px;">
                         <label for="participantName" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Full Name *</label>
-                        <input type="text" id="participantName" placeholder="Full Name" autocomplete="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        <input type="text" id="participantName" autocomplete="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
                     </div>
 
-                    <!-- Company -->
                     <div class="form-group" style="margin-bottom: 18px;">
-                        <label for="participantCompany" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Company *</label>
-                        <input type="text" id="participantCompany" placeholder="Company" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        <label for="participantEmail" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Email Address *</label>
+                        <input type="email" id="participantEmail" autocomplete="email" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
                     </div>
 
-                    <!-- Job Title -->
-                    <div class="form-group" style="margin-bottom: 18px;">
-                        <label for="participantJobTitle" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Job Title *</label>
-                        <input type="text" id="participantJobTitle" placeholder="Job Title" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px;">
+                        <div class="form-group">
+                            <label for="participantDepartment" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Department</label>
+                            <select id="participantDepartment" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; background: white; cursor: pointer;">
+                                <option value="">Select a department</option>
+                                <option value="IT">IT</option>
+                                <option value="HR">HR</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Finance">Finance</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="participantPhone" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Phone Number</label>
+                            <input type="tel" id="participantPhone" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        </div>
                     </div>
 
-                    <!-- Email Address -->
-                    <div class="form-group" style="margin-bottom: 18px;">
-                        <label for="participantEmail" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Email *</label>
-                        <input type="email" id="participantEmail" placeholder="Email" autocomplete="email" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
-                    </div>
-
-                    <!-- Employee Code -->
-                    <div class="form-group" style="margin-bottom: 18px;">
-                        <label for="participantEmployeeCode" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Employee Code *</label>
-                        <input type="text" id="participantEmployeeCode" placeholder="Employee Code" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
-                    </div>
-
-                    <!-- Contact Number -->
-                    <div class="form-group" style="margin-bottom: 25px;">
-                        <label for="participantPhone" style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Contact Number *</label>
-                        <input type="tel" id="participantPhone" placeholder="Contact Number" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    <div class="form-group" style="margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <label style="display: flex; align-items: flex-start; cursor: pointer; font-size: 14px; color: #333;">
+                            <input type="checkbox" id="agreeTerms" required style="margin-top: 4px; margin-right: 10px; cursor: pointer;">
+                            <span>I agree to the event terms and conditions</span>
+                        </label>
                     </div>
 
                     <div style="display: flex; gap: 12px;">
-                        <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: #1F4CC4; color: white; transition: background 0.3s;">Submit Registration</button>
+                        <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: #C41E3A; color: white; transition: background 0.3s;">Register</button>
                         <button type="button" class="btn btn-secondary" style="flex: 1; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; background: white; color: #333; transition: background 0.3s;" onclick="closeRegistrationModal()">Cancel</button>
                     </div>
                 </form>
@@ -339,19 +343,19 @@
             <!-- Details Section -->
             <div id="confirmationDetails" style="margin: 0; padding: 18px 15px; background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%); border-top: 1px solid #e0e0e0;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; max-width: 100%;">
-                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #1F4CC4;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
                         <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Event</p>
                         <p id="confirmEventName" style="margin: 0; font-size: 13px; color: #333; font-weight: 500;">-</p>
                     </div>
-                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #1F4CC4;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
                         <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Reg Code</p>
-                        <p id="confirmRegistrationCode" style="margin: 0; font-size: 12px; color: #1F4CC4; font-weight: 700; font-family: 'Courier New', monospace;">-</p>
+                        <p id="confirmRegistrationCode" style="margin: 0; font-size: 12px; color: #C41E3A; font-weight: 700; font-family: 'Courier New', monospace;">-</p>
                     </div>
-                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #1F4CC4;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
                         <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Name</p>
                         <p id="confirmName" style="margin: 0; font-size: 13px; color: #333; font-weight: 500;">-</p>
                     </div>
-                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #1F4CC4;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #C41E3A;">
                         <p style="margin: 0 0 4px 0; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Email</p>
                         <p id="confirmEmail" style="margin: 0; font-size: 13px; color: #333; font-weight: 500; word-break: break-all;">-</p>
                     </div>
@@ -386,7 +390,7 @@
                         placeholder="Enter event code" 
                         style="width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: 'Poppins', sans-serif; box-sizing: border-box; transition: all 0.3s;"
                         onkeypress="if(event.key === 'Enter') submitPrivateCode();"
-                        onfocus="this.style.borderColor='#1F4CC4'; this.style.boxShadow='0 0 0 3px rgba(31, 76, 196, 0.1)'"
+                        onfocus="this.style.borderColor='#C41E3A'; this.style.boxShadow='0 0 0 3px rgba(196, 30, 58, 0.1)'"
                         onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
                     >
                 </div>
@@ -452,14 +456,6 @@
     </footer>
 
     <!-- Scripts -->
-    
-    <!-- Unified Global Utilities -->
-    <script src="../assets/js/utilities.js"></script>
-    
-    <!-- Unified API Client -->
-    <script src="../assets/js/api-client.js"></script>
-    
-    <!-- Client Main Script -->
     <script src="js/client.js"></script>
 </body>
 </html>

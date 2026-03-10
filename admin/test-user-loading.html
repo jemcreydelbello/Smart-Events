@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - User Loading Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin: 10px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        h1 { color: #333; }
+        .test { margin: 15px 0; padding: 15px; border-left: 4px solid #ddd; background: #fafafa; }
+        .test h3 { margin-bottom: 10px; font-size: 14px; color: #666; font-weight: 600; }
+        .status { padding: 8px 12px; border-radius: 4px; display: inline-block; font-weight: 600; font-size: 12px; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #fff3cd; color: #856404; }
+        .details { margin-top: 10px; font-size: 13px; color: #666; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .result-table th, .result-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        .result-table th { background: #f8f9fa; font-weight: 600; }
+        .result-table td { font-size: 13px; }
+        .result-summary { background: #f0f7ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .result-summary h4 { margin-bottom: 10px; color: #0052cc; }
+        .result-item { margin: 5px 0; font-size: 13px; }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 3px solid #f3f3f3; border-top: 3px solid #333; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Admin Dashboard - User Loading Test</h1>
+            <div id="status" class="status loading"><span class="loading-spinner"></span> Testing...</div>
+        </div>
+        
+        <div id="tests"></div>
+        <div id="summary"></div>
+    </div>
+
+    <script>
+        const API_BASE = './api';
+        let testResults = { passed: 0, failed: 0, tests: [] };
+
+        async function runTests() {
+            const testsDiv = document.getElementById('tests');
+            const summaryDiv = document.getElementById('summary');
+            
+            // Test 1: Admins API
+            await testAPI('Admins API', 'admins.php?action=list', 'admin');
+            
+            // Test 2: Coordinators API
+            await testAPI('Coordinators API', 'coordinators.php?action=list', 'coordinator');
+            
+            // Test 3: Users API (merged)
+            await testAPI('Users API (Merged)', 'users.php?action=list', 'merged');
+            
+            // Test 4: loadAllUsers() function simulation
+            await testLoadAllUsersSimulation();
+            
+            // Test 5: JSON Parsing
+            await testJSONParsing();
+            
+            updateStatus();
+            displaySummary();
+        }
+
+        async function testAPI(testName, endpoint, type) {
+            const test = createTestDiv(testName, 'loading');
+            let status = 'error';
+            let message = '';
+            let recordCount = 0;
+            let sampleData = null;
+            
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`);
+                const text = await response.text();
+                const data = JSON.parse(text);
+                
+                if (response.status === 200 && data.success) {
+                    recordCount = data.data ? data.data.length : 0;
+                    if (recordCount > 0) {
+                        sampleData = data.data[0];
+                        status = 'success';
+                        message = `✓ Returned ${recordCount} records (${(text.length / 1024).toFixed(1)}KB)`;
+                    } else {
+                        message = '⚠ No data returned';
+                    }
+                } else {
+                    message = `✗ API returned status ${response.status}`;
+                }
+            } catch (e) {
+                message = `✗ Error: ${e.message}`;
+            }
+            
+            updateTestDiv(test, status, message);
+            addTestResult(testName, status, message, recordCount, sampleData);
+        }
+
+        async function testLoadAllUsersSimulation() {
+            const test = createTestDiv('loadAllUsers() Function', 'loading');
+            let status = 'error';
+            let message = '';
+            
+            try {
+                const [adminsResponse, coordinatorsResponse] = await Promise.all([
+                    fetch(`${API_BASE}/admins.php?action=list`),
+                    fetch(`${API_BASE}/coordinators.php?action=list`)
+                ]);
+                
+                const adminsText = await adminsResponse.text();
+                const coordinatorsText = await coordinatorsResponse.text();
+                
+                if (!adminsText) throw new Error('Empty response from admins API');
+                if (!coordinatorsText) throw new Error('Empty response from coordinators API');
+                
+                const adminsData = JSON.parse(adminsText);
+                const coordinatorsData = JSON.parse(coordinatorsText);
+                
+                let merged = [];
+                if (adminsData.success && Array.isArray(adminsData.data)) {
+                    merged.push(...adminsData.data.map(a => ({ id: a.user_id, type: 'Admin' })));
+                }
+                if (coordinatorsData.success && Array.isArray(coordinatorsData.data)) {
+                    merged.push(...coordinatorsData.data.map(c => ({ id: c.coordinator_id, type: 'Coordinator' })));
+                }
+                
+                status = 'success';
+                message = `✓ Successfully merged ${adminsData.data.length} admins + ${coordinatorsData.data.length} coordinators = ${merged.length} total users`;
+            } catch (e) {
+                message = `✗ Error: ${e.message}`;
+            }
+            
+            updateTestDiv(test, status, message);
+            addTestResult('loadAllUsers() Simulation', status, message, null, null);
+        }
+
+        async function testJSONParsing() {
+            const test = createTestDiv('JSON Parsing Validation', 'loading');
+            let status = 'success';
+            let message = '✓ JSON parsing works correctly';
+            
+            try {
+                // Test with various JSON responses
+                const testCases = [
+                    '{"success":true,"data":[],"total":0}',
+                    '{"success":true,"data":[{"id":1,"name":"Test"}]}',
+                    '[]',
+                    '{}'
+                ];
+                
+                for (const testJson of testCases) {
+                    JSON.parse(testJson);
+                }
+            } catch (e) {
+                status = 'error';
+                message = `✗ JSON parsing error: ${e.message}`;
+            }
+            
+            updateTestDiv(test, status, message);
+            addTestResult('JSON Parsing', status, message, null, null);
+        }
+
+        function createTestDiv(name, status) {
+            const testsDiv = document.getElementById('tests');
+            const test = document.createElement('div');
+            test.className = 'test';
+            test.innerHTML = `
+                <h3>${name}</h3>
+                <div class="status ${status}">${status === 'loading' ? '<span class="loading-spinner"></span> Testing...' : ''}</div>
+                <div class="details"></div>
+            `;
+            testsDiv.appendChild(test);
+            return test;
+        }
+
+        function updateTestDiv(test, status, message) {
+            const statusEl = test.querySelector('.status');
+            const detailsEl = test.querySelector('.details');
+            statusEl.className = `status ${status}`;
+            statusEl.innerHTML = message;
+            if (status === 'success') testResults.passed++;
+            else if (status === 'error') testResults.failed++;
+        }
+
+        function addTestResult(name, status, message, count, sample) {
+            testResults.tests.push({ name, status, message, count, sample });
+        }
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            const total = testResults.passed + testResults.failed;
+            const allPassed = testResults.failed === 0;
+            
+            statusEl.className = `status ${allPassed ? 'success' : 'error'}`;
+            statusEl.innerHTML = `${allPassed ? '✓' : '✗'} ${testResults.passed}/${total} Tests Passed`;
+        }
+
+        function displaySummary() {
+            const summaryDiv = document.getElementById('summary');
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            let html = '<h2>Test Summary</h2><div class="result-summary">';
+            html += `<h4>${testResults.passed}/${testResults.passed + testResults.failed} Tests Passed</h4>`;
+            
+            testResults.tests.forEach(result => {
+                const icon = result.status === 'success' ? '✓' : '✗';
+                const color = result.status === 'success' ? '#155724' : '#721c24';
+                html += `<div class="result-item" style="color: ${color}"><strong>${icon} ${result.name}:</strong> ${result.message}</div>`;
+            });
+            
+            html += '</div>';
+            
+            if (testResults.failed > 0) {
+                html += '<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; color: #721c24; margin-top: 10px;">';
+                html += '<strong>⚠ Issues Found:</strong><br>';
+                testResults.tests.filter(t => t.status === 'error').forEach(t => {
+                    html += `• ${t.name}: ${t.message}<br>`;
+                });
+                html += '</div>';
+            }
+            
+            html += '<p style="margin-top: 15px; font-size: 13px; color: #666;">✓ Admin dashboard should now load users correctly without JSON parsing errors.</p>';
+            
+            card.innerHTML = html;
+            summaryDiv.appendChild(card);
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

@@ -12,7 +12,7 @@ if (!headers_sent()) {
     header('Access-Control-Allow-Headers: Content-Type');
 }
 
-require_once '../db_config.php';
+require_once '../config/db.php';
 
 try {
     // Get dashboard statistics
@@ -37,8 +37,8 @@ try {
         
         // Events this week
         $result = $conn->query("SELECT COUNT(*) as total FROM events 
-                               WHERE WEEK(event_date) = WEEK(CURDATE()) 
-                               AND YEAR(event_date) = YEAR(CURDATE())");
+                               WHERE WEEK(start_event) = WEEK(CURDATE()) 
+                               AND YEAR(start_event) = YEAR(CURDATE())");
         if (!$result) throw new Exception("Query error: " . $conn->error);
         $eventsThisWeek = $result->fetch_assoc()['total'];
         
@@ -81,7 +81,7 @@ try {
         
         // Recent events (top 3 most recently created)
         $recentEvents = [];
-        $result = $conn->query("SELECT event_id, event_name, event_date, created_at
+        $result = $conn->query("SELECT event_id, event_name, DATE(start_event) as event_date, created_at
                                FROM events
                                ORDER BY created_at DESC
                                LIMIT 3");
@@ -122,7 +122,7 @@ try {
                                FROM events e
                                LEFT JOIN registrations r ON e.event_id = r.event_id
                                GROUP BY e.event_id, e.event_name, e.capacity
-                               ORDER BY e.event_date DESC
+                               ORDER BY e.start_event DESC
                                LIMIT 10");
         if (!$result) throw new Exception("Query error: " . $conn->error);
         

@@ -1,0 +1,19 @@
+<!-- DUPLICATE REGISTRATION MODAL -->
+<div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 animate-fade-in-up relative">
+        <button onclick="closeDuplicateModal()" class="absolute top-4 right-4 bg-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-slate-100 transition shadow-md">
+            <i class="bi bi-x text-xl text-slate-700"></i>
+        </button>
+        <div class="text-center">
+            <div class="mb-4 flex justify-center">
+                <img src="../assets/ITI.jpg" alt="Intellismart Logo" class="h-12 w-auto">
+            </div>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">Already Registered</h3>
+            <p class="text-slate-600 mb-4">This email is already registered for this event. Check your email for confirmation or contact support if you think this is a mistake.</p>
+            <p class="text-sm text-slate-500 mb-6">Email: <span id="duplicateEmail" class="font-semibold text-slate-900"></span></p>
+            <button onclick="closeDuplicateModal()" class="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition active:scale-95">
+                OK
+            </button>
+        </div>
+    </div>
+</div>

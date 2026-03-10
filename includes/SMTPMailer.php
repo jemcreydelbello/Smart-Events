@@ -65,9 +65,7 @@ class SMTPMailer {
         return $this->sendGenericViaLocalMail($to_email, $subject, $html_body);
     }
 
-    /**
-     * Send generic email via local mail()
-     */
+    
     private function sendGenericViaLocalMail($to_email, $subject, $html_body) {
         $headers = "From: " . $this->from_name . " <" . $this->from_email . ">\r\n";
         $headers .= "Reply-To: " . $this->from_email . "\r\n";
@@ -77,17 +75,15 @@ class SMTPMailer {
         $result = mail($to_email, $subject, $html_body, $headers);
 
         if ($result) {
-            error_log('✓ Email sent via mail() to: ' . $to_email);
+            error_log('Email sent via mail() to: ' . $to_email);
         } else {
-            error_log('✗ mail() failed for: ' . $to_email);
+            error_log('mail() failed for: ' . $to_email);
         }
 
         return $result;
     }
 
-    /**
-     * Send generic email via SMTP
-     */
+   
     private function sendGenericViaSMTP($to_email, $subject, $html_body) {
         try {
             // Create socket connection
@@ -187,18 +183,13 @@ class SMTPMailer {
         }
     }
     
-    /**
-     * Check if running on localhost
-     */
+    
     private function isLocalhost() {
         $localhost_ips = ['127.0.0.1', '::1', 'localhost'];
         return in_array($_SERVER['REMOTE_ADDR'] ?? 'localhost', $localhost_ips) || 
                in_array($_SERVER['SERVER_NAME'] ?? 'localhost', $localhost_ips);
     }
-    
-    /**
-     * Send via local mail() function
-     */
+ 
     private function sendViaLocalMail($to_email, $to_name, $event_name, $registration_code, $event_date, $event_location, $is_private) {
         $subject = 'Event Registration Confirmation - ' . htmlspecialchars($event_name);
         
@@ -221,9 +212,7 @@ class SMTPMailer {
         return $result;
     }
     
-    /**
-     * Send via SMTP (for Gmail, etc.)
-     */
+    
     private function sendViaSMTP($to_email, $to_name, $event_name, $registration_code, $event_date, $event_location, $is_private) {
         try {
             // Create socket connection
@@ -382,7 +371,7 @@ class SMTPMailer {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #559CDA;
             color: white;
             padding: 30px 20px;
             text-align: center;
@@ -400,7 +389,7 @@ class SMTPMailer {
         .section-title {
             font-size: 16px;
             font-weight: bold;
-            color: #667eea;
+            color: #559CDA;
             margin-bottom: 10px;
         }
         .qr-code-container {
@@ -416,7 +405,7 @@ class SMTPMailer {
         .code-box {
             background: #f0f0f0;
             padding: 15px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #ED8028;
             font-family: monospace;
             font-size: 18px;
             margin: 10px 0;
@@ -439,7 +428,7 @@ class SMTPMailer {
         }
         .badge {
             display: inline-block;
-            background: #667eea;
+            background: #7BADFF;
             color: white;
             padding: 4px 8px;
             border-radius: 3px;
@@ -460,7 +449,7 @@ class SMTPMailer {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Registration Confirmed!</h1>
+            <h1>Registration Confirmed!</h1>
         </div>
         
         <div class="content">
@@ -473,7 +462,6 @@ class SMTPMailer {
                 <div class="event-details">
                     <p>
                         <span class="detail-label">Event:</span> {$event_name}
-                        <span class="badge">{$event_type}</span>
                     </p>
 EOT;
         
@@ -508,7 +496,7 @@ EOT;
         
         <div class="footer">
             <p>This is an automated email. Please do not reply with sensitive information.</p>
-            <p>&copy; Event Registration System</p>
+            <p>&copy; Intellismart Technology Inc. Event System</p>
         </div>
     </div>
 </body>

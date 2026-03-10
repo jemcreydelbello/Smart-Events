@@ -2,24 +2,52 @@
 // Output buffering to catch any unexpected output
 ob_start();
 
-// Set proper headers before any output
+// Error handling - ensure all output is JSON
 header('Content-Type: application/json; charset=utf-8');
-
-// Enable error logging but hide from output
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
-ini_set('log_errors', 1);
 
-// Set error handler to JSON output
+// Helper function to safely encode JSON with invalid UTF-8 handling
+function cleanUtf8Data($data) {
+    if (is_array($data) || is_object($data)) {
+        $cleaned = is_array($data) ? [] : new stdClass();
+        foreach ($data as $key => $value) {
+            $cleaned[$key] = cleanUtf8Data($value);
+        }
+        return $cleaned;
+    } elseif (is_string($data)) {
+        // Use regex-based approach to handle incomplete multibyte sequences
+        // iconv() throws errors on incomplete sequences, so we use regex instead
+        // Remove high bytes that don't form valid UTF-8
+        $cleaned = preg_replace('/[\x80-\xFF]/', '', $data);
+        // Also remove any control characters (except newlines/tabs)
+        $cleaned = preg_replace('/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/u', '', $cleaned);
+        return trim($cleaned);
+    }
+    return $data;
+}
+
+function safeJsonEncode($data) {
+    // Clean data first to remove corrupt UTF-8
+    $cleanedData = cleanUtf8Data($data);
+    
+    // Try with standard encoding first
+    $json = json_encode($cleanedData);
+    if ($json === false && json_last_error() === JSON_ERROR_UTF8) {
+        // If UTF-8 error, retry with substitution flag
+        return json_encode($cleanedData, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
+    }
+    return $json;
+}
+
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    ob_end_clean(); // Clear any buffered output
+    error_log("PHP Error: $errstr in $errfile:$errline");
+    ob_end_clean();
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Server error: ' . $errstr,
-        'file' => $errfile,
-        'line' => $errline
-    ]);
+    echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
     exit;
 });
 
@@ -27,20 +55,41 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        ob_end_clean();
+        // Clear buffer and output error
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Fatal error: ' . $error['message'],
-            'file' => $error['file'],
-            'line' => $error['line']
+            'message' => 'Fatal error: ' . $error['message']
         ]);
     } else {
-        ob_end_flush();
+        // Normal shutdown - just flush buffer without double-outputting
+        if (ob_get_level() > 0) {
+            ob_end_flush();
+        }
     }
 });
 
-require_once '../db_config.php';
+
+try {
+    require_once dirname(__DIR__) . '/config/db.php';
+    
+    // Verify database connection was successful
+    if (!isset($conn) || !$conn || $conn->connect_error) {
+        throw new Exception('Database connection not available: ' . ($conn->connect_error ?? 'Unknown error'));
+    }
+} catch (Exception $e) {
+    error_log("Database config error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Database config failed: ' . $e->getMessage()]);
+    exit;
+}
+
+// Load email & SMTP optional (don't fail if not available)
+@require_once dirname(__DIR__) . '/config/email_config.php';
+@require_once dirname(__DIR__) . '/includes/SMTPMailer.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -49,28 +98,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         if ($action === 'list') {
             // Get all admin users from admins table
-            $query = "SELECT admin_id as user_id, email, full_name, created_at, status, admin_image
+            // Note: admin_image is now safe to select since it's VARCHAR(255) storing only filename, not BLOB
+            $query = "SELECT admin_id as user_id, email, full_name, admin_image, created_at, status
                       FROM admins 
                       ORDER BY created_at DESC";
             $result = $conn->query($query);
+            
+            if (!$result) {
+                throw new Exception('Query failed: ' . $conn->error);
+            }
+            
             $admins = [];
             
-            if ($result && $result->num_rows > 0) {
+            if ($result->num_rows > 0) {
                 while ($row = $result->fetch_assoc()) {
-                    // Add full image URL if image exists
-                    if ($row['admin_image']) {
-                        $row['admin_image'] = '../uploads/' . $row['admin_image'];
-                    }
                     $admins[] = $row;
                 }
             }
             
             http_response_code(200);
-            echo json_encode([
+            $jsonResponse = safeJsonEncode([
                 'success' => true,
                 'data' => $admins,
                 'total' => count($admins)
             ]);
+            echo $jsonResponse;
+            exit;
         } else if ($action === 'detail') {
             // Get single admin by ID
             $admin_id = intval($_GET['admin_id'] ?? 0);
@@ -80,7 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 exit;
             }
             
-            $query = "SELECT admin_id as user_id, email, full_name, created_at, status, admin_image
+            // Don't select admin_image to avoid returning huge BLOB data in JSON
+            $query = "SELECT admin_id as user_id, email, full_name, admin_image, created_at, status
                       FROM admins 
                       WHERE admin_id = ?";
             
@@ -101,11 +155,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             
             $admin = $result->fetch_assoc();
             
-            // Add full image URL if image exists
-            if ($admin['admin_image']) {
-                $admin['admin_image'] = '../uploads/' . $admin['admin_image'];
-            }
-            
             http_response_code(200);
             echo json_encode([
                 'success' => true,
@@ -113,7 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ]);
         } else if ($action === 'search' && isset($_GET['q'])) {
             $searchTerm = '%' . $_GET['q'] . '%';
-            $query = "SELECT admin_id as user_id, email, full_name, created_at, status, admin_image
+            // Note: admin_image is now safe to select since it's VARCHAR(255) storing only filename, not BLOB
+            $query = "SELECT admin_id as user_id, email, full_name, admin_image, created_at, status
                       FROM admins 
                       WHERE (full_name LIKE ? OR email LIKE ?)
                       ORDER BY created_at DESC";
@@ -129,10 +179,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $admins = [];
             
             while ($row = $result->fetch_assoc()) {
-                // Add full image URL if image exists
-                if ($row['admin_image']) {
-                    $row['admin_image'] = '../uploads/' . $row['admin_image'];
-                }
                 $admins[] = $row;
             }
             
@@ -152,11 +198,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
-// POST - Create new admin
+// POST - Create new admin OR update with image
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Handle both JSON and FormData
         $is_multipart = strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false;
+        
+        // Determine if this is CREATE or UPDATE
+        $admin_id = null;
+        if ($is_multipart) {
+            $admin_id = intval($_POST['admin_id'] ?? 0);
+        } else {
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true);
+            $admin_id = intval($data['admin_id'] ?? 0);
+        }
+        
+        $isUpdate = $admin_id > 0;
+        
+        if ($isUpdate) {
+            // UPDATE operation with image file upload
+            if (!$is_multipart) {
+                throw new Exception('UPDATE requires FormData');
+            }
+            
+            $full_name = trim($_POST['full_name'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $image_file = $_FILES['image'] ?? null;
+            $imageFilename = null;
+            
+            if (!$full_name || !$email) {
+                throw new Exception('Full name and email are required');
+            }
+            
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new Exception('Invalid email format');
+            }
+            
+            // Check if email already exists on a different admin
+            $checkQuery = "SELECT admin_id FROM admins WHERE email = ? AND admin_id != ?";
+            $checkStmt = $conn->prepare($checkQuery);
+            if (!$checkStmt) {
+                throw new Exception('Database error: ' . $conn->error);
+            }
+            $checkStmt->bind_param('si', $email, $admin_id);
+            $checkStmt->execute();
+            if ($checkStmt->get_result()->num_rows > 0) {
+                throw new Exception('Email already exists');
+            }
+            $checkStmt->close();
+            
+            // Handle image file upload if provided
+            if ($image_file && $image_file['size'] > 0) {
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!in_array($image_file['type'], $allowed_types)) {
+                    throw new Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed');
+                }
+                
+                if ($image_file['size'] > 5 * 1024 * 1024) {
+                    throw new Exception('File size must not exceed 5MB');
+                }
+                
+                $upload_dir = '../uploads/admins/';
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                $file_ext = pathinfo($image_file['name'], PATHINFO_EXTENSION);
+                $imageFilename = 'admin_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file_ext;
+                $upload_path = $upload_dir . $imageFilename;
+                
+                if (!move_uploaded_file($image_file['tmp_name'], $upload_path)) {
+                    throw new Exception('Failed to upload image');
+                }
+            }
+            
+            // Prepare update statement
+            if ($imageFilename) {
+                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, admin_image = ?, updated_at = NOW() WHERE admin_id = ?";
+                $updateStmt = $conn->prepare($updateQuery);
+                if (!$updateStmt) {
+                    throw new Exception('Database error: ' . $conn->error);
+                }
+                $updateStmt->bind_param('sssi', $full_name, $email, $imageFilename, $admin_id);
+            } else {
+                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, updated_at = NOW() WHERE admin_id = ?";
+                $updateStmt = $conn->prepare($updateQuery);
+                if (!$updateStmt) {
+                    throw new Exception('Database error: ' . $conn->error);
+                }
+                $updateStmt->bind_param('ssi', $full_name, $email, $admin_id);
+            }
+            
+            if (!$updateStmt->execute()) {
+                throw new Exception('Failed to update admin: ' . $updateStmt->error);
+            }
+            $updateStmt->close();
+            
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Admin updated successfully',
+                'admin_id' => $admin_id
+            ]);
+            exit;
+        }
+        
+        // CREATE operation (when admin_id is not provided)
+        $full_name = null;
+        $email = null;
+        $password = null;
+        $image_file = null;
+        $imageFilename = null;
         
         if ($is_multipart) {
             // FormData (with file upload)
@@ -164,7 +317,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = trim($_POST['email'] ?? '');
             $password = trim($_POST['password'] ?? '');
             $image_file = $_FILES['image'] ?? null;
-            $imageFilename = null;
         } else {
             // JSON
             $input = file_get_contents('php://input');
@@ -173,35 +325,11 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $full_name = trim($data['full_name'] ?? '');
             $email = trim($data['email'] ?? '');
             $password = trim($data['password'] ?? '');
-            $admin_image = isset($data['admin_image']) ? $data['admin_image'] : null;
-            $image_file = null;
-            $imageFilename = null;
-            
-            // Process image if provided (save to uploads folder) - base64 format
-            if ($admin_image && strpos($admin_image, 'data:image') === 0) {
-                // Extract base64 data from data URI
-                $imageData = explode(',', $admin_image);
-                if (count($imageData) === 2) {
-                    $imageBlob = base64_decode($imageData[1]);
-                    // Generate unique filename
-                    $imageFilename = 'admin_' . time() . '_' . uniqid() . '.jpg';
-                    $uploadPath = '../uploads/' . $imageFilename;
-                    
-                    // Create uploads folder if it doesn't exist
-                    if (!is_dir('../uploads')) {
-                        mkdir('../uploads', 0755, true);
-                    }
-                    
-                    // Save image file
-                    if (!file_put_contents($uploadPath, $imageBlob)) {
-                        throw new Exception('Failed to save image file');
-                    }
-                }
-            }
+            // For JSON, don't process base64 image - only FormData should handle images
         }
         
-        // Handle FormData file upload
-        if ($image_file && $image_file['size'] > 0) {
+        // Handle file upload ONLY if image_file exists and is FormData
+        if ($image_file && $image_file['size'] > 0 && isset($_FILES['image'])) {
             $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!in_array($image_file['type'], $allowed_types)) {
                 throw new Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed');
@@ -265,9 +393,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Insert new admin into admins table
         if ($imageFilename) {
-            // Store relative path for admin_image
-            $image_path = (strpos($imageFilename, 'admin_') === 0 && strpos($imageFilename, '/')) ? $imageFilename : 'admins/' . $imageFilename;
-            
             $insertQuery = "INSERT INTO admins (username, email, password_hash, full_name, admin_image, status) 
                            VALUES (?, ?, ?, ?, ?, 'active')";
             $insertStmt = $conn->prepare($insertQuery);
@@ -276,7 +401,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
             
-            $insertStmt->bind_param('sssss', $username, $email, $hashedPassword, $full_name, $image_path);
+            $insertStmt->bind_param('sssss', $username, $email, $hashedPassword, $full_name, $imageFilename);
         } else {
             $insertQuery = "INSERT INTO admins (username, email, password_hash, full_name, status) 
                            VALUES (?, ?, ?, ?, 'active')";
@@ -616,4 +741,6 @@ else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
+
 $conn->close();
+

@@ -7,6 +7,25 @@
 // API Base URL
 const API_BASE = '../api';
 
+// Helper function to fix image URLs for nested folder structure
+function getImageUrl(imagePath) {
+    if (!imagePath) return null;
+    // If it's already a full URL (starts with http), return as-is
+    if (imagePath.startsWith('http')) {
+        return imagePath;
+    }
+    // If path is just a filename (no slashes), it's in /uploads/events/
+    if (!imagePath.includes('/')) {
+        return '../uploads/events/' + imagePath;
+    }
+    // If path is relative to webroot (uploads/...), prepend ../ for admin nested folder
+    if (imagePath.startsWith('uploads/')) {
+        return '../' + imagePath;
+    }
+    // If it's already a full URL or correct path, return as-is
+    return imagePath;
+}
+
 // Chart instances (defined globally for dashboard)
 let registrationChart = null;
 let attendanceChart = null;
@@ -290,7 +309,7 @@ function displayEvents(events) {
     console.log('Rendering', events.length, 'events');
     const html = events.map(event => `
         <div class="event-card">
-            <div class="event-image" ${event.image_url ? `style="background-image: url('${event.image_url}'); background-size: cover; background-position: center;"` : ''}>
+            <div class="event-image" ${event.image_url ? `style="background-image: url('${getImageUrl(event.image_url)}'); background-size: cover; background-position: center;"` : ''}>
                 ${!event.image_url ? '📅' : ''}
             </div>
             <div class="event-content">
@@ -693,7 +712,7 @@ function openEditEventModal(eventId) {
                     currentImageDiv.innerHTML = `
                         <div style="padding: 10px; background: #f0f0f0; border-radius: 4px;">
                             <p style="margin: 0 0 8px 0; font-weight: bold;">Current Image:</p>
-                            <img src="${event.image_url}" alt="${event.event_name}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
+                            <img src="${getImageUrl(event.image_url)}" alt="${event.event_name}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
                         </div>
                     `;
                     console.log('✓ Current image displayed');

@@ -1,7 +1,11 @@
 <?php
 include("../config/db.php");
 
+// Force HTML content type (override any JSON headers from db.php)
+header('Content-Type: text/html; charset=utf-8');
+
 $token = isset($_GET['token']) ? $_GET['token'] : '';
+$type = isset($_GET['type']) ? $_GET['type'] : 'admin';
 
 if (empty($token)) {
     http_response_code(400);
@@ -10,7 +14,14 @@ if (empty($token)) {
 }
 
 $token_escaped = $conn->real_escape_string($token);
-$sql = "SELECT admin_id, reset_expire FROM admins WHERE reset_token='$token_escaped'";
+
+// Check in the appropriate table based on type
+if ($type === 'coordinator') {
+    $sql = "SELECT coordinator_id, reset_expire FROM coordinators WHERE reset_token='$token_escaped'";
+} else {
+    $sql = "SELECT admin_id, reset_expire FROM admins WHERE reset_token='$token_escaped'";
+}
+
 $result = $conn->query($sql);
 
 if (!$result || $result->num_rows == 0) {
@@ -19,9 +30,9 @@ if (!$result || $result->num_rows == 0) {
     exit;
 }
 
-$admin_row = $result->fetch_assoc();
-$admin_id = $admin_row['admin_id'];
-$reset_expire = $admin_row['reset_expire'];
+$row = $result->fetch_assoc();
+$account_id = $type === 'coordinator' ? $row['coordinator_id'] : $row['admin_id'];
+$reset_expire = $row['reset_expire'];
 
 if ($reset_expire < date('Y-m-d H:i:s')) {
     http_response_code(400);
@@ -35,130 +46,118 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password - Event System</title>
-    <link rel="stylesheet" href="css/login.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 53, 53, 0.3); }
-            50% { box-shadow: 0 0 0 15px rgba(244, 53, 53, 0); }
-        }
-
-        @keyframes checkFade {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .reset-password-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f3f4f6;
             min-height: 100vh;
-            background-image: url('/EventSystem/assets/back.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .password-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: white;
+            border-radius: 0;
+            box-shadow: none;
             overflow: hidden;
         }
 
-        .reset-password-container::before {
-            content: '';
+        .video-section {
+            flex: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-section video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
-            pointer-events: none;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-password-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 60px;
+            overflow-y: auto;
         }
 
         .reset-password-box {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 50px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-                        0 0 60px rgba(244, 53, 53, 0.15);
             width: 100%;
-            max-width: 420px;
-            animation: slideInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            z-index: 1;
+            max-width: 500px;
         }
 
         .reset-password-box h2 {
             text-align: center;
-            margin-bottom: 15px;
-            color: #F43535;
-            font-size: 28px;
+            margin-bottom: 12px;
+            color: #1F4CC4;
+            font-size: 42px;
             font-weight: 700;
-            letter-spacing: -0.5px;
         }
 
         .reset-password-box p {
             text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 40px;
+            font-size: 18px;
             line-height: 1.6;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 28px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #630909;
-            font-weight: 500;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            color: #374151;
+            font-weight: 600;
+            font-size: 16px;
         }
 
         .form-group input {
             width: 100%;
             padding: 14px 16px;
-            border: 2px solid #820c0c;
-            border-radius: 12px;
-            font-size: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
             transition: all 0.3s ease;
-            background: #ffffff9b;
+            background: white;
+            font-family: 'Inter', sans-serif;
         }
 
         .form-group input:hover {
-            border-color: #F43535;
-            background: #fff;
+            border-color: #1F4CC4;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #F43535;
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(244, 53, 53, 0.1);
+            border-color: #1F4CC4;
+            box-shadow: 0 0 0 3px rgba(31, 76, 196, 0.1);
         }
 
         .password-strength {
@@ -176,65 +175,42 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
         .btn-update {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #F43535 0%, #950B08 100%);
+            background: linear-gradient(135deg, #1F4CC4 0%, #1538A0 100%);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
-            animation: pulse 2s infinite;
-        }
-
-        .btn-update::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            transition: left 0.3s ease;
-        }
-
-        .btn-update:hover::before {
-            left: 100%;
+            transition: all 0.3s;
+            text-transform: none;
+            letter-spacing: normal;
         }
 
         .btn-update:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(244, 53, 53, 0.4);
-        }
-
-        .btn-update:active {
-            transform: translateY(0);
+            box-shadow: 0 8px 20px rgba(31, 76, 196, 0.3);
         }
 
         .btn-update:disabled {
-            background: #e4bdbd;
+            opacity: 0.7;
             cursor: not-allowed;
-            animation: none;
-            box-shadow: none;
+            transform: none;
         }
 
         .password-requirements {
-            background: #fcf3f3;
+            background: #f0f9ff;
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 8px;
             margin-top: 25px;
             font-size: 13px;
-            color: #ef8383;
-            border-left: 4px solid #F43535;
+            color: #1e40af;
+            border-left: 4px solid #1F4CC4;
         }
 
         .password-requirements h4 {
             margin-bottom: 12px;
-            color: #630909;
+            color: #1F4CC4;
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -257,25 +233,85 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
         }
 
         .requirement.met {
-            color: #d8341e;
-            animation: checkFade 0.3s ease;
+            color: #10b981;
         }
 
         .requirement.met::before {
             content: '✓';
-            color: #d8341e;
+            color: #10b981;
             font-size: 16px;
         }
 
         .requirement.unmet {
-            color: #aa7d7d;
+            color: #9ca3af;
         }
 
-        @media (max-width: 480px) {
-            .reset-password-box {
-                margin: 20px;
-                padding: 40px 25px;
+        #successNotification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+            font-size: 15px;
+            font-weight: 600;
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            max-width: 500px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        #successNotification.show {
+            display: flex;
+        }
+
+        #successNotification::before {
+            content: '✓';
+            font-size: 20px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
             }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            #successNotification {
+                left: 15px;
+                right: 15px;
+                transform: none;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .password-wrapper {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .video-section {
+                display: none;
+            }
+
+            .reset-password-container {
+                padding: 30px 20px;
+                min-height: 100vh;
+            }
+
             .reset-password-box h2 {
                 font-size: 24px;
             }
@@ -283,35 +319,51 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
     </style>
 </head>
 <body>
-    <div class="reset-password-container">
-        <div class="reset-password-box">
-            <h2>Reset Your Password</h2>
-            <p>Enter a new password for your account.</p>
-            
-            <div class="form-group">
-                <label for="password">New Password</label>
-                <input type="password" id="password" placeholder="Enter new password" onkeyup="checkPasswordStrength()" required>
-                <div class="password-strength" id="strengthIndicator"></div>
-            </div>
+    <!-- Success Notification -->
+    <div id="successNotification"></div>
 
-            <div class="form-group">
-                <label for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" placeholder="Confirm password" required>
-            </div>
-            <button class="btn-update" onclick="updatePass()" id="updateBtn">Update Password</button>
+    <div class="password-wrapper">
+        <!-- Video Section (Left) -->
+        <div class="video-section">
+            <video autoplay muted loop playsinline>
+                <source src="../assets/background.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-overlay"></div>
+        </div>
 
-            <div class="password-requirements">
-                <h4>Password Requirements:</h4>
-                <div class="requirement unmet" id="req-length">✓ At least 8 characters</div>
-                <div class="requirement unmet" id="req-upper">✓ At least one uppercase letter</div>
-                <div class="requirement unmet" id="req-lower">✓ At least one lowercase letter</div>
-                <div class="requirement unmet" id="req-number">✓ At least one number required</div>
+        <!-- Password Reset Section (Right) -->
+        <div class="reset-password-container">
+            <div class="reset-password-box">
+                <h2>Reset Your Password</h2>
+                <p>Enter a new password for your account.</p>
+                
+                <div class="form-group">
+                    <label for="password">New Password</label>
+                    <input type="password" id="password" placeholder="Enter new password" onkeyup="checkPasswordStrength()" required>
+                    <div class="password-strength" id="strengthIndicator"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+                </div>
+                <button class="btn-update" onclick="updatePass()" id="updateBtn">Update Password</button>
+
+                <div class="password-requirements">
+                    <h4>Password Requirements:</h4>
+                    <div class="requirement unmet" id="req-length">✓ At least 8 characters</div>
+                    <div class="requirement unmet" id="req-upper">✓ At least one uppercase letter</div>
+                    <div class="requirement unmet" id="req-lower">✓ At least one lowercase letter</div>
+                    <div class="requirement unmet" id="req-number">✓ At least one number required</div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         const TOKEN = "<?php echo htmlspecialchars($token); ?>";
+        const ACCOUNT_TYPE = "<?php echo htmlspecialchars($type); ?>";
 
         function checkPasswordStrength() {
             const password = document.getElementById("password").value;
@@ -359,39 +411,25 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
         }
 
         function showErrorAlert(message) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Oops!',
-                text: message,
-                background: '#fff',
-                color: '#333',
-                confirmButtonColor: '#F43535',
-                confirmButtonText: 'Try Again',
-                didOpen: (modal) => {
-                    modal.style.borderRadius = '12px';
-                    modal.style.boxShadow = '0 20px 60px rgba(244, 53, 53, 0.2)';
-                    const popup = Swal.getPopup();
-                    popup.style.animation = 'slideInUp 0.3s ease-out';
-                }
-            });
+            alert(message);
         }
 
         function showSuccessAlert(message) {
-            return Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: message,
-                background: '#fff',
-                color: '#333',
-                confirmButtonColor: '#27ae60',
-                confirmButtonText: 'OK',
-                didOpen: (modal) => {
-                    modal.style.borderRadius = '12px';
-                    modal.style.boxShadow = '0 20px 60px rgba(39, 174, 96, 0.2)';
-                    const popup = Swal.getPopup();
-                    popup.style.animation = 'slideInUp 0.3s ease-out';
-                }
-            });
+            const notification = document.getElementById('successNotification');
+            if (notification) {
+                // Remove the ::before pseudo-element content from being added to text
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        window.location = "login.html";
+                    }, 500);
+                }, 2000);
+            } else {
+                alert(message);
+            }
         }
 
         function updatePass() {
@@ -430,7 +468,7 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
             fetch("../api/update-password.php", {
                 method: "POST",
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: "token=" + encodeURIComponent(TOKEN) + "&password=" + encodeURIComponent(password)
+                body: "token=" + encodeURIComponent(TOKEN) + "&password=" + encodeURIComponent(password) + "&type=" + encodeURIComponent(ACCOUNT_TYPE)
             })
             .then(r => {
                 console.log("Response status:", r.status);
@@ -447,9 +485,10 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
                 console.log("Checking response:", data);
                 
                 if (data.includes("success")) {
-                    showSuccessAlert("Your password has been updated successfully!").then(() => {
+                    showSuccessAlert("Your password has been updated successfully!");
+                    setTimeout(() => {
                         window.location = "login.html";
-                    });
+                    }, 1500);
                 } else if (data.includes("Error")) {
                     showErrorAlert(data.replace("Error: ", ""));
                 } else {

@@ -1,6 +1,6 @@
 <?php
-// Set headers before any output (only for API calls)
-if (!headers_sent() && strpos($_SERVER['REQUEST_URI'], '/api/') !== false) {
+// Set headers before any output
+if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -24,4 +24,37 @@ if ($conn->connect_error) {
 
 // Set character set to utf8mb4
 $conn->set_charset("utf8mb4");
+
+// Include activity logger helper functions
+require_once dirname(__DIR__) . '/includes/activity-logger.php';
+
+// Ensure activity_logs table exists
+ensureActivityLogsTable();
+
+// Helper function to execute queries
+function executeQuery($query, $params = []) {
+    global $conn;
+    
+    $stmt = $conn->prepare($query);
+    
+    if (!$stmt) {
+        return ['success' => false, 'message' => 'Prepare failed: ' . $conn->error];
+    }
+    
+    if (!empty($params)) {
+        $types = '';
+        foreach ($params as $param) {
+            if (is_int($param)) $types .= 'i';
+            elseif (is_float($param)) $types .= 'd';
+            else $types .= 's';
+        }
+        $stmt->bind_param($types, ...$params);
+    }
+    
+    if (!$stmt->execute()) {
+        return ['success' => false, 'message' => 'Execute failed: ' . $stmt->error];
+    }
+    
+    return ['success' => true, 'stmt' => $stmt];
+}
 ?>

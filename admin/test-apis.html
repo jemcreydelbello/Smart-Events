@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug</title>
+    <style>
+        body { font-family: monospace; background: #222; color: #0f0; padding: 20px; }
+        .result { border: 1px solid #0f0; padding: 10px; margin: 10px 0; background: #111; white-space: pre-wrap; word-wrap: break-word; }
+        .hex { max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Admins API Debug</h1>
+    
+    <h2>Test 1: Fetch admins.php?action=list</h2>
+    <div id="result1" class="result">Loading...</div>
+    
+    <h2>Test 2: Fetch coordinators.php?action=list</h2>
+    <div id="result2" class="result">Loading...</div>
+    
+    <h2>Test 3: Fetch users.php?action=list</h2>
+    <div id="result3" class="result">Loading...</div>
+    
+    <script>
+        async function test(apiPath, resultId) {
+            try {
+                console.log('Testing: ' + apiPath);
+                const response = await fetch(apiPath + '?t=' + Date.now());
+                
+                const text = await response.text();
+                const resultDiv = document.getElementById(resultId);
+                
+                let output = '';
+                output += 'Status: ' + response.status + '\n';
+                output += 'Status Text: ' + response.statusText + '\n';
+                output += 'Content-Type: ' + response.headers.get('Content-Type') + '\n';
+                output += 'Content-Length: ' + response.headers.get('Content-Length') + '\n';
+                output += 'Response Length: ' + text.length + ' bytes\n';
+                output += '\nHex Dump:\n' + toHex(text) + '\n';
+                output += '\nRaw Response:\n' + text + '\n';
+                output += '\nTrying JSON parse...\n';
+                
+                try {
+                    const json = JSON.parse(text);
+                    output += 'JSON Parse: SUCCESS\n';
+                    output += JSON.stringify(json, null, 2);
+                } catch (e) {
+                    output += 'JSON Parse ERROR: ' + e.message + '\n';
+                }
+                
+                resultDiv.textContent = output;
+            } catch (e) {
+                document.getElementById(resultId).textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        function toHex(str) {
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+                const hex = str.charCodeAt(i).toString(16).padStart(2, '0');
+                result += hex + ' ';
+                if ((i + 1) % 32 === 0) result += '\n';
+            }
+            return result;
+        }
+        
+        window.addEventListener('load', () => {
+            test('./api/admins.php', 'result1');
+            test('./api/coordinators.php', 'result2');
+            test('./api/users.php', 'result3');
+        });
+    </script>
+</body>
+</html>

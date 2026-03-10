@@ -13,6 +13,7 @@ if (!isset($_POST['password']) || !isset($_POST['token'])) {
 
 $password = $_POST['password'];
 $token = $_POST['token'];
+$type = isset($_POST['type']) ? $_POST['type'] : 'admin';
 
 // Validate password strength
 if (strlen($password) < 8) {
@@ -20,8 +21,18 @@ if (strlen($password) < 8) {
     die("Error: Password must be at least 8 characters long");
 }
 
+// Determine which table to query based on type
+if ($type === 'coordinator') {
+    $verify_sql = "SELECT coordinator_id, reset_expire FROM coordinators WHERE reset_token = ?";
+    $table_name = 'coordinators';
+    $id_column = 'coordinator_id';
+} else {
+    $verify_sql = "SELECT admin_id, reset_expire FROM admins WHERE reset_token = ?";
+    $table_name = 'admins';
+    $id_column = 'admin_id';
+}
+
 // First verify the token exists and is not expired
-$verify_sql = "SELECT admin_id, reset_expire FROM admins WHERE reset_token = ?";
 $verify_stmt = $conn->prepare($verify_sql);
 if (!$verify_stmt) {
     http_response_code(500);
@@ -38,7 +49,7 @@ if ($verify_result->num_rows == 0) {
 }
 
 $token_row = $verify_result->fetch_assoc();
-$admin_id = $token_row['admin_id'];
+$account_id = $token_row[$id_column];
 
 // Check if token has expired
 if ($token_row['reset_expire'] < date('Y-m-d H:i:s')) {
@@ -51,8 +62,13 @@ $verify_stmt->close();
 // Hash password
 $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-// Update password and clear reset token
-$update_sql = "UPDATE admins SET password_hash = ?, reset_token = NULL, reset_expire = NULL WHERE admin_id = ? LIMIT 1";
+// Update password and clear reset token based on account type
+if ($type === 'coordinator') {
+    $update_sql = "UPDATE coordinators SET password_hash = ?, reset_token = NULL, reset_expire = NULL WHERE coordinator_id = ? LIMIT 1";
+} else {
+    $update_sql = "UPDATE admins SET password_hash = ?, reset_token = NULL, reset_expire = NULL WHERE admin_id = ? LIMIT 1";
+}
+
 $update_stmt = $conn->prepare($update_sql);
 
 if (!$update_stmt) {
@@ -60,7 +76,7 @@ if (!$update_stmt) {
     die("Error: Database prepare failed");
 }
 
-$update_stmt->bind_param("si", $password_hash, $admin_id);
+$update_stmt->bind_param("si", $password_hash, $account_id);
 
 if (!$update_stmt->execute()) {
     http_response_code(500);

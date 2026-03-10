@@ -51,7 +51,7 @@ $verify_stmt->close();
 // Hash password
 $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-// Update password and clear reset token
+// Update password and clear reset token (keep is_active = 0 for Pending Setup)
 $update_sql = "UPDATE coordinators SET password_hash = ?, reset_token = NULL, reset_expire = NULL WHERE coordinator_id = ? LIMIT 1";
 $update_stmt = $conn->prepare($update_sql);
 
