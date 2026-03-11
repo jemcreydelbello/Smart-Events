@@ -570,35 +570,7 @@ body {
   color: #991b1b;
 }
 
-/* Buttons */
-.btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-primary {
-  background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%);
-  color: white;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-secondary {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.btn-secondary:hover {
-  background: #f9fafb;
-}
+/* Buttons - styles now defined in admin/css/styles.css for consistency */
 
 /* Modal */
 .modal {
@@ -848,7 +820,6 @@ textarea[disabled]:focus {
 .event-tab-content input[type="time"]:focus,
 .event-tab-content input[type="number"]:focus,
 .event-tab-content textarea:focus {
-  border-color: #d1d5db !important;
+  border-color: #3b82f6 !important;
   outline: none !important;
-  box-shadow: none !important;
 }

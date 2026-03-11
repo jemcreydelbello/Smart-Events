@@ -470,100 +470,8 @@ tr:hover {
 /* ============================================
    9. BUTTONS
    ============================================ */
-
-.btn {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: inline-block;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-primary {
-    background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 12px rgba(244, 53, 53, 0.35);
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%);
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #d5d5d5;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.btn-success {
-    background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #ECB9B2 90%);
-    color: white;
-}
-
-.btn-success:hover {
-    background: #218838;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-}
-
-.btn-small {
-    padding: 6px 12px;
-    font-size: 12px;
-    min-height: 36px;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-
-.btn-outline:hover {
-    background: var(--bg-light);
-}
-
-.new-event-btn,
-.edit-event-btn {
-    background: linear-gradient(90deg, #630909 0%, #950B08 27%, #F43535 56%, #F43535 56%);
-    color: white;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: inline-block;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.new-event-btn:hover,
-.edit-event-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(99, 9, 9, 0.3);
-}
+/* Button styles are now defined in styles.css as single source of truth */
+/* Remove this section to avoid conflicts with styles.css */
 
 @media (max-width: 768px) {
     .btn { width: 100%; }
@@ -582,8 +490,7 @@ tr:hover {
 }
 
 .search-input:focus {
-    border-color: var(--primary-red) !important;
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1) !important;
+    border-color: #3b82f6 !important;
 }
 
 .search-box {
@@ -605,11 +512,12 @@ textarea,
 select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
     box-sizing: border-box;
+    transition: all 0.2s ease;
 }
 
 input[type="text"],
@@ -631,8 +539,21 @@ input:focus,
 textarea:focus,
 select:focus {
     outline: none;
-    border-color: var(--primary-red);
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    border-color: #3b82f6;
+}
+
+/* All Search and Filter Inputs Focus Styles */
+#usersSearch:focus,
+#roleFilter:focus,
+#statusFilter:focus,
+#coordinatorSearchFilterInput:focus,
+#eventSearchInput:focus,
+#coordinatorSearchInput:focus,
+#otherInfoSearchInput:focus,
+#attendeesSearch:focus,
+#participantsSearch:focus {
+    outline: none;
+    border-color: #3b82f6 !important;
 }
 
 label {

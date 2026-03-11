@@ -6780,7 +6780,16 @@ function closeResendSetupLinkModal() {
 async function confirmResendSetupLink() {
     if (!currentActionUserId || !currentActionUserEmail) return;
     
+    const sendBtn = document.getElementById('sendSetupLinkBtn');
+    const btnText = document.getElementById('sendLinkBtnText');
+    const spinner = document.getElementById('sendLinkLoadingSpinner');
+    
     try {
+        // Disable button and show loading state
+        sendBtn.disabled = true;
+        btnText.style.display = 'none';
+        spinner.style.display = 'block';
+        
         let endpoint = '';
         if (currentActionUserRole === 'Coordinator') {
             endpoint = `${API_BASE}/coordinator-send-reset.php`;
@@ -6789,7 +6798,8 @@ async function confirmResendSetupLink() {
         }
         
         if (!endpoint) {
-            alert('Invalid user role');
+            showToast('Invalid user role', 'error');
+            resetSendLinkButton();
             return;
         }
         
@@ -6805,15 +6815,32 @@ async function confirmResendSetupLink() {
         const text = await response.text();
         
         if (response.ok || text.includes('successfully') || text.includes('receive')) {
-            alert('Setup link sent successfully');
-            closeResendSetupLinkModal();
+            showToast('Setup link sent successfully! Check your email.', 'success');
+            // Close modal after a brief delay
+            setTimeout(() => {
+                closeResendSetupLinkModal();
+                resetSendLinkButton();
+            }, 1500);
         } else {
-            alert('Error sending setup link: ' + text);
+            showToast('Error sending setup link: ' + text, 'error');
+            resetSendLinkButton();
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error sending setup link: ' + error.message);
+        showToast('Error sending setup link: ' + error.message, 'error');
+        resetSendLinkButton();
     }
+}
+
+// Helper function to reset the Send Link button
+function resetSendLinkButton() {
+    const sendBtn = document.getElementById('sendSetupLinkBtn');
+    const btnText = document.getElementById('sendLinkBtnText');
+    const spinner = document.getElementById('sendLinkLoadingSpinner');
+    
+    sendBtn.disabled = false;
+    btnText.style.display = 'inline';
+    spinner.style.display = 'none';
 }
 
 // Open Deactivate User Modal
@@ -10291,7 +10318,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const email = document.getElementById('editUserEmail').value.trim();
             
             if (!name || !email) {
-                alert('Name and Email are required');
+                showToast('Name and Email are required', 'warning');
                 return;
             }
             
@@ -10336,11 +10363,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     const data = await response.json();
                     if (data.success) {
-                        alert('User updated successfully');
+                        showToast('Coordinator updated successfully', 'success');
                         closeEditUserModal();
                         loadAllUsers();
                     } else {
-                        alert('Error updating user: ' + (data.message || 'Unknown error'));
+                        showToast('Error updating coordinator: ' + (data.message || 'Unknown error'), 'error');
                     }
                 } else if (userRole === 'Admin' || userRole === 'Super Admin') {
                     // Update admin user

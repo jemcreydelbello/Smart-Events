@@ -198,8 +198,7 @@ input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus {
     outline: none;
-    border-color: #C41E3A;
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    border-color: #3b82f6;
 }
 
 .remember-forgot {

@@ -13,8 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="icon" type="image/png" href="../assets/logo2.png">
-  <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
-  <link rel="stylesheet" href="./css/styles.css?v=2">
+  <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=2">
+  <link rel="stylesheet" href="./css/styles.css?v=3">
   <style>
     /* Ultra-specific override for pages container - highest priority */
     body .main-content > div.p-8 {
@@ -3311,7 +3311,10 @@ try {
         
         <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
           <button type="button" onclick="closeResendSetupLinkModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Cancel</button>
-          <button type="button" onclick="confirmResendSetupLink()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Send Link</button>
+          <button type="button" id="sendSetupLinkBtn" onclick="confirmResendSetupLink()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+            <span id="sendLinkBtnText">Send Link</span>
+            <span id="sendLinkLoadingSpinner" style="display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;"></span>
+          </button>
         </div>
       </div>
     </div>

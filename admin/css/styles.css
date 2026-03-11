@@ -68,15 +68,14 @@ h3 {
 /* Search Input */
 .search-input {
     padding: 12px 15px !important;
-    border: 1px solid var(--border-gray) !important;
-    border-radius: 4px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
     font-size: 14px !important;
-    transition: border-color 0.3s, box-shadow 0.3s !important;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s !important;
 }
 
 .search-input:focus {
-    border-color: var(--primary-red) !important;
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1) !important;
+    border-color: #3b82f6 !important;
 }
 
 /* Responsive Search Input */
@@ -749,8 +748,8 @@ canvas {
 
 .filter-select {
     padding: 8px 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
     font-size: 14px;
     background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="m7 10l5 5l5-5z"/></svg>') no-repeat right 8px center;
     background-size: 20px 20px;
@@ -759,6 +758,12 @@ canvas {
     -webkit-appearance: none;
     -moz-appearance: none;
     padding-right: 32px;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
 }
 
 .filter-select::-ms-expand {
@@ -767,8 +772,8 @@ canvas {
 
 .event-type-select {
     padding: 8px 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
     font-size: 14px;
     background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="m7 10l5 5l5-5z"/></svg>') no-repeat right 8px center;
     background-size: 20px 20px;
@@ -777,6 +782,12 @@ canvas {
     -webkit-appearance: none;
     -moz-appearance: none;
     padding-right: 32px;
+    transition: all 0.2s ease;
+}
+
+.event-type-select:focus {
+    outline: none;
+    border-color: #3b82f6;
 }
 
 .event-type-select::-ms-expand {
@@ -952,14 +963,11 @@ tr:hover {
     background: #2563eb;
 }
 
+/* ============================================================
+   EVENT-SPECIFIC BUTTON STYLES
+   ============================================================ */
 .new-event-btn {
-    background: linear-gradient(
-        90deg,
-        #630909 0%,
-        #950B08 27%,
-        #F43535 56%,
-        #F43535 56%
-    );
+    background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%);
     color: white;
     padding: 10px 16px;
     border: none;
@@ -967,28 +975,26 @@ tr:hover {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     text-decoration: none;
-    display: inline-block;
-    min-height: 44px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px;
 }
 
-.new-event-btn:hover {
+.new-event-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(99, 9, 9, 0.3);
+    opacity: 0.9;
+    box-shadow: 0 4px 12px rgba(85, 156, 218, 0.3);
+}
+
+.new-event-btn:active:not(:disabled) {
+    transform: translateY(0px);
 }
 
 .edit-event-btn {
-    background: linear-gradient(
-        90deg,
-        #630909 0%,
-        #950B08 27%,
-        #F43535 56%,
-        #F43535 56%
-    );
+    background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%);
     color: white;
     padding: 10px 16px;
     border: none;
@@ -996,18 +1002,22 @@ tr:hover {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     text-decoration: none;
-    display: inline-block;
-    min-height: 44px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px;
 }
 
-.edit-event-btn:hover {
+.edit-event-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(99, 9, 9, 0.3);
+    opacity: 0.9;
+    box-shadow: 0 4px 12px rgba(85, 156, 218, 0.3);
+}
+
+.edit-event-btn:active:not(:disabled) {
+    transform: translateY(0px);
 }
 
 .btn-small {
@@ -1477,8 +1487,7 @@ input:focus,
 textarea:focus,
 select:focus {
     outline: none;
-    border-color: var(--primary-red);
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    border-color: #3b82f6;
 }
 
 /* Utilities */
