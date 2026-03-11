@@ -51,8 +51,8 @@ $verify_stmt->close();
 // Hash password
 $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-// Update password and clear reset token (keep is_active = 0 for Pending Setup)
-$update_sql = "UPDATE coordinators SET password_hash = ?, reset_token = NULL, reset_expire = NULL WHERE coordinator_id = ? LIMIT 1";
+// Update password, clear reset token, and activate account (is_active = 1)
+$update_sql = "UPDATE coordinators SET password_hash = ?, reset_token = NULL, reset_expire = NULL, is_active = 1 WHERE coordinator_id = ? LIMIT 1";
 $update_stmt = $conn->prepare($update_sql);
 
 if (!$update_stmt) {
@@ -68,7 +68,7 @@ if (!$update_stmt->execute()) {
 }
 
 if ($update_stmt->affected_rows > 0) {
-    echo "success: Password set successfully! You can now use your account.";
+    echo "success: Password set successfully! Your account is now active. You can login with your credentials.";
 } else {
     http_response_code(500);
     die("Error: Password update failed - no rows affected");

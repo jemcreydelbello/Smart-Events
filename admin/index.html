@@ -14,7 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="icon" type="image/png" href="../assets/logo2.png">
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
-  <link rel="stylesheet" href="../client/css/styles.css">
+  <link rel="stylesheet" href="./css/styles.css?v=2">
   <style>
     /* Ultra-specific override for pages container - highest priority */
     body .main-content > div.p-8 {
@@ -574,9 +574,9 @@
   </script>
   
   
-  <script src="./js/admin.js?v=24"></script>
-  <script src="./js/event-details.js?v=32"></script>
-  <script src="./js/catalogue-lookup.js?v=10"></script>
+  <script src="./js/admin.js?v=25"></script>
+  <script src="./js/event-details.js?v=33"></script>
+  <script src="./js/catalogue-lookup.js?v=11"></script>
   
   <!-- Define helper function for inline scripts -->
   <script>
@@ -3184,11 +3184,14 @@ try {
 
   <!-- Edit User Modal -->
   <div id="editUserModal" class="modal" onclick="if(event.target.id === 'editUserModal') closeEditUserModal();">
-    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-      <!-- Header -->
-      <div style="padding: 28px 32px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f0f9ff 0%, #f3e8ff 100%);">
-        <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1f2937;">Edit User</h2>
-        <button type="button" onclick="closeEditUserModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #9ca3af; transition: color 0.2s;">×</button>
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Header with Gradient -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 32px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: white; letter-spacing: 0.5px;">Edit User</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Update user information and settings</p>
+        </div>
+        <button type="button" onclick="closeEditUserModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.8); transition: color 0.2s;">×</button>
       </div>
 
       <!-- Content with 2-Column Layout -->
@@ -3282,45 +3285,116 @@ try {
 
   <!-- Resend Setup Link Modal -->
   <div id="resendSetupLinkModal" class="modal" onclick="if(event.target.id === 'resendSetupLinkModal') closeResendSetupLinkModal();">
-    <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1f2937;">Resend Setup Link</h2>
-        <button type="button" onclick="closeResendSetupLinkModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+    <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; overflow: hidden;">
+      <!-- Header with Gradient -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: white; letter-spacing: 0.5px;">Resend Setup Link</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin: 6px 0 0 0; font-weight: 400;">Send password setup instructions</p>
+        </div>
+        <button type="button" onclick="closeResendSetupLinkModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; flex-shrink: 0; transition: color 0.2s;">×</button>
       </div>
       
-      <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Send a new password setup link to <strong id="resendUserNameDisplay"></strong>?</p>
-      
-      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-        <button type="button" onclick="closeResendSetupLinkModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Cancel</button>
-        <button type="button" onclick="confirmResendSetupLink()" style="padding: 10px 24px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Send Link</button>
+      <!-- Content -->
+      <div style="padding: 24px;">
+        <p style="color: #6b7280; margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">Send a new password setup link to <strong id="resendUserNameDisplay"></strong>?</p>
+        
+        <!-- Info Box -->
+        <div style="background: #f3f4f6; border-left: 4px solid #559CDA; padding: 14px; border-radius: 6px; margin: 16px 0; font-size: 13px; line-height: 1.6; color: #555;">
+          <strong style="color: #667eea; display: block; margin-bottom: 6px;">ℹ️ What happens next:</strong>
+          <ul style="margin: 0; padding-left: 18px; color: #6b7280;">
+            <li>A new password setup link will be sent to their email</li>
+            <li>The link expires in 24 hours</li>
+            <li>Once they set their password, their account status will become Active</li>
+          </ul>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" onclick="closeResendSetupLinkModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Cancel</button>
+          <button type="button" onclick="confirmResendSetupLink()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Send Link</button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Deactivate User Modal -->
   <div id="deactivateUserModal" class="modal" onclick="if(event.target.id === 'deactivateUserModal') closeDeactivateUserModal();">
-    <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #dc2626;">Deactivate User</h2>
-        <button type="button" onclick="closeDeactivateUserModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+    <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; overflow: hidden;">
+      <!-- Header with Gradient -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: white; letter-spacing: 0.5px;">Deactivate User</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin: 6px 0 0 0; font-weight: 400;">Temporarily disable account access</p>
+        </div>
+        <button type="button" onclick="closeDeactivateUserModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; flex-shrink: 0; transition: color 0.2s;">×</button>
       </div>
       
-      <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to deactivate <strong id="deactivateUserNameDisplay"></strong>? They won't be able to login until reactivated.</p>
+      <!-- Content -->
+      <div style="padding: 24px;">
+        <p style="color: #6b7280; margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to deactivate <strong id="deactivateUserNameDisplay"></strong>?</p>
+        
+        <!-- Warning Box -->
+        <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 14px; border-radius: 6px; margin: 16px 0; font-size: 13px; line-height: 1.6; color: #7f1d1d;">
+          <strong style="color: #dc2626; display: block; margin-bottom: 6px;">⚠️ What happens:</strong>
+          <ul style="margin: 0; padding-left: 18px; color: #991b1b;">
+            <li>They won't be able to login to their account</li>
+            <li>Their pending setup status is preserved</li>
+            <li>You can reactivate them anytime</li>
+          </ul>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" onclick="closeDeactivateUserModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Cancel</button>
+          <button type="button" onclick="confirmDeactivateUser()" style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Deactivate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reactivate User Modal -->
+  <div id="reactivateUserModal" class="modal" onclick="if(event.target.id === 'reactivateUserModal') closeReactivateUserModal();">
+    <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; overflow: hidden;">
+      <!-- Header with Gradient -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: white; letter-spacing: 0.5px;">Reactivate User</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin: 6px 0 0 0; font-weight: 400;">Restore account access</p>
+        </div>
+        <button type="button" onclick="closeReactivateUserModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; flex-shrink: 0; transition: color 0.2s;">×</button>
+      </div>
       
-      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-        <button type="button" onclick="closeDeactivateUserModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Cancel</button>
-        <button type="button" onclick="confirmDeactivateUser()" style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Deactivate</button>
+      <!-- Content -->
+      <div style="padding: 24px;">
+        <p style="color: #6b7280; margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">Reactivate <strong id="reactivateUserNameDisplay"></strong>?</p>
+        
+        <!-- Info Box -->
+        <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px; border-radius: 6px; margin: 16px 0; font-size: 13px; line-height: 1.6; color: #065f46;">
+          <strong style="color: #10b981; display: block; margin-bottom: 6px;">✓ What happens:</strong>
+          <ul style="margin: 0; padding-left: 18px; color: #047857;">
+            <li>They will be able to login again with their credentials</li>
+            <li>All their data and settings are preserved</li>
+            <li>Pending setup status will be restored if applicable</li>
+          </ul>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" onclick="closeReactivateUserModal()" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Cancel</button>
+          <button type="button" onclick="confirmReactivateUser()" style="padding: 10px 24px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">Reactivate</button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Create Account Modal -->
   <div id="createAccountModal" class="modal">
-    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-      <!-- Header -->
-      <div style="padding: 28px 32px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f0f9ff 0%, #f3e8ff 100%);">
-        <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1f2937;">Create Account</h2>
-        <button type="button" onclick="closeCreateAccountModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #9ca3af; transition: color 0.2s;">×</button>
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Header with Gradient -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 32px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: white; letter-spacing: 0.5px;">Create Account</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Manage admin and coordinator accounts</p>
+        </div>
+        <button type="button" onclick="closeCreateAccountModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.8); transition: color 0.2s;">×</button>
       </div>
 
       <!-- Content with 2-Column Layout -->

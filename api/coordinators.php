@@ -518,8 +518,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reset_token = bin2hex(random_bytes(16));
             $reset_expire = date('Y-m-d H:i:s', strtotime('+24 hours'));
             
-            // INSERT core columns plus reset token
-            $query = "INSERT INTO coordinators (coordinator_name, email, contact_number, reset_token, reset_expire) VALUES (?, ?, ?, ?, ?)";
+            // INSERT with is_active = 0 for pending setup status
+            $query = "INSERT INTO coordinators (coordinator_name, email, contact_number, is_active, reset_token, reset_expire) VALUES (?, ?, ?, 0, ?, ?)";
             
             $stmt = $conn->prepare($query);
             if (!$stmt) {
@@ -813,12 +813,11 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                   email = ?, 
                   contact_number = ?,
                   company = ?,
-                  job_title = ?,
-                  event_id = ?
+                  job_title = ?
                   WHERE coordinator_id = ?";
         
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('sssssii', $coordinator_name, $email, $contact_number, $company, $job_title, $event_id, $coordinator_id);
+        $stmt->bind_param('sssssi', $coordinator_name, $email, $contact_number, $company, $job_title, $coordinator_id);
     }
     
     if ($stmt->execute()) {

@@ -82,6 +82,79 @@ function isCurrentUserAdmin() {
     }
 }
 
+// Modern Toast Notification Function
+function showToast(message, type = 'success', duration = 4000) {
+    const toastId = 'toast-' + Date.now();
+    const backgroundColor = type === 'success' ? '#10b981' : 
+                           type === 'error' ? '#ef4444' : 
+                           type === 'warning' ? '#f59e0b' : '#3b82f6';
+    const icon = type === 'success' ? '✓' : 
+                type === 'error' ? '✕' : 
+                type === 'warning' ? '⚠' : 'ℹ';
+    
+    // Add animation styles if not already added
+    if (!document.querySelector('style[data-toast-styles]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-toast-styles', 'true');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${backgroundColor};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        font-weight: 500;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 9999;
+        animation: slideInRight 0.3s ease-out;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    
+    toast.innerHTML = `<span style="font-size: 18px; font-weight: bold;">${icon}</span><span>${message}</span>`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, duration);
+}
+
 // Helper function to ensure Finance and Postmortem tabs are visible for admins
 function ensureAdminTabsVisible() {
     console.log('[ENSURE-TABS] Checking admin tabs visibility...');
@@ -6224,17 +6297,15 @@ function displayUsers(users) {
         let statusColor = '#ef4444';
         let statusBgColor = '#fee2e2';
         
-        if (isActive) {
-            // Check if coordinator has pending reset token (hasn't reset password yet)
-            if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
-                status = 'Pending Setup';
-                statusColor = '#f59e0b';
-                statusBgColor = '#fffbeb';
-            } else {
-                status = 'Active';
-                statusColor = '#10b981';
-                statusBgColor = '#ecfdf5';
-            }
+        // Check if coordinator has pending reset token (hasn't reset password yet)
+        if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
+            status = 'Pending Setup';
+            statusColor = '#f59e0b';
+            statusBgColor = '#fffbeb';
+        } else if (isActive) {
+            status = 'Active';
+            statusColor = '#10b981';
+            statusBgColor = '#ecfdf5';
         }
         
         // Get profile image
@@ -6242,7 +6313,13 @@ function displayUsers(users) {
         
         let profileImageHtml;
         if (profileImage) {
+            // Construct proper path based on image type
             let imgSrc = profileImage;
+            if (user.admin_image && !profileImage.includes('/')) {
+                imgSrc = `../uploads/admins/${profileImage}`;
+            } else if (user.coordinator_image && !profileImage.includes('/')) {
+                imgSrc = `../uploads/coordinators/${profileImage}`;
+            }
             const fallbackInitial = (user.full_name || user.username || 'U').charAt(0).toUpperCase();
             // Use background-image for perfect circular crop
             profileImageHtml = `<td style="padding: 12px 16px; text-align: center;">
@@ -6418,15 +6495,13 @@ function filterUsersTable() {
         const isActive = isActiveValue === 1 || isActiveValue === '1' || isActiveValue === true;
         let currentStatus = 'Inactive';
         
-        // "Pending Setup" only applies when: is_active = 1 AND has reset_token
+        // "Pending Setup" only applies when: has reset_token (regardless of is_active value)
         // When deactivated, is_active becomes 0 → status becomes "Inactive"
         // reset_token is preserved, so reactivation restores "Pending Setup"
-        if (isActive) {
-            if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
-                currentStatus = 'Pending Setup';
-            } else {
-                currentStatus = 'Active';
-            }
+        if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
+            currentStatus = 'Pending Setup';
+        } else if (isActive) {
+            currentStatus = 'Active';
         }
         const matchesStatus = !statusFilter || currentStatus === statusFilter;
         
@@ -6577,7 +6652,7 @@ async function createCoordinatorAccount() {
     }
     
     if (data.success) {
-      alert(`Coordinator Account Created Successfully!\n\nName: ${name}\nEmail: ${email}\n\nAccount Status: Pending Setup\n\nNext Step: Assign to Event in Users Page`);
+      alert(`Coordinator Account Created Successfully!\n\nName: ${name}\nEmail: ${email}\n\nAccount Status: Pending Setup ⏳\n\n📧 A password setup link has been sent to ${email}\n\nThe coordinator can use this link to set their password and complete their account setup.`);
       closeCreateAccountModal();
       loadAllUsers(); // Refresh users list
       updateUserStatistics(); // Update stats
@@ -6644,7 +6719,7 @@ async function createAdminAccount() {
     }
     
     if (data.success) {
-      alert(`Admin Account Created Successfully!\n\nName: ${fullName}\nEmail: ${email}\n\nAccount Status: Active\n\nThey can now login to the admin dashboard`);
+      alert(`Admin Account Created Successfully! ✅\n\nName: ${fullName}\nEmail: ${email}\n\nAccount Status: Active ✓\n\nThe admin can now login immediately to the admin dashboard using their credentials.`);
       closeCreateAccountModal();
       loadAllUsers(); // Refresh users list
       updateUserStatistics(); // Update stats
@@ -6777,7 +6852,7 @@ async function confirmDeactivateUser() {
             console.log('Deactivate response data:', data);
             
             if (data.success) {
-                alert('Coordinator deactivated successfully');
+                showToast('Coordinator deactivated successfully', 'success');
                 closeDeactivateUserModal();
                 await loadAllUsers();
                 // Auto-set filter to show "Inactive" users
@@ -6787,7 +6862,7 @@ async function confirmDeactivateUser() {
                     filterUsersTable();
                 }
             } else {
-                alert('Error deactivating coordinator: ' + (data.message || 'Unknown error'));
+                showToast('Error deactivating coordinator: ' + (data.message || 'Unknown error'), 'error');
             }
         } else if (currentActionUserRole === 'Admin' || currentActionUserRole === 'Super Admin') {
             const response = await fetch(`${API_BASE}/admins.php`, {
@@ -6804,7 +6879,7 @@ async function confirmDeactivateUser() {
             console.log('Deactivate response data:', data);
             
             if (data.success) {
-                alert('Admin deactivated successfully');
+                showToast('Admin deactivated successfully', 'success');
                 closeDeactivateUserModal();
                 await loadAllUsers();
                 // Auto-set filter to show "Inactive" users
@@ -6814,7 +6889,7 @@ async function confirmDeactivateUser() {
                     filterUsersTable();
                 }
             } else {
-                alert('Error deactivating admin: ' + (data.message || 'Unknown error'));
+                showToast('Error deactivating admin: ' + (data.message || 'Unknown error'), 'error');
             }
         }
     } catch (error) {
@@ -6827,10 +6902,12 @@ async function confirmDeactivateUser() {
 function openReactivateUserModal(userId, userName, userRole) {
     currentActionUserId = parseInt(userId, 10);
     currentActionUserRole = userRole;
-    
-    if (confirm(`Reactivate ${userName}? They will be able to login again.`)) {
-        confirmReactivateUser();
-    }
+    document.getElementById('reactivateUserNameDisplay').textContent = userName;
+    document.getElementById('reactivateUserModal').classList.add('active');
+}
+
+function closeReactivateUserModal() {
+    document.getElementById('reactivateUserModal').classList.remove('active');
 }
 
 async function confirmReactivateUser() {
@@ -6849,7 +6926,8 @@ async function confirmReactivateUser() {
             
             const data = await response.json();
             if (data.success) {
-                alert('Coordinator reactivated successfully');
+                showToast('Coordinator reactivated successfully', 'success');
+                closeReactivateUserModal();
                 await loadAllUsers();
                 // Auto-set filter to show "Active" users
                 const statusFilterEl = document.getElementById('statusFilter');
@@ -6858,7 +6936,7 @@ async function confirmReactivateUser() {
                     filterUsersTable();
                 }
             } else {
-                alert('Error reactivating coordinator: ' + (data.message || 'Unknown error'));
+                showToast('Error reactivating coordinator: ' + (data.message || 'Unknown error'), 'error');
             }
         } else if (currentActionUserRole === 'Admin' || currentActionUserRole === 'Super Admin') {
             const response = await fetch(`${API_BASE}/admins.php`, {
@@ -6872,7 +6950,8 @@ async function confirmReactivateUser() {
             
             const data = await response.json();
             if (data.success) {
-                alert('Admin reactivated successfully');
+                showToast('Admin reactivated successfully', 'success');
+                closeReactivateUserModal();
                 await loadAllUsers();
                 // Auto-set filter to show "Active" users
                 const statusFilterEl = document.getElementById('statusFilter');
@@ -6881,12 +6960,12 @@ async function confirmReactivateUser() {
                     filterUsersTable();
                 }
             } else {
-                alert('Error reactivating admin: ' + (data.message || 'Unknown error'));
+                showToast('Error reactivating admin: ' + (data.message || 'Unknown error'), 'error');
             }
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error reactivating user: ' + error.message);
+        showToast('Error reactivating user: ' + error.message, 'error');
     }
 }
 
@@ -6938,7 +7017,11 @@ function displayCoordinatorsList(coordinators) {
         let profileImageHtml = '<div style="width: 45px; height: 45px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #e0e0e0; flex-shrink: 0;">';
         
         if (profileImage) {
-            profileImageHtml += `<img src="${profileImage}" style="width: 100%; height: 100%; object-fit: cover;" alt="${coordinator.coordinator_name || coordinator.full_name}" onerror="this.parentElement.innerHTML='<div style=\"font-weight:700;font-size:16px;color:#666;\">${(coordinator.coordinator_name || coordinator.full_name || 'U').charAt(0).toUpperCase()}</div>'">`;
+            let imgSrc = profileImage;
+            if (!profileImage.includes('/')) {
+                imgSrc = `../uploads/coordinators/${profileImage}`;
+            }
+            profileImageHtml += `<img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;" alt="${coordinator.coordinator_name || coordinator.full_name}" onerror="this.parentElement.innerHTML='<div style=\"font-weight:700;font-size:16px;color:#666;\">${(coordinator.coordinator_name || coordinator.full_name || 'U').charAt(0).toUpperCase()}</div>'">`;
         } else {
             // Show initials if no image
             const initials = (coordinator.coordinator_name || coordinator.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -7613,8 +7696,12 @@ function loadEventCoordinators() {
                 
                 let profileImageHtml;
                 if (profileImage) {
+                    let imgSrc = profileImage;
+                    if (!profileImage.includes('/')) {
+                        imgSrc = `../uploads/coordinators/${profileImage}`;
+                    }
                     profileImageHtml = `<td style="padding: 12px 16px; text-align: center;">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background-image: url('${profileImage}'); background-size: cover; background-position: center; background-color: #3b82f6;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6;">
                         </div>
                     </td>`;
                 } else {
@@ -8047,8 +8134,12 @@ function openLookupCoordinatorModal() {
                 
                 let profileImageHtml;
                 if (profileImage) {
+                    let imgSrc = profileImage;
+                    if (!profileImage.includes('/')) {
+                        imgSrc = `../uploads/coordinators/${profileImage}`;
+                    }
                     profileImageHtml = `
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${profileImage}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
                         </div>
                     `;
                 } else {
@@ -10280,16 +10371,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     const data = await response.json();
                     if (data.success) {
-                        alert('User updated successfully');
+                        showToast('Admin updated successfully', 'success');
                         closeEditUserModal();
                         loadAllUsers();
                     } else {
-                        alert('Error updating user: ' + (data.message || 'Unknown error'));
+                        showToast('Error updating user: ' + (data.message || 'Unknown error'), 'error');
                     }
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error updating user: ' + error.message);
+                console.error('Error updating user:', error);
+                showToast('Error: ' + error.message, 'error');
             }
         });
     }
@@ -10350,8 +10441,11 @@ function openEditUserModal(userId, userRole, userName, userEmail, userCompany, u
                 // Already base64 encoded from preview
                 imgSrc = user.admin_image;
             } else {
-                // File path
+                // File path - add directory prefix if needed
                 imgSrc = user.admin_image;
+                if (!imgSrc.includes('/')) {
+                    imgSrc = `../uploads/admins/${imgSrc}`;
+                }
             }
             circle.style.background = 'none';
             circle.style.backgroundImage = `url('${imgSrc}')`;
@@ -10372,8 +10466,11 @@ function openEditUserModal(userId, userRole, userName, userEmail, userCompany, u
                 // Already base64 encoded from preview
                 imgSrc = user.coordinator_image;
             } else {
-                // File path
+                // File path - add directory prefix if needed
                 imgSrc = user.coordinator_image;
+                if (!imgSrc.includes('/')) {
+                    imgSrc = `../uploads/coordinators/${imgSrc}`;
+                }
             }
             circle.style.background = 'none';
             circle.style.backgroundImage = `url('${imgSrc}')`;
