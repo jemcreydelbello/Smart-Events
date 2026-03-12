@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 10, 2026 at 06:26 AM
+-- Generation Time: Mar 12, 2026 at 07:08 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -39,6 +39,13 @@ CREATE TABLE `activity_logs` (
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`log_id`, `user_id`, `action_type`, `entity_type`, `entity_id`, `description`, `ip_address`, `user_agent`, `timestamp`) VALUES
+(2, NULL, 'LOGIN', 'ADMIN', 4, 'Admin Login: Luisa Phamm', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0', '2026-03-12 05:53:52');
+
 -- --------------------------------------------------------
 
 --
@@ -70,7 +77,7 @@ CREATE TABLE `admins` (
 
 INSERT INTO `admins` (`admin_id`, `username`, `email`, `password_hash`, `full_name`, `admin_image`, `department_id`, `status`, `last_login`, `login_attempts`, `locked_until`, `created_by`, `created_at`, `updated_at`, `reset_token`, `reset_expire`) VALUES
 (2, 'miwanneone', 'lasiter.agustin@gmail.com', '$2y$10$PcGy6lls2qDdsjbOnmCDV.8zvvvKPAYwmhgfCOlgCECq5VmMSrHkG', 'Miwanneone', 'admin_1772706945_4bae8e67.jpg', 1, 'active', '2026-02-18 15:16:48', 0, NULL, NULL, '2026-02-18 07:07:49', '2026-03-05 10:35:45', '4577464a065bad5f72926ad8172a08b3', '2026-02-25 05:39:32'),
-(4, 'jemcreydelbello', 'jemcreydelbello@gmail.com', '$2y$10$yqzsZgoi0nUiLGl/eTh5EueACKcwMh0pyFqbDd.VGsV191E6bdAPy', 'Luisa Pham', 'admin_1772706309_afc78974.jpg', NULL, 'active', '2026-03-06 16:48:34', 0, NULL, NULL, '2026-03-04 16:29:38', '2026-03-06 08:48:34', NULL, NULL);
+(4, 'jemcreydelbello', 'jemcreydelbello@gmail.com', '$2y$10$yqzsZgoi0nUiLGl/eTh5EueACKcwMh0pyFqbDd.VGsV191E6bdAPy', 'Luisa Phamm', 'admin_1772706309_afc78974.jpg', NULL, 'active', '2026-03-12 13:53:52', 0, NULL, NULL, '2026-03-04 16:29:38', '2026-03-12 05:53:52', '7add13d86e3f57e458f540f15b727d12', '2026-03-11 08:17:20');
 
 -- --------------------------------------------------------
 
@@ -99,7 +106,8 @@ INSERT INTO `admin_login_logs` (`login_log_id`, `admin_id`, `login_time`, `logou
 (43, 4, '2026-03-06 03:37:30', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 1, NULL),
 (44, 4, '2026-03-06 04:07:32', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 1, NULL),
 (45, 4, '2026-03-06 08:30:40', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 1, NULL),
-(46, 4, '2026-03-06 08:48:34', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 1, NULL);
+(46, 4, '2026-03-06 08:48:34', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 1, NULL),
+(47, 4, '2026-03-12 05:53:52', NULL, '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -159,7 +167,9 @@ INSERT INTO `catalogue` (`catalogue_id`, `event_id`, `is_manual`, `event_name`, 
 (21, 45, 0, '2026 Global Sprint & Stride', '2026-03-09 00:00:00', 'Riverside Park, Quezon City', 'Join us for a scenic 5K run/walk to promote health and wellness. Open to all employees and their families. T-shirts and refreshments provided.', 'run.webp', 0, '2026-03-10 03:13:26', 1),
 (22, NULL, 1, 'Past Event', '2026-03-02 00:00:00', '12 Catanduanes', 'veveve', 'cat_1773112442_69af8c7a879f7.jpg', 0, '2026-03-10 03:14:02', 1),
 (23, NULL, 1, 'Past Event', '2026-03-02 00:00:00', '12 Catanduanes', '', 'uploads/cat_1773112747_69af8dabb8534.jpg', 0, '2026-03-10 03:19:07', 0),
-(24, NULL, 1, 'no dir', '2026-03-05 00:00:00', '12 Catanduanes', '', 'cat_1773113212_69af8f7c13b57.jpg', 0, '2026-03-10 03:26:52', 1);
+(24, NULL, 1, 'no dir', '2026-03-05 00:00:00', '12 Catanduanes', '', 'cat_1773113212_69af8f7c13b57.jpg', 0, '2026-03-10 03:26:52', 1),
+(25, 62, 0, 'HR Software All-Hands Meeting', '2026-03-09 00:00:00', 'Conference Room A', 'Quarterly update on company performance, upcoming goals, and open floor Q&A with leadership. Lunch will be provided.', 'run.webp', 1, '2026-03-10 05:38:32', 0),
+(26, 86, 0, 'Private EV', '2026-03-10 00:00:00', 'Pariatur Accusantiu', '', 'event_1773109986_cbdae795.png', 1, '2026-03-11 07:10:08', 0);
 
 -- --------------------------------------------------------
 
@@ -205,7 +215,7 @@ INSERT INTO `coordinators` (`coordinator_id`, `coordinator_name`, `email`, `cont
 (4, 'Maria Garcia', 'maria.coord@example.com', '09876543210', '2026-03-02 16:22:28', '2026-03-05 10:32:59', 'Intellismart', NULL, 'coordinator_1772706779_bb501702.jpg', '652ad186347c1c65002f998094fc23b6', '2026-03-03 17:22:28', 1, NULL),
 (7, 'Daniel Cameron', 'delapena.edrian.bsit@gmail.com', '+639764823140', '2026-03-04 16:02:34', '2026-03-05 10:28:05', 'Intellismart', NULL, 'coordinator_1772706485_801e95a7.jpg', '31ab95deafec6988d28d2a43e560765a', '2026-03-05 17:02:34', 1, NULL),
 (8, 'Raven Leon', 'raven.coord@example.com', '09123456789', '2026-03-04 16:03:38', '2026-03-06 07:52:11', 'Intellismart', NULL, 'coordinator_1772706403_e736e215.jpg', 'af8c24901be9bf0df936d05fc9488611', '2026-03-06 09:52:11', 1, NULL),
-(10, 'Alessandra Everett', 'bello.jemcreydel.bsit@gmail.com', '0993342123', '2026-03-04 16:30:37', '2026-03-06 08:31:45', 'Intellismart', NULL, 'coordinator_1772641837_3538ee58.jpg', 'ec95ad07147e45f5d9a81a19641dbb7f', '2026-03-06 10:31:45', 1, '$2y$10$ojUJGqLcHWb128u3Lx09S.GpPx4nFQryvw0DzAvz6l1fO8QQqyAVu'),
+(10, 'Alessandra Everett', 'bello.jemcreydel.bsit@gmail.com', '0993342123', '2026-03-04 16:30:37', '2026-03-11 00:49:56', 'Intellismart', NULL, 'coordinator_1772641837_3538ee58.jpg', NULL, NULL, 1, '$2y$10$m6BiD8JMlTZHZinGxZzUoO79gBADTdXu/saUWKMwYi5Iyl1O190RK'),
 (11, 'Princess Fuller', 'princess.coord@example.com', '0993342123', '2026-03-05 03:28:30', '2026-03-05 08:11:48', 'Intellismart', NULL, 'coordinator_1772698308_bc51413e.jpg', '3beca92bc2e52d71fabbab473b2f5316', '2026-03-06 04:28:30', 1, NULL);
 
 -- --------------------------------------------------------
@@ -280,7 +290,8 @@ INSERT INTO `events` (`event_id`, `event_name`, `start_event`, `end_event`, `des
 (45, '2026 Global Sprint & Stride', '2026-03-09 07:30:00', '2026-03-09 15:00:00', 'Join us for a scenic 5K run/walk to promote health and wellness. Open to all employees and their families. T-shirts and refreshments provided.', 'Riverside Park, Quezon City', 'run.webp', 50, 0, '0', '0', 1, NULL, '2026-03-04 15:41:50', '2026-03-09 07:30:03', 0, '2026-03-04 07:00:00', '2026-03-08 12:00:00', 1),
 (46, 'Marketing Department Team Building', '2026-03-17 17:14:00', '2026-03-20 17:14:00', 'Test your problem-solving skills! We will split into groups to see who can escape the room the fastest. Followed by drinks and appetizers.', 'Escape Zone Downtown, Quezon City', 'run.webp', 50, 0, '0', 'https://wellsfargo-rfid.vercel.app/?fbclid=IwY2xjawQCEI5leHRuA2FlbQIxMABicmlkETJ6N2dpWlZoRkJRcW5CZUhzc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHjGDPp68rL1_G5GAQ1VIkJYlC6b4fREfna3LVZH6tWRHlbOOEyx_b72RKU2k_aem_jOGUm_s6UxdtR0vLHVRFKg', 1, NULL, '2026-03-05 09:16:07', '2026-03-09 07:30:13', 0, '2026-03-05 17:14:00', '2026-03-17 17:14:00', 0),
 (62, 'HR Software All-Hands Meeting', '2026-03-09 07:00:00', '2026-03-09 12:00:00', 'Quarterly update on company performance, upcoming goals, and open floor Q&A with leadership. Lunch will be provided.', 'Conference Room A', 'run.webp', 10, 1, '0', 'https://wellsfargo-rfid.vercel.app/?fbclid=IwY2xjawQCEI5leHRuA2FlbQIxMABicmlkETJ6N2dpWlZoRkJRcW5CZUhzc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHjGDPp68rL1_G5GAQ1VIkJYlC6b4fREfna3LVZH6tWRHlbOOEyx_b72RKU2k_aem_jOGUm_s6UxdtR0vLHVRFKg', 1, NULL, '2026-03-05 15:03:08', '2026-03-09 07:30:25', 0, '2026-03-05 23:02:00', '2026-03-08 23:02:00', 1),
-(86, 'Private EV', '2026-03-10 10:32:00', '2026-03-10 22:32:00', '', 'Pariatur Accusantiu', 'event_1773109986_cbdae795.png', 2, 1, 'https://www.qesygy.co.uk', 'https://www.rukyvari.org.au', 1, NULL, '2026-03-10 02:33:06', '2026-03-10 02:33:06', 0, '2026-03-10 10:32:00', '2026-03-10 22:32:00', 0);
+(86, 'Private EV', '2026-03-10 10:32:00', '2026-03-10 22:32:00', '', 'Pariatur Accusantiu', 'event_1773109986_cbdae795.png', 2, 1, 'https://www.qesygy.co.uk', 'https://www.rukyvari.org.au', 1, NULL, '2026-03-10 02:33:06', '2026-03-11 07:10:08', 0, '2026-03-10 10:32:00', '2026-03-10 22:32:00', 1),
+(87, 'HR Software All-Hands Meeting', '2026-03-18 08:00:00', '2026-03-18 12:00:00', 'Quarterly update on company performance, upcoming goals, and open floor Q&A with leadership. Lunch will be provided.', 'Meeting Room B', 'event_1773284694_fa554c2a.jpg', 10, 1, '', '', 1, NULL, '2026-03-12 03:04:54', '2026-03-12 03:04:54', 0, '2026-03-12 11:01:00', '2026-03-17 11:01:00', 0);
 
 -- --------------------------------------------------------
 
@@ -302,7 +313,8 @@ CREATE TABLE `event_access_codes` (
 --
 
 INSERT INTO `event_access_codes` (`code_id`, `event_id`, `access_code`, `expires_at`, `is_active`, `created_at`) VALUES
-(15, 86, '1OB313', NULL, 1, '2026-03-10 02:33:06');
+(15, 86, '1OB313', NULL, 1, '2026-03-10 02:33:06'),
+(16, 87, '1G46Q1', NULL, 1, '2026-03-12 03:04:54');
 
 -- --------------------------------------------------------
 
@@ -327,7 +339,10 @@ INSERT INTO `event_coordinators` (`id`, `event_id`, `coordinator_id`, `assigned_
 (28, 46, 7, '2026-03-06 08:51:29', 4),
 (29, 46, 3, '2026-03-06 08:51:29', 4),
 (30, 46, 4, '2026-03-06 08:51:29', 4),
-(31, 46, 11, '2026-03-06 08:51:29', 4);
+(31, 46, 11, '2026-03-06 08:51:29', 4),
+(32, 87, 10, '2026-03-12 05:07:27', 4),
+(33, 87, 7, '2026-03-12 05:07:27', 4),
+(34, 87, 4, '2026-03-12 05:07:27', 4);
 
 -- --------------------------------------------------------
 
@@ -457,7 +472,9 @@ CREATE TABLE `event_metadata` (
 INSERT INTO `event_metadata` (`metadata_id`, `event_id`, `field_name`, `field_value`, `created_at`, `updated_at`) VALUES
 (4, 46, 'Emergency Contact', '0988273821', '2026-03-05 16:18:49', '2026-03-06 08:13:44'),
 (5, 46, 'Lead Organizer', 'Jennilyn Mercado', '2026-03-05 16:19:00', '2026-03-06 08:14:17'),
-(6, 46, 'Estimated Travel Time from Office', '1 hour and 30 minutes', '2026-03-05 16:19:18', '2026-03-05 16:19:18');
+(6, 46, 'Estimated Travel Time from Office', '1 hour and 30 minutes', '2026-03-05 16:19:18', '2026-03-05 16:19:18'),
+(7, 87, 'Emergency Contact', '+63 0293 2093', '2026-03-12 05:09:33', '2026-03-12 05:09:33'),
+(8, 87, 'Lead Organizer', 'Event PM Team - Jonathan Buyers', '2026-03-12 05:10:02', '2026-03-12 05:10:02');
 
 -- --------------------------------------------------------
 
@@ -504,7 +521,8 @@ CREATE TABLE `event_postmortem` (
 --
 
 INSERT INTO `event_postmortem` (`postmortem_id`, `event_id`, `initial_attendees`, `actual_attendees`, `registered_count`, `attended_count`, `attendance_rate`, `task_completion_rate`, `logistics_completion_rate`, `communications_sent`, `communications_scheduled`, `communications_draft`, `movement_stability_score`, `budget_tracked`, `total_budget`, `feedback_summary`, `lessons_learned`, `automated_report_generated`, `log_report_created`, `log_title_introduction`, `log_issue_summary`, `log_root_cause_analysis`, `log_impact_mitigation`, `log_resolution_recovery`, `log_corrective_measures`, `log_feedback_survey`, `log_lesson_learned`, `log_review_measurements`, `generated_at`, `created_at`, `updated_at`) VALUES
-(2, 46, 0, 1, 1, 1, 100.00, 100.00, 100.00, 0, 0, 0, 0.00, 0.00, 0.00, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-06 07:54:09', '2026-03-06 08:36:46');
+(2, 46, 1, 1, 2, 1, 50.00, 100.00, 100.00, 0, 0, 0, 0.00, 0.00, 0.00, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-06 07:54:09', '2026-03-11 05:16:56'),
+(5, 87, 0, 0, 0, 0, 0.00, 0.00, 0.00, 0, 0, 0, 0.00, 0.00, 0.00, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-12 05:05:51', '2026-03-12 05:05:51');
 
 -- --------------------------------------------------------
 
@@ -903,19 +921,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `admin_login_logs`
 --
 ALTER TABLE `admin_login_logs`
-  MODIFY `login_log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `login_log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `attendance_logs`
@@ -933,7 +951,7 @@ ALTER TABLE `audit_logs`
 -- AUTO_INCREMENT for table `catalogue`
 --
 ALTER TABLE `catalogue`
-  MODIFY `catalogue_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `catalogue_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `catalogue_images`
@@ -945,7 +963,7 @@ ALTER TABLE `catalogue_images`
 -- AUTO_INCREMENT for table `coordinators`
 --
 ALTER TABLE `coordinators`
-  MODIFY `coordinator_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `coordinator_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `departments`
@@ -963,19 +981,19 @@ ALTER TABLE `email_blasts`
 -- AUTO_INCREMENT for table `events`
 --
 ALTER TABLE `events`
-  MODIFY `event_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
+  MODIFY `event_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `event_access_codes`
 --
 ALTER TABLE `event_access_codes`
-  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `event_coordinators`
 --
 ALTER TABLE `event_coordinators`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `event_expenses`
@@ -1005,13 +1023,13 @@ ALTER TABLE `event_marketing_assets`
 -- AUTO_INCREMENT for table `event_metadata`
 --
 ALTER TABLE `event_metadata`
-  MODIFY `metadata_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `metadata_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `event_postmortem`
 --
 ALTER TABLE `event_postmortem`
-  MODIFY `postmortem_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `postmortem_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `event_program_flow`
