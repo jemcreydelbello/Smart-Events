@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity-logger.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -131,6 +132,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
         // Log successful login
         logSuccessfulLogin($admin['admin_id'], $ip_address, $user_agent);
         
+        // Get proper full name for activity log - just use full_name from database
+        $admin_full_name = !empty($admin['full_name']) ? $admin['full_name'] : $admin['username'];
+        
+        // Log activity - Admin Login
+        $description = "Admin Login: " . $admin_full_name;
+        logActivity($admin['admin_id'], 'LOGIN', 'ADMIN', $admin['admin_id'], $description);
+
         // Return success with admin data
         $adminData = [
             'id' => $admin['admin_id'],
@@ -220,6 +228,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
             'coordinator_id' => $coordinator['coordinator_id']
         ];
         
+        // Log activity - Coordinator Login
+        $description = "Coordinator Login: " . $coordinator['coordinator_name'];
+        logActivity($coordinator['coordinator_id'], 'LOGIN', 'COORDINATOR', $coordinator['coordinator_id'], $description);
+        
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
@@ -234,24 +246,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
     }
 }
 
-// LOGOUT - End admin session
+// LOGOUT - End admin/coordinator session
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'logout') {
     try {
         $input = file_get_contents('php://input');
         $data = json_decode($input, true);
         
-        $admin_id = intval($data['admin_id'] ?? 0);
+        $user_id = intval($data['admin_id'] ?? $data['user_id'] ?? 0);
+        $user_role = isset($data['role']) ? strtoupper($data['role']) : 'ADMIN'; // Default to ADMIN if not specified
         
-        if ($admin_id > 0) {
-            // Update logout time in login logs
-            $query = "UPDATE admin_login_logs 
-                     SET logout_time = NOW() 
-                     WHERE admin_id = ? AND logout_time IS NULL 
-                     ORDER BY login_time DESC LIMIT 1";
+        if ($user_id > 0) {
+            // Get user full name for activity log
+            $user_full_name = 'System';
+            $entity_type = 'ADMIN';
             
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param('i', $admin_id);
-            $stmt->execute();
+            if ($user_role === 'COORDINATOR') {
+                $userQuery = "SELECT coordinator_name FROM coordinators WHERE coordinator_id = ?";
+                $entity_type = 'COORDINATOR';
+            } else {
+                $userQuery = "SELECT COALESCE(full_name, username) as name FROM admins WHERE admin_id = ?";
+                $entity_type = 'ADMIN';
+            }
+            
+            $userStmt = $conn->prepare($userQuery);
+            $userStmt->bind_param('i', $user_id);
+            $userStmt->execute();
+            $userResult = $userStmt->get_result();
+            
+            if ($userResult->num_rows > 0) {
+                $userRow = $userResult->fetch_assoc();
+                $user_full_name = $user_role === 'COORDINATOR' ? $userRow['coordinator_name'] : $userRow['name'];
+            }
+            $userStmt->close();
+            
+            // Update logout time in login logs (for admin only, coordinators don't use admin_login_logs)
+            if ($user_role === 'ADMIN') {
+                $query = "UPDATE admin_login_logs 
+                         SET logout_time = NOW() 
+                         WHERE admin_id = ? AND logout_time IS NULL 
+                         ORDER BY login_time DESC LIMIT 1";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('i', $user_id);
+                $stmt->execute();
+            }
+            
+            // Log activity - User Logout
+            $description = $entity_type . " Logout: " . $user_full_name;
+            logActivity($user_id, 'LOGOUT', $entity_type, $user_id, $description);
         }
         
         echo json_encode(['success' => true, 'message' => 'Logout successful']);

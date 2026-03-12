@@ -45,6 +45,69 @@ function ensureEventsTableArchived($conn) {
     }
 }
 
+// Helper function to resolve admin_id or coordinator_id to user_id by email matching
+function resolveUserIdFromAdminId($conn, $admin_or_coord_id) {
+    global $conn;
+    
+    // First try to find in admins table
+    $query = "SELECT email FROM admins WHERE admin_id = ?";
+    $stmt = $conn->prepare($query);
+    if (!$stmt) return null;
+    
+    $stmt->bind_param('i', $admin_or_coord_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $admin = $result->fetch_assoc();
+    $stmt->close();
+    
+    if ($admin && $admin['email']) {
+        // Found admin, now find user with same email
+        $userQuery = "SELECT user_id FROM users WHERE email = ?";
+        $userStmt = $conn->prepare($userQuery);
+        if (!$userStmt) return null;
+        
+        $userStmt->bind_param('s', $admin['email']);
+        $userStmt->execute();
+        $userResult = $userStmt->get_result();
+        $user = $userResult->fetch_assoc();
+        $userStmt->close();
+        
+        if ($user && $user['user_id']) {
+            return $user['user_id'];
+        }
+    }
+    
+    // If not found in admins, try coordinators
+    $coordQuery = "SELECT email FROM coordinators WHERE coordinator_id = ?";
+    $coordStmt = $conn->prepare($coordQuery);
+    if (!$coordStmt) return null;
+    
+    $coordStmt->bind_param('i', $admin_or_coord_id);
+    $coordStmt->execute();
+    $coordResult = $coordStmt->get_result();
+    $coordinator = $coordResult->fetch_assoc();
+    $coordStmt->close();
+    
+    if ($coordinator && $coordinator['email']) {
+        // Found coordinator, now find user with same email
+        $userQuery = "SELECT user_id FROM users WHERE email = ?";
+        $userStmt = $conn->prepare($userQuery);
+        if (!$userStmt) return null;
+        
+        $userStmt->bind_param('s', $coordinator['email']);
+        $userStmt->execute();
+        $userResult = $userStmt->get_result();
+        $user = $userResult->fetch_assoc();
+        $userStmt->close();
+        
+        if ($user && $user['user_id']) {
+            return $user['user_id'];
+        }
+    }
+    
+    return null;
+}
+
 // Helper function to get user role and info from request headers or session
 function getUserInfo() {
     $userInfo = [
@@ -723,6 +786,25 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->execute()) {
             $event_id = $conn->insert_id;
             
+            // Log activity - get user_id from POST or headers  
+            $user_id = intval($_POST['_user_id'] ?? 0);
+            if (!$user_id) {
+                $userInfo = getUserInfo();
+                $user_id = $userInfo['user_id'] ?? 1;
+            }
+            // Try to resolve admin/coordinator ID to actual user_id
+            $resolved_user_id = resolveUserIdFromAdminId($conn, $user_id);
+            if ($resolved_user_id) {
+                $user_id = $resolved_user_id;
+            }
+            // Wrap logActivity in try-catch to prevent 500 errors
+            try {
+                logActivity($user_id, 'CREATE', 'EVENT', $event_id, "Created event: {$event_name} (Capacity: {$capacity})");
+            } catch (Exception $e) {
+                error_log('Failed to log activity: ' . $e->getMessage());
+                // Continue anyway - logging failure shouldn't prevent event creation
+            }
+            
             $access_code = null;
             
             // If event is private, generate and create access code
@@ -818,6 +900,25 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $event_id = $conn->insert_id;
+            
+            // Log activity - get user_id from POST or headers
+            $user_id = intval($data['_user_id'] ?? 0);
+            if (!$user_id) {
+                $userInfo = getUserInfo();
+                $user_id = $userInfo['user_id'] ?? 1;
+            }
+            // Try to resolve admin/coordinator ID to actual user_id
+            $resolved_user_id = resolveUserIdFromAdminId($conn, $user_id);
+            if ($resolved_user_id) {
+                $user_id = $resolved_user_id;
+            }
+            // Wrap logActivity in try-catch to prevent 500 errors
+            try {
+                logActivity($user_id, 'CREATE', 'EVENT', $event_id, "Created event: {$event_name} (Capacity: {$capacity})");
+            } catch (Exception $e) {
+                error_log('Failed to log activity: ' . $e->getMessage());
+                // Continue anyway - logging failure shouldn't prevent event creation
+            }
             
             $access_code = null;
             
@@ -1265,6 +1366,25 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
+            // Log activity for event update
+            $user_id = intval($data['_user_id'] ?? 0);
+            if (!$user_id) {
+                $userInfo = getUserInfo();
+                $user_id = $userInfo['user_id'] ?? 1;
+            }
+            // Try to resolve admin/coordinator ID to actual user_id
+            $resolved_user_id = resolveUserIdFromAdminId($conn, $user_id);
+            if ($resolved_user_id) {
+                $user_id = $resolved_user_id;
+            }
+            // Wrap logActivity in try-catch to prevent 500 errors
+            try {
+                logActivity($user_id, 'UPDATE', 'EVENT', $event_id, "Updated event: {$event_name} (Capacity: {$capacity})");
+            } catch (Exception $e) {
+                error_log('Failed to log activity: ' . $e->getMessage());
+                // Continue anyway - logging failure shouldn't prevent event update
+            }
+            
             // Handle access code changes when privacy status changes
             $privacy_changed_to_private = ($is_private == 1 && $existing['is_private'] == 0);
             $privacy_changed_to_public = ($is_private == 0 && $existing['is_private'] == 1);
@@ -1316,13 +1436,14 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         exit;
     }
     
-    // Get the event to delete associated image
-    $get_query = "SELECT image_url FROM events WHERE event_id = ?";
+    // Get the event to delete associated image and fetch event_name for logging
+    $get_query = "SELECT image_url, event_name FROM events WHERE event_id = ?";
     $stmt = $conn->prepare($get_query);
     $stmt->bind_param('i', $event_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $event = $result->fetch_assoc();
+    $event_name = $event ? $event['event_name'] : 'Unknown';
     
     // Start transaction for cascade delete
     $conn->begin_transaction();
@@ -1359,6 +1480,31 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $conn->commit();
         
         if ($affected_rows > 0) {
+            // Log activity for event deletion
+            $input_data = [];
+            if (json_decode($input, true) && is_array(json_decode($input, true))) {
+                $input_data = json_decode($input, true);
+            } else {
+                parse_str($input, $input_data);
+            }
+            $user_id = intval($input_data['_user_id'] ?? 0);
+            if (!$user_id) {
+                $userInfo = getUserInfo();
+                $user_id = $userInfo['user_id'] ?? 1;
+            }
+            // Try to resolve admin/coordinator ID to actual user_id
+            $resolved_user_id = resolveUserIdFromAdminId($conn, $user_id);
+            if ($resolved_user_id) {
+                $user_id = $resolved_user_id;
+            }
+            // Wrap logActivity in try-catch to prevent 500 errors
+            try {
+                logActivity($user_id, 'DELETE', 'EVENT', $event_id, "Deleted event: {$event_name}");
+            } catch (Exception $e) {
+                error_log('Failed to log activity: ' . $e->getMessage());
+                // Continue anyway - logging failure shouldn't prevent event deletion
+            }
+            
             // Delete associated image file if exists
             if ($event && $event['image_url']) {
                 $image_path = dirname(__DIR__) . '/' . $event['image_url'];

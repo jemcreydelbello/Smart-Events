@@ -73,6 +73,9 @@ try {
     exit;
 }
 
+// Load activity logger
+require_once dirname(__DIR__) . '/includes/activity-logger.php';
+
 // Load email & SMTP optional (don't fail if not available)
 @require_once '../config/email_config.php';
 @require_once '../includes/SMTPMailer.php';
@@ -231,12 +234,17 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle both JSON and FormData
         $is_multipart = strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false;
         
+        // Read JSON data once and save it (only if not multipart)
+        $rawData = [];
+        if (!$is_multipart) {
+            $rawData = json_decode(file_get_contents('php://input'), true) ?? [];
+        }
+        
         if ($is_multipart) {
             // FormData (with file upload)
             $data_action_type = $_POST['action_type'] ?? '';
         } else {
-            // JSON
-            $rawData = json_decode(file_get_contents('php://input'), true);
+            // JSON - use already-decoded data
             $data_action_type = $rawData['action_type'] ?? '';
         }
         
@@ -310,8 +318,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($is_multipart) {
                 $coordinator_id = intval($_POST['coordinator_id'] ?? 0);
             } else {
-                $data = json_decode(file_get_contents('php://input'), true);
-                $coordinator_id = intval($data['coordinator_id'] ?? 0);
+                $coordinator_id = intval($rawData['coordinator_id'] ?? 0);
             }
             
             if (!$coordinator_id) {
@@ -330,13 +337,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $job_title = $_POST['job_title'] ?? '';
             $image_file = $_FILES['image'] ?? null;
         } else {
-            // JSON
-            $data = json_decode(file_get_contents('php://input'), true);
-            $coordinator_name = $data['coordinator_name'] ?? '';
-            $email = $data['email'] ?? '';
-            $contact_number = $data['contact_number'] ?? '';
-            $company = $data['company'] ?? '';
-            $job_title = $data['job_title'] ?? '';
+            // JSON - use already-decoded data
+            $coordinator_name = $rawData['coordinator_name'] ?? '';
+            $email = $rawData['email'] ?? '';
+            $contact_number = $rawData['contact_number'] ?? '';
+            $company = $rawData['company'] ?? '';
+            $job_title = $rawData['job_title'] ?? '';
             $image_file = null;
         }
         
@@ -579,6 +585,56 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             error_log("Coordinator created: ID=$coordinator_id, Name=$coordinator_name, Email=$email");
+            
+            // Log activity - Coordinator Account Creation
+            // Debug: Show what was received
+            error_log("=== COORDINATOR CREATION DEBUG ===");
+            error_log("is_multipart: " . ($is_multipart ? 'YES' : 'NO'));
+            if ($is_multipart) {
+                error_log("FormData received - creator_admin_id from _POST: " . ($_POST['creator_admin_id'] ?? 'MISSING'));
+            } else {
+                error_log("JSON received - creator_admin_id from rawData: " . ($rawData['creator_admin_id'] ?? 'MISSING'));
+            }
+            error_log("Full rawData: " . json_encode($rawData));
+            
+            // First try to get from request body (FormData or JSON), then fall back to headers
+            $creator_user_id = null;
+            if ($is_multipart) {
+                $creator_user_id = intval($_POST['creator_admin_id'] ?? 0) ?: null;
+            } else {
+                $creator_user_id = intval($rawData['creator_admin_id'] ?? 0) ?: null;
+            }
+            $creator_user_id = $creator_user_id ?: (intval($_SERVER['HTTP_X_USER_ID'] ?? 0) ?: null);
+            error_log("Final creator_user_id: " . ($creator_user_id ?? 'NULL'));
+            
+            // Get creator name from database if user_id is available
+            $creator_name = 'System';
+            if ($creator_user_id) {
+                error_log("Attempting to look up admin with ID: " . $creator_user_id);
+                // Try to get from admins table first (if creator is admin) - use correct column name
+                $creatorQuery = "SELECT COALESCE(full_name, username) as name FROM admins WHERE admin_id = ? LIMIT 1";
+                $creatorStmt = $conn->prepare($creatorQuery);
+                if ($creatorStmt) {
+                    $creatorStmt->bind_param('i', $creator_user_id);
+                    $creatorStmt->execute();
+                    $creatorResult = $creatorStmt->get_result();
+                    if ($creatorResult->num_rows > 0) {
+                        $creatorRow = $creatorResult->fetch_assoc();
+                        $creator_name = $creatorRow['name'];
+                        error_log("Found creator: " . $creator_name);
+                    } else {
+                        error_log("No creator found with admin_id: " . $creator_user_id);
+                    }
+                    $creatorStmt->close();
+                } else {
+                    error_log("Failed to prepare query: " . $conn->error);
+                }
+            } else {
+                error_log("creator_user_id is NULL or 0");
+            }
+            
+            $description = "Create Account: " . $coordinator_name . " | By: " . $creator_name;
+            logActivity($creator_user_id, 'CREATE', 'COORDINATOR', $coordinator_id, $description);
             
             // Return success immediately - email sending is optional and non-blocking
             http_response_code(200);

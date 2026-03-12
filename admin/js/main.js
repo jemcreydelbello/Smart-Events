@@ -3457,10 +3457,15 @@ function deactivateAdminFromModal() {
 
 // Submit functions for admin forms
 function submitCreateAdmin(formData, adminImage) {
+    // Get current admin from localStorage
+    const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+    const admin_id = admin.admin_id || admin.id || 0;
+    
     const submitData = {
         full_name: formData.get('full_name'),
         email: formData.get('email'),
-        password: formData.get('password')
+        password: formData.get('password'),
+        creator_admin_id: admin_id  // Pass creator admin ID in body
     };
     
     if (adminImage) {
@@ -3958,90 +3963,67 @@ function logActivity(actionType, actionDescription) {
 }
 
 function loadActivityLogs() {
-    const table = document.getElementById('logsTable');
-    if (!table) return;
-    
-    table.querySelector('tbody').innerHTML = '<tr><td colspan="6" class="text-center">Loading activity logs...</td></tr>';
-    
-    fetch(`${API_BASE}/audit_logs.php?action=list`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.data) {
-                displayActivityLogs(data.data);
-            } else {
-                table.querySelector('tbody').innerHTML = '<tr><td colspan="6" class="text-center">No activity logs found</td></tr>';
-            }
-        })
-        .catch(error => {
-            console.error('Error loading logs:', error);
-            table.querySelector('tbody').innerHTML = '<tr><td colspan="6" class="text-center">Error loading activity logs</td></tr>';
-        });
-    
-    // Setup logs search with suggestions
-    const logsSearchBox = document.getElementById('logsSearch');
-    if (logsSearchBox) {
-        let searchTimeout;
-        logsSearchBox.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim().toLowerCase();
-            
-            if (query.length > 0) {
-                searchTimeout = setTimeout(() => {
-                    displayLogsSuggestions(query);
-                }, 300);
-            } else if (query.length === 0) {
-                clearTimeout(searchTimeout);
-                hideLogsSuggestions();
-            }
-        });
-        
-        // Hide suggestions when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target !== logsSearchBox) {
-                hideLogsSuggestions();
-            }
-        });
-    }
-}
-
-function displayActivityLogs(logs) {
-    const tbody = document.getElementById('logsTable').querySelector('tbody');
-    
-    // Store all logs data for search/filter
-    allLogsData = logs || [];
-    logsFilteredData = logs || [];
-    logsCurrentPage = 1; // Reset to first page
-    logsTotalPages = Math.ceil(logs.length / logsPerPage);
-    
-    if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No activity logs found</td></tr>';
-        updateLogsPaginationControls();
+    const tbody = document.getElementById('logsTable');
+    if (!tbody) {
+        console.error('logsTable element not found!');
         return;
     }
     
-    // Display current page
-    displayLogsPage();
-    updateLogsPaginationControls();
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading activity logs...</td></tr>';
     
-    // Setup search
-    setupActivityLogsSearch();
+    console.log('Fetching activity logs from API...');
+    
+    fetch(`${API_BASE}/audit_logs.php?action=list`)
+        .then(response => {
+            console.log('API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response data:', data);
+            if (data.success && data.data && data.data.length > 0) {
+                console.log('✓ Loaded', data.data.length, 'activity logs');
+                displayActivityLogs(data.data);
+            } else {
+                console.log('No data in API response');
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No activity logs found</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('✗ Error loading logs:', error);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Error loading activity logs</td></tr>';
+        });
 }
 
-function displayLogsPage() {
-    const tbody = document.getElementById('logsTable').querySelector('tbody');
-    if (!tbody) return;
+function displayActivityLogs(logs) {
+    const tbody = document.getElementById('logsTable');
+    if (!tbody) {
+        console.error('logsTable element not found!');
+        return;
+    }
     
-    const startIndex = (logsCurrentPage - 1) * logsPerPage;
-    const endIndex = startIndex + logsPerPage;
-    const pageData = logsFilteredData.slice(startIndex, endIndex);
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No activity logs found</td></tr>';
+        return;
+    }
     
-    if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No activity logs found</td></tr>';
+    // Display logs
+    displayLogsPage(logs);
+}
+
+function displayLogsPage(logs) {
+    const tbody = document.getElementById('logsTable');
+    if (!tbody) {
+        console.error('logsTable tbody not found');
+        return;
+    }
+    
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No activity logs found</td></tr>';
         return;
     }
     
     tbody.innerHTML = '';
-    pageData.forEach(log => {
+    logs.forEach(log => {
         const row = document.createElement('tr');
         const dateTime = new Date(log.created_at).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -4060,6 +4042,10 @@ function displayLogsPage() {
             actionBadgeStyle = 'background: #007bff; color: white;'; // Blue for UPDATE
         } else if (log.action_type === 'DELETE') {
             actionBadgeStyle = 'background: #dc3545; color: white;'; // Red for DELETE
+        } else if (log.action_type === 'LOGIN') {
+            actionBadgeStyle = 'background: #6f42c1; color: white;'; // Purple for LOGIN
+        } else if (log.action_type === 'LOGOUT') {
+            actionBadgeStyle = 'background: #ff9800; color: white;'; // Orange for LOGOUT
         }
         
         // Create profile image cell - show image if available, otherwise show initials
@@ -4068,7 +4054,7 @@ function displayLogsPage() {
             profileImageHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #e0e0e0; background: #f0f0f0;" id="imgContainer_${log.audit_id}">
                 <img src="${log.admin_image}" 
                      style="width: 100%; height: 100%; object-fit: cover;" 
-                     alt="${log.full_name || 'User'}"
+                     alt="${log.user_name || 'User'}"
                      onerror="fallbackToInitials(${log.audit_id}, '${firstLetter}', '${profileColor}')">
             </div>`;
         } else {
@@ -4076,124 +4062,13 @@ function displayLogsPage() {
         }
         
         row.innerHTML = `
-            <td>
-                ${profileImageHtml}
-            </td>
-            <td>${log.full_name || 'Unknown'}</td>
+            <td style="font-weight: 600; color: #333;">${log.user_name || 'Unknown'}</td>
             <td><span style="${actionBadgeStyle} padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">${log.action_type}</span></td>
-            <td><small>${log.action_description}</small></td>
             <td><small>${dateTime}</small></td>
-            <td>
-                <button class="btn btn-small" style="background: #f0f0f0; padding: 4px 8px; font-size: 11px;" onclick="showLogDetails('${log.audit_id}', '${log.full_name || 'Unknown'}', '${log.action_type}', '${log.action_description.replace(/'/g, "\\'")}', '${log.ip_address}')">
-                    ▼
-                </button>
-            </td>
+            <td><small>${log.action_description}</small></td>
         `;
         tbody.appendChild(row);
     });
-}
-
-function updateLogsPaginationControls() {
-    const totalRecords = logsFilteredData.length;
-    
-    // Update pagination info total
-    const totalElement = document.getElementById('logsPaginationTotal');
-    if (totalElement) {
-        totalElement.textContent = totalRecords;
-    }
-    
-    // Update Previous button
-    const prevBtn = document.getElementById('logsPrevBtn');
-    if (prevBtn) {
-        prevBtn.disabled = logsCurrentPage === 1;
-    }
-    
-    // Update Next button
-    const nextBtn = document.getElementById('logsNextBtn');
-    if (nextBtn) {
-        nextBtn.disabled = logsCurrentPage >= logsTotalPages;
-    }
-    
-    // Update page numbers
-    const pageNumbersDiv = document.getElementById('logsPageNumbers');
-    if (pageNumbersDiv) {
-        let pageNumbersHtml = '';
-        const maxPagesToShow = 5;
-        let startPage = Math.max(1, logsCurrentPage - Math.floor(maxPagesToShow / 2));
-        let endPage = Math.min(logsTotalPages, startPage + maxPagesToShow - 1);
-        
-        // Adjust start page if too close to end
-        if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-        
-        // Add first page and ellipsis if needed
-        if (startPage > 1) {
-            pageNumbersHtml += `<button class="page-btn" onclick="goToLogsPage(1)">1</button>`;
-            if (startPage > 2) {
-                pageNumbersHtml += `<span style="color: #999; padding: 0 4px;">...</span>`;
-            }
-        }
-        
-        // Add page numbers
-        for (let i = startPage; i <= endPage; i++) {
-            const activeClass = i === logsCurrentPage ? 'active' : '';
-            pageNumbersHtml += `<button class="page-btn ${activeClass}" onclick="goToLogsPage(${i})">${i}</button>`;
-        }
-        
-        // Add last page and ellipsis if needed
-        if (endPage < logsTotalPages) {
-            if (endPage < logsTotalPages - 1) {
-                pageNumbersHtml += `<span style="color: #999; padding: 0 4px;">...</span>`;
-            }
-            pageNumbersHtml += `<button class="page-btn" onclick="goToLogsPage(${logsTotalPages})">${logsTotalPages}</button>`;
-        }
-        
-        pageNumbersDiv.innerHTML = pageNumbersHtml;
-    }
-}
-
-function logsNextPage() {
-    if (logsCurrentPage < logsTotalPages) {
-        logsCurrentPage++;
-        displayLogsPage();
-        updateLogsPaginationControls();
-        // Scroll to top of table
-        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function logsPreviousPage() {
-    if (logsCurrentPage > 1) {
-        logsCurrentPage--;
-        displayLogsPage();
-        updateLogsPaginationControls();
-        // Scroll to top of table
-        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function goToLogsPage(pageNum) {
-    if (pageNum >= 1 && pageNum <= logsTotalPages) {
-        logsCurrentPage = pageNum;
-        displayLogsPage();
-        updateLogsPaginationControls();
-        // Scroll to top of table
-        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function changeLogsRowsPerPage(newValue) {
-    const rowsPerPage = parseInt(newValue);
-    if (rowsPerPage > 0) {
-        logsPerPage = rowsPerPage;
-        logsCurrentPage = 1; // Reset to first page
-        logsTotalPages = Math.ceil(logsFilteredData.length / logsPerPage);
-        displayLogsPage();
-        updateLogsPaginationControls();
-        // Scroll to top of table
-        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 }
 
 function getColorFromLetter(letter) {
@@ -4247,161 +4122,6 @@ function loadActionTypes() {
         .catch(error => console.error('Error loading action types:', error));
 }
 
-function setupActivityLogsSearch() {
-    const searchInput = document.getElementById('logsSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
-            if (query.length === 0) {
-                logsFilteredData = [...allLogsData];
-                logsCurrentPage = 1;
-                logsTotalPages = Math.ceil(logsFilteredData.length / logsPerPage);
-                displayLogsPage();
-                updateLogsPaginationControls();
-                return;
-            }
-            
-            // Filter logs from all logs data
-            logsFilteredData = allLogsData.filter(log => 
-                log.full_name.toLowerCase().includes(query) ||
-                log.action_type.toLowerCase().includes(query) ||
-                log.action_description.toLowerCase().includes(query)
-            );
-            
-            logsCurrentPage = 1;
-            logsTotalPages = Math.ceil(logsFilteredData.length / logsPerPage);
-            displayLogsPage();
-            updateLogsPaginationControls();
-        });
-    }
-}
-
-function filterLogsByAction(actionType) {
-    if (actionType === '') {
-        logsFilteredData = [...allLogsData];
-    } else {
-        logsFilteredData = allLogsData.filter(log => log.action_type === actionType);
-    }
-    
-    // Reset to first page and recalculate pagination
-    logsCurrentPage = 1;
-    logsTotalPages = Math.ceil(logsFilteredData.length / logsPerPage);
-    displayLogsPage();
-    updateLogsPaginationControls();
-}
-
-function sortLogs(sortValue) {
-    let sorted = [...logsFilteredData];
-    
-    sorted.sort((a, b) => {
-        const aTime = new Date(a.created_at);
-        const bTime = new Date(b.created_at);
-        
-        return sortValue === 'newest' ? bTime - aTime : aTime - bTime;
-    });
-    
-    logsFilteredData = sorted;
-    logsCurrentPage = 1;
-    logsTotalPages = Math.ceil(logsFilteredData.length / logsPerPage);
-    displayLogsPage();
-    updateLogsPaginationControls();
-}
-
-function refreshLogs() {
-    document.getElementById('logsSearch').value = '';
-    document.getElementById('actionTypeFilter').value = '';
-    document.getElementById('logsSortBy').value = 'newest';
-    loadActivityLogs();
-}
-
-function displayLogsSuggestions(query) {
-    const container = document.getElementById('logsSearchSuggestions');
-    if (!container) return;
-    
-    const filtered = allLogsData.filter(log => {
-        const adminMatch = (log.full_name || '').toLowerCase().includes(query);
-        const actionMatch = (log.action_type || '').toLowerCase().includes(query);
-        const descMatch = (log.action_description || '').toLowerCase().includes(query);
-        return adminMatch || actionMatch || descMatch;
-    }).slice(0, 8);
-    
-    if (filtered.length === 0) {
-        container.innerHTML = '<div style="padding: 12px; text-align: center; color: #999; font-size: 12px;">No matching logs found</div>';
-        container.style.display = 'block';
-        return;
-    }
-    
-    let html = '';
-    filtered.forEach((log) => {
-        const actionTypeColor = getActionTypeColor(log.action_type);
-        const dateFormatted = new Date(log.created_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-        
-        html += `
-            <div class="suggestion-item" style="padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; gap: 12px; align-items: flex-start;" 
-                 onmouseover="this.style.background='#f5f5f5'" 
-                 onmouseout="this.style.background='transparent'"
-                 onclick="selectLogSuggestion('${log.full_name || 'Unknown'}', '${log.action_type}')">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 13px; color: #333;">${log.full_name || 'Unknown'}</div>
-                    <div style="font-size: 12px; margin-top: 2px;"><span style="background: ${actionTypeColor}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">${log.action_type}</span></div>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px;">${log.action_description || 'No description'}</div>
-                    <div style="font-size: 11px; color: #999; margin-top: 2px;">${dateFormatted}</div>
-                </div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-    container.style.display = 'block';
-}
-
-function hideLogsSuggestions() {
-    const container = document.getElementById('logsSearchSuggestions');
-    if (container) {
-        container.style.display = 'none';
-        container.innerHTML = '';
-    }
-}
-
-function selectLogSuggestion(adminName, actionType) {
-    const logsSearchBox = document.getElementById('logsSearch');
-    logsSearchBox.value = adminName;
-    hideLogsSuggestions();
-    
-    const query = adminName.toLowerCase();
-    const tbody = document.getElementById('logsTable').querySelector('tbody');
-    
-    if (allLogsData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No activity logs found</td></tr>';
-        return;
-    }
-    
-    const filtered = allLogsData.filter(log => 
-        (log.full_name || '').toLowerCase().includes(query)
-    );
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No logs found for ' + adminName + '</td></tr>';
-        return;
-    }
-    
-    displayActivityLogs(filtered);
-}
-
-function getActionTypeColor(actionType) {
-    const colors = {
-        'CREATE': '#28a745',
-        'UPDATE': '#007bff',
-        'DELETE': '#dc3545',
-        'LOGIN': '#6c757d',
-        'LOGOUT': '#6c757d'
-    };
-    return colors[actionType] || '#6c757d';
-}
 // Report functions
 function previewReport(reportType) {
     console.log('Previewing report:', reportType);

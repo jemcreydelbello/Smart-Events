@@ -87,6 +87,9 @@ try {
     exit;
 }
 
+// Load activity logger
+require_once dirname(__DIR__) . '/includes/activity-logger.php';
+
 // Load email & SMTP optional (don't fail if not available)
 @require_once dirname(__DIR__) . '/config/email_config.php';
 @require_once dirname(__DIR__) . '/includes/SMTPMailer.php';
@@ -204,13 +207,18 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle both JSON and FormData
         $is_multipart = strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false;
         
+        // Read JSON data once and save it
+        $data = [];
+        if (!$is_multipart) {
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true) ?? [];
+        }
+        
         // Determine if this is CREATE or UPDATE
         $admin_id = null;
         if ($is_multipart) {
             $admin_id = intval($_POST['admin_id'] ?? 0);
         } else {
-            $input = file_get_contents('php://input');
-            $data = json_decode($input, true);
             $admin_id = intval($data['admin_id'] ?? 0);
         }
         
@@ -318,10 +326,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $password = trim($_POST['password'] ?? '');
             $image_file = $_FILES['image'] ?? null;
         } else {
-            // JSON
-            $input = file_get_contents('php://input');
-            $data = json_decode($input, true);
-            
+            // JSON - use already-decoded data
             $full_name = trim($data['full_name'] ?? '');
             $email = trim($data['email'] ?? '');
             $password = trim($data['password'] ?? '');
@@ -419,6 +424,45 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         $newAdminId = $conn->insert_id;
+        
+        // Log activity - Admin Account Creation
+        // Debug: Show what was received
+        error_log("=== ADMIN CREATION DEBUG ===");
+        error_log("Full data received: " . json_encode($data));
+        error_log("creator_admin_id from data: " . ($data['creator_admin_id'] ?? 'MISSING'));
+        
+        // First try to get from request body (newer method), then fall back to headers
+        $creator_user_id = intval($data['creator_admin_id'] ?? $_SERVER['HTTP_X_USER_ID'] ?? 0) ?: null;
+        error_log("creator_user_id after parsing: " . ($creator_user_id ?? 'NULL'));
+        
+        // Get creator name from database if user_id is available
+        $creator_name = 'System';
+        if ($creator_user_id) {
+            error_log("Attempting to look up admin with ID: " . $creator_user_id);
+            // Try to get from admins table first - use correct column name
+            $creatorQuery = "SELECT COALESCE(full_name, username) as name FROM admins WHERE admin_id = ? LIMIT 1";
+            $creatorStmt = $conn->prepare($creatorQuery);
+            if ($creatorStmt) {
+                $creatorStmt->bind_param('i', $creator_user_id);
+                $creatorStmt->execute();
+                $creatorResult = $creatorStmt->get_result();
+                if ($creatorResult->num_rows > 0) {
+                    $creatorRow = $creatorResult->fetch_assoc();
+                    $creator_name = $creatorRow['name'];
+                    error_log("Found creator: " . $creator_name);
+                } else {
+                    error_log("No creator found with admin_id: " . $creator_user_id);
+                }
+                $creatorStmt->close();
+            } else {
+                error_log("Failed to prepare query: " . $conn->error);
+            }
+        } else {
+            error_log("creator_user_id is NULL or 0");
+        }
+        
+        $description = "Create Account: " . $full_name . " | By: " . $creator_name;
+        logActivity($creator_user_id, 'CREATE', 'ADMIN', $newAdminId, $description);
         
         http_response_code(200);
         echo json_encode([

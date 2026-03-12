@@ -603,6 +603,17 @@
           headers['X-Coordinator-Id'] = userInfo.coordinator_id;
         }
         
+        // Add user name/username for activity logging
+        if (userInfo.full_name) {
+          headers['X-User-Name'] = userInfo.full_name;
+        } else if (userInfo.username) {
+          headers['X-User-Name'] = userInfo.username;
+        } else if (userInfo.coordinator_name) {
+          headers['X-User-Name'] = userInfo.coordinator_name;
+        } else if (userInfo.email) {
+          headers['X-User-Name'] = userInfo.email;
+        }
+        
         return headers;
       } catch (error) {
         return { 'Content-Type': 'application/json' };
@@ -2779,15 +2790,105 @@ try {
         <!-- Activity Logs Page -->
         <div id="logs" class="page">
           <h2 class="font-semibold" style="color: #000000; font-size: 32px; margin-top: -10px; margin-bottom: 24px;">Activity Logs</h2>
+          <p class="text-gray-600" style="margin-bottom: 40px; margin-top: -25px; font-size: 14px;">Records and tracks user and system activities (login, updates, actions) for monitoring, security, and auditing purposes.</p>
+          
+          <!-- Search Bar Section -->
+          <div class="mb-6" style="display: flex; gap: 12px; align-items: center;">
+            <div style="flex: 0 0 300px; position: relative;">
+              <input 
+                type="text" 
+                id="logsSearchInput" 
+                placeholder="Search by User or Action..."
+                style="
+                  width: 100%; 
+                  padding: 8px 10px 8px 32px; 
+                  border: 1px solid #ddd; 
+                  border-radius: 6px; 
+                  font-size: 13px; 
+                  font-family: inherit;
+                  color: #1f2937;
+                  transition: all 0.2s ease;
+                "
+                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
+              >
+              <svg 
+                style="
+                  position: absolute; 
+                  left: 8px; 
+                  top: 50%; 
+                  transform: translateY(-50%); 
+                  width: 14px; 
+                  height: 14px; 
+                  color: #999;
+                  pointer-events: none;
+                " 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <!-- Search Suggestions Dropdown -->
+              <div 
+                id="logsSuggestionsDropdown" 
+                style="
+                  display: none;
+                  position: absolute;
+                  top: 100%;
+                  left: 0;
+                  right: 0;
+                  margin-top: 4px;
+                  background: white;
+                  border: 1px solid #ddd;
+                  border-radius: 6px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                  max-height: 300px;
+                  overflow-y: auto;
+                  z-index: 10;
+                  width: 100%;
+                "
+              >
+                <!-- Suggestions will be populated here -->
+              </div>
+            </div>
+            
+            <!-- Filter Action Type Dropdown -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-size: 13px; color: #374151; font-weight: 500; margin-left: 2px; margin-top: 5px; white-space: nowrap;">Action Type:</label>
+              <select 
+                id="actionTypeFilter" 
+                style="
+                  padding: 8px 10px;
+                  border: 1px solid #ddd;
+                  border-radius: 6px;
+                  font-size: 13px;
+                  font-family: inherit;
+                  background: white;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  color: #374151;
+                  width: 200px;
+                "
+                onchange="applyActionTypeFilter(this.value)"
+                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
+              >
+                <option value="">Select Action Type</option>
+              </select>
+            </div>
+          </div>
+          
           <div class="bg-white rounded-lg p-6 border border-gray-200">
             <div class="overflow-x-auto">
-              <table class="w-full text-sm">
+              <table class="w-full text-sm" style="table-layout: fixed;">
                 <thead class="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900">User</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900">Action</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900">Date & Time</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900">Details</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">User</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Action</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Date & Time</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Details</th>
                   </tr>
                 </thead>
                 <tbody id="logsTable" class="divide-y divide-gray-200">
@@ -4608,6 +4709,18 @@ try {
       const imageFile = document.getElementById('eventImage').files[0];
       if (imageFile) {
         formData.append('image', imageFile);
+      }
+      
+      // Add user info for logging
+      try {
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userInfo = (admin && admin.id) ? admin : user;
+        if (userInfo.id) {
+          formData.append('_user_id', userInfo.id);
+        }
+      } catch (e) {
+        console.warn('Could not extract user info');
       }
       
       // Debug: Log the is_private value before sending

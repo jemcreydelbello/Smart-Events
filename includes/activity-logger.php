@@ -15,10 +15,28 @@ function logActivity($user_id, $action_type, $entity_type = null, $entity_id = n
         return false;
     }
     
-    $stmt->bind_param('issiiss', $user_id, $action_type, $entity_type, $entity_id, $description, $ip_address, $user_agent);
+        $stmt->bind_param('ississs', $user_id, $action_type, $entity_type, $entity_id, $description, $ip_address, $user_agent);
     
-    if (!$stmt->execute()) {
-        error_log('Activity log insert failed: ' . $stmt->error);
+    try {
+        if (!$stmt->execute()) {
+            error_log('Activity log insert failed: ' . $stmt->error);
+            return false;
+        }
+    } catch (Throwable $e) {
+        // Handle all exceptions including mysqli_sql_exception
+        error_log('Activity log execution exception: ' . $e->getMessage());
+        // Try again with NULL user_id if FK constraint failed (user doesn't exist)
+        if (strpos($e->getMessage(), 'FOREIGN KEY') !== false || strpos($e->getMessage(), 'foreign key constraint fails') !== false) {
+            error_log('FK constraint failed for user_id: ' . $user_id . ', retrying with NULL');
+            $stmt2 = $conn->prepare($query);
+            if ($stmt2) {
+                $null_user_id = null;
+                $stmt2->bind_param('ississs', $null_user_id, $action_type, $entity_type, $entity_id, $description, $ip_address, $user_agent);
+                if ($stmt2->execute()) {
+                    return $conn->insert_id;
+                }
+            }
+        }
         return false;
     }
     
