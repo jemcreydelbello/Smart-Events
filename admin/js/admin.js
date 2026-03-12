@@ -59,6 +59,17 @@ function getUserHeaders() {
             headers['X-Coordinator-Id'] = userInfo.coordinator_id;
         }
         
+        // Add user name/username for activity logging
+        if (userInfo.full_name) {
+            headers['X-User-Name'] = userInfo.full_name;
+        } else if (userInfo.username) {
+            headers['X-User-Name'] = userInfo.username;
+        } else if (userInfo.coordinator_name) {
+            headers['X-User-Name'] = userInfo.coordinator_name;
+        } else if (userInfo.email) {
+            headers['X-User-Name'] = userInfo.email;
+        }
+        
         return headers;
     } catch (error) {
         console.error('Error building user headers:', error);
@@ -5275,6 +5286,8 @@ let allUsersData = [];
 let usersCurrentPage = 1;
 let usersPerPage = 10;
 let usersFilteredData = [];
+let allActivityLogs = []; // Store all logs for search functionality
+let selectedActionTypeFilter = ''; // Store selected action type filter
 
 function loadActivityLogs() {
     console.log('✓ loadActivityLogs() called');
@@ -5305,50 +5318,17 @@ function loadActivityLogs() {
             return;
         }
         
-        logsTable.innerHTML = '';
+        // Store all logs data for search functionality
+        allActivityLogs = data.data;
         
-        data.data.forEach(log => {
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid #f0f0f0';
-            
-            // Format timestamp
-            const logDate = new Date(log.timestamp);
-            const formattedDate = logDate.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            
-            // Format action type (convert SNAKE_CASE to Readable Text)
-            const actionFormatted = log.action_type
-                .replace(/_/g, ' ')
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-            
-            // Build description
-            let description = log.description || '';
-            if (log.entity_type && log.entity_id) {
-                description += (description ? ' | ' : '') + `${log.entity_type} (ID: ${log.entity_id})`;
-            }
-            
-            row.innerHTML = `
-                <td class="px-4 py-3" style="color: #1f2937; font-size: 14px;">${log.user_name || 'System'}</td>
-                <td class="px-4 py-3" style="color: #1f2937; font-size: 14px;">
-                    <span style="display: inline-block; padding: 4px 8px; background: #e3f2fd; color: #1976d2; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                        ${actionFormatted}
-                    </span>
-                </td>
-                <td class="px-4 py-3" style="color: #666; font-size: 13px;">${formattedDate}</td>
-                <td class="px-4 py-3" style="color: #666; font-size: 13px;">${description || '-'}</td>
-            `;
-            
-            logsTable.appendChild(row);
-        });
+        // Display all logs
+        displayActivityLogs(data.data);
+        
+        // Populate action type filter dropdown
+        populateActionTypeFilter();
+        
+        // Set up search event listener
+        setupLogsSearchListener();
         
         console.log(`✓ Displayed ${data.data.length} activity logs`);
         
@@ -5358,6 +5338,322 @@ function loadActivityLogs() {
         logsTable.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: #e74c3c;">Error loading logs: ${error.message}</td></tr>`;
     });
 }
+
+function displayActivityLogs(logsToDisplay) {
+    const logsTable = document.getElementById('logsTable');
+    if (!logsTable) {
+        console.error('✗ logsTable not found');
+        return;
+    }
+    
+    if (!logsToDisplay || logsToDisplay.length === 0) {
+        logsTable.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #999;">No activity logs found</td></tr>';
+        return;
+    }
+    
+    logsTable.innerHTML = '';
+    
+    logsToDisplay.forEach(log => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #f0f0f0';
+        
+        // Format timestamp
+        const logDate = new Date(log.timestamp);
+        const formattedDate = logDate.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        
+        // Format action type (convert SNAKE_CASE to Readable Text)
+        const actionFormatted = log.action_type
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+        
+        // Build description
+        let description = log.description || '';
+        if (log.entity_type && log.entity_id) {
+            description += (description ? ' | ' : '') + `${log.entity_type} (ID: ${log.entity_id})`;
+        }
+        
+        row.innerHTML = `
+            <td class="px-4 py-3" style="color: #1f2937; font-size: 14px;">${log.user_name || 'System'}</td>
+            <td class="px-4 py-3" style="color: #1f2937; font-size: 14px;">
+                <span style="display: inline-block; padding: 4px 8px; background: #e3f2fd; color: #1976d2; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                    ${actionFormatted}
+                </span>
+            </td>
+            <td class="px-4 py-3" style="color: #666; font-size: 13px;">${formattedDate}</td>
+            <td class="px-4 py-3" style="color: #666; font-size: 13px;">${description || '-'}</td>
+        `;
+        
+        logsTable.appendChild(row);
+    });
+}
+
+function setupLogsSearchListener() {
+    const searchInput = document.getElementById('logsSearchInput');
+    if (!searchInput) {
+        console.error('✗ logsSearchInput not found');
+        return;
+    }
+    
+    // Add event listener for real-time search
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        filterActivityLogs(searchTerm);
+        showLogsSuggestions(searchTerm);
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput) {
+            const dropdown = document.getElementById('logsSuggestionsDropdown');
+            if (dropdown) {
+                dropdown.style.display = 'none';
+            }
+        }
+    });
+    
+    // Show suggestions on focus
+    searchInput.addEventListener('focus', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        showLogsSuggestions(searchTerm, true);
+    });
+}
+
+function filterActivityLogs(searchTerm) {
+    if (!searchTerm || searchTerm === '') {
+        // Display all logs if search term is empty, but apply action type filter if set
+        if (selectedActionTypeFilter) {
+            const filteredByAction = allActivityLogs.filter(log => 
+                log.action_type === selectedActionTypeFilter
+            );
+            displayActivityLogs(filteredByAction);
+        } else {
+            displayActivityLogs(allActivityLogs);
+        }
+        return;
+    }
+    
+    // Filter logs based on search term
+    let filteredLogs = allActivityLogs.filter(log => {
+        const userName = (log.user_name || '').toLowerCase();
+        const actionType = (log.action_type || '').toLowerCase();
+        
+        // Search in user name and action type
+        return userName.includes(searchTerm) || actionType.includes(searchTerm);
+    });
+    
+    // Apply action type filter if selected
+    if (selectedActionTypeFilter) {
+        filteredLogs = filteredLogs.filter(log => 
+            log.action_type === selectedActionTypeFilter
+        );
+    }
+    
+    displayActivityLogs(filteredLogs);
+}
+
+function populateActionTypeFilter() {
+    const filterSelect = document.getElementById('actionTypeFilter');
+    if (!filterSelect) {
+        console.error('✗ actionTypeFilter not found');
+        return;
+    }
+    
+    // Get unique action types
+    const actionTypes = new Set();
+    allActivityLogs.forEach(log => {
+        if (log.action_type) {
+            actionTypes.add(log.action_type);
+        }
+    });
+    
+    // Sort action types
+    const sortedActionTypes = Array.from(actionTypes).sort();
+    
+    // Clear existing options except the first one
+    filterSelect.innerHTML = '<option value="">Select Action Type</option>';
+    
+    // Add action type options
+    sortedActionTypes.forEach(actionType => {
+        const option = document.createElement('option');
+        option.value = actionType;
+        
+        // Format action type for display
+        const formattedAction = actionType
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+        
+        option.textContent = formattedAction;
+        filterSelect.appendChild(option);
+    });
+}
+
+function applyActionTypeFilter(actionType) {
+    selectedActionTypeFilter = actionType;
+    
+    // Get current search term
+    const searchInput = document.getElementById('logsSearchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    // Reapply filters
+    filterActivityLogs(searchTerm);
+}
+
+function showLogsSuggestions(searchTerm, showAll = false) {
+    const dropdown = document.getElementById('logsSuggestionsDropdown');
+    if (!dropdown) {
+        console.error('✗ logsSuggestionsDropdown not found');
+        return;
+    }
+    
+    // Collect unique suggestions from logs
+    const suggestions = new Set();
+    let userSuggestions = [];
+    let actionSuggestions = [];
+    
+    allActivityLogs.forEach(log => {
+        const userName = (log.user_name || '').toLowerCase();
+        const actionType = (log.action_type || '').toLowerCase();
+        
+        // If no search term or showAll is true, add all suggestions
+        if (!searchTerm || showAll) {
+            if (log.user_name && !userSuggestions.find(u => u.original === log.user_name)) {
+                userSuggestions.push({
+                    type: 'user',
+                    text: log.user_name,
+                    original: log.user_name
+                });
+            }
+            
+            const actionFormatted = log.action_type
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            
+            if (!actionSuggestions.find(a => a.original === log.action_type)) {
+                actionSuggestions.push({
+                    type: 'action',
+                    text: actionFormatted,
+                    original: log.action_type
+                });
+            }
+        } else {
+            // Filter based on search term
+            if (userName.includes(searchTerm) && !userSuggestions.find(u => u.original === log.user_name)) {
+                userSuggestions.push({
+                    type: 'user',
+                    text: log.user_name,
+                    original: log.user_name
+                });
+            }
+            
+            if (actionType.includes(searchTerm)) {
+                const actionFormatted = log.action_type
+                    .replace(/_/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+                
+                if (!actionSuggestions.find(a => a.original === log.action_type)) {
+                    actionSuggestions.push({
+                        type: 'action',
+                        text: actionFormatted,
+                        original: log.action_type
+                    });
+                }
+            }
+        }
+    });
+    
+    const suggestionsArray = [...userSuggestions, ...actionSuggestions];
+    
+    // Limit to 8 suggestions
+    const limitedSuggestions = suggestionsArray.slice(0, 8);
+    
+    dropdown.innerHTML = '';
+    
+    if (limitedSuggestions.length === 0) {
+        // Show "No suggestions" message
+        const noSuggestionsItem = document.createElement('div');
+        noSuggestionsItem.style.cssText = `
+            padding: 12px 16px;
+            color: #999;
+            font-size: 13px;
+            text-align: center;
+        `;
+        noSuggestionsItem.textContent = 'No suggestions';
+        dropdown.appendChild(noSuggestionsItem);
+        dropdown.style.display = 'block';
+        return;
+    }
+    
+    limitedSuggestions.forEach((suggestion, index) => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.style.cssText = `
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+            font-size: 14px;
+        `;
+        
+        if (suggestion.type === 'user') {
+            suggestionItem.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 8px; vertical-align: middle; color: #6b7280;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span style="color: #1f2937; font-weight: 500;">${suggestion.text}</span>
+                <span style="color: #9ca3af; font-size: 12px; margin-left: 8px;">User</span>
+            `;
+        } else {
+            suggestionItem.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 8px; vertical-align: middle; color: #6b7280;">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <span style="color: #1f2937; font-weight: 500;">${suggestion.text}</span>
+                <span style="color: #9ca3af; font-size: 12px; margin-left: 8px;">Action</span>
+            `;
+        }
+        
+        suggestionItem.onmouseover = function() {
+            this.style.backgroundColor = '#f3f4f6';
+        };
+        
+        suggestionItem.onmouseout = function() {
+            this.style.backgroundColor = 'transparent';
+        };
+        
+        suggestionItem.onclick = function() {
+            document.getElementById('logsSearchInput').value = suggestion.original;
+            filterActivityLogs(suggestion.original.toLowerCase());
+            dropdown.style.display = 'none';
+        };
+        
+        // Remove border from last item
+        if (index === limitedSuggestions.length - 1) {
+            suggestionItem.style.borderBottom = 'none';
+        }
+        
+        dropdown.appendChild(suggestionItem);
+    });
+    
+    dropdown.style.display = 'block';
+}
+
+
 
 function loadActionTypes() { 
     console.log('✓ loadActionTypes() called');
@@ -6553,14 +6849,27 @@ async function createCoordinatorAccount() {
   formData.append('company', company);
   formData.append('job_title', jobTitle);
   formData.append('contact_number', contact);
+  
+  // Add creator admin ID
+  const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+  const creator_admin_id = admin.admin_id || admin.id || 0;
+  if (creator_admin_id > 0) {
+    formData.append('creator_admin_id', creator_admin_id);
+  }
+  
   if (imageFile) {
     formData.append('image', imageFile);
   }
   
   try {
-    // Do NOT pass headers with FormData - let browser set Content-Type automatically
+    // Get user headers and add to fetch request
+    const headers = getUserHeaders();
+    // Remove Content-Type for FormData - let browser set it automatically with boundary
+    delete headers['Content-Type'];
+    
     const response = await fetch(`${API_BASE}/coordinators.php`, {
       method: 'POST',
+      headers: headers,
       body: formData
     });
     

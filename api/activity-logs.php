@@ -122,12 +122,10 @@ if ($method === 'GET') {
         $count_row = $count_result->fetch_assoc();
         $total_records = $count_row['total'];
         
-        // Get logs
-        $query = "SELECT al.log_id, al.user_id, u.first_name, u.last_name, u.email, 
-                         al.action_type, al.entity_type, al.entity_id, al.description, 
-                         al.timestamp, al.ip_address, al.user_agent
+        // Get logs - extract user_name from description since activity logs store creator info there
+        $query = "SELECT al.log_id, al.user_id, al.action_type, al.entity_type, al.entity_id, 
+                         al.description, al.timestamp, al.ip_address, al.user_agent
                   FROM activity_logs al
-                  LEFT JOIN users u ON al.user_id = u.user_id
                   $where_clause
                   ORDER BY al.timestamp DESC
                   LIMIT ? OFFSET ?";
@@ -153,10 +151,43 @@ if ($method === 'GET') {
         $logs = [];
         
         while ($row = $result->fetch_assoc()) {
+            $user_name = 'Unknown';
+            $description = $row['description'];
+            
+            // Extract user name from description based on action type
+            // Patterns: "Action: [Name]", "Action: [Name] | By: [Creator]", "Create Account: [Name] | By: [Creator]"
+            
+            // For LOGIN/LOGOUT: "Admin/Coordinator Login: [Name]"
+            if (in_array($row['action_type'], ['LOGIN', 'LOGOUT'])) {
+                if (preg_match('/(?:Admin|Coordinator)\s+(?:Login|Logout):\s+(.+?)(?:\s+\||$)/', $description, $matches)) {
+                    $user_name = trim($matches[1]);
+                }
+            }
+            // For CREATE: "Create Account: [Name] | By: [Creator]" - we want the creator (By: [Creator])
+            elseif ($row['action_type'] === 'CREATE') {
+                if (strpos($description, ' | By: ') !== false) {
+                    $parts = explode(' | By: ', $description);
+                    if (count($parts) > 1) {
+                        $user_name = trim($parts[1]);
+                    }
+                }
+            }
+            // For other actions, try to extract from format "Action: [something] | [Details]"
+            else {
+                if (preg_match('/^[^:]+:\s+(.+?)(?:\s+\||$)/', $description, $matches)) {
+                    $user_name = trim($matches[1]);
+                }
+            }
+            
+            // Default to Unknown if extraction failed
+            if (!$user_name) {
+                $user_name = 'Unknown';
+            }
+            
             $logs[] = [
                 'log_id' => $row['log_id'],
                 'user_id' => $row['user_id'],
-                'user_name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')) ?: ($row['email'] ?? 'Unknown'),
+                'user_name' => $user_name,
                 'action_type' => $row['action_type'],
                 'entity_type' => $row['entity_type'],
                 'entity_id' => $row['entity_id'],
