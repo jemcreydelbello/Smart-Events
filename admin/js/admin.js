@@ -2277,9 +2277,17 @@ function renderAttendeesTable(attendees, tableBody) {
     attendees.forEach((attendee, idx) => {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid #e5e7eb';
+        
+        // Create walk-in badge if applicable
+        const walkInBadge = attendee.is_walkIn === 1 || attendee.is_walkIn === '1' 
+            ? '<span style="display: inline-block; padding: 2px 8px; background: #fef08a; color: #854d0e; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px;">Walk-in</span>'
+            : '';
+        
+        const fullName = escapeHtml(attendee.full_name || attendee.name || '-');
+        
         row.innerHTML = `
             <td style="padding: 12px 16px; color: #111827; font-size: 14px;">${idx + 1}</td>
-            <td style="padding: 12px 16px; color: #111827; font-size: 14px;">${escapeHtml(attendee.full_name || attendee.name || '-')}</td>
+            <td style="padding: 12px 16px; color: #111827; font-size: 14px;">${fullName}${walkInBadge}</td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px;">${escapeHtml(attendee.company || '-')}</td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px;">${escapeHtml(attendee.job_title || '-')}</td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px;">${escapeHtml(attendee.email || '-')}</td>
@@ -2381,10 +2389,19 @@ function renderFullPageAttendees(attendees, tableBody) {
         row.style.height = '60px';
         
         const regCode = attendee.registration_code || '';
+        const fullName = attendee.full_name || attendee.name || 'Attendee';
+        const status = (attendee.status || '').toUpperCase();
+        const isAttended = status === 'ATTENDED';
+        
+        // Context-aware button: checkmark for REGISTERED, undo for ATTENDED
+        const statusButton = isAttended 
+            ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ff9800;" title="Move to Initial List"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><g fill="none" fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"><path d="M6.499 6.498L3.5 9.5l3 3"/><path d="M8.5 15.5h5q3 0 3-3c0-3-1-3-3-3h-10"/></g></svg></button>`
+            : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #10b981;" title="Mark as Attended"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9.55 15.15l8.475-8.475q.3-.3.7-.3t.7.3t.3.713t-.3.712l-9.175 9.2q-.3.3-.7.3t-.7-.3L4.55 13q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3z"/></svg></button>`;
+        
         const actions = `
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #6b7280;" title="View QR Code"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg></button>
-                <button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #10b981;" title="Mark as Attended"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9.55 15.15l8.475-8.475q.3-.3.7-.3t.7.3t.3.713t-.3.712l-9.175 9.2q-.3.3-.7.3t-.7-.3L4.55 13q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3z"/></svg></button>
+                <button onclick="showQRCode('${escapeHtml(regCode)}', '${escapeHtml(fullName)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #6b7280;" title="View QR Code"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg></button>
+                ${statusButton}
                 <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ef4444;" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2h4a1 1 0 1 1 0 2h-1.069l-.867 12.142A2 2 0 0 1 17.069 22H6.93a2 2 0 0 1-1.995-1.858L4.07 8H3a1 1 0 0 1 0-2h4zm2 2h6V4H9zM6.074 8l.857 12H17.07l.857-12zM10 10a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1m4 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1"/></svg></button>
             </div>
         `;
@@ -2686,33 +2703,74 @@ function exportEventAttendees(eventId) {
         return;
     }
     
-    // Create CSV content
-    let csv = 'NO.,FULL NAME,COMPANY,JOB TITLE,EMAIL ADDRESS,CONTACT NUMBER,STATUS\n';
-    
-    allData.forEach((attendee, idx) => {
-        const fullName = (attendee.full_name || attendee.name || '-').replace(/"/g, '""');
-        const company = (attendee.company || '-').replace(/"/g, '""');
-        const jobTitle = (attendee.job_title || '-').replace(/"/g, '""');
-        const email = (attendee.email || '-').replace(/"/g, '""');
-        const phone = (attendee.phone || attendee.contact_number || '-').replace(/"/g, '""');
-        const status = (attendee.status || 'PENDING').replace(/"/g, '""');
+    try {
+        if (typeof window.jspdf === 'undefined') {
+            showNotification('PDF library not available. Please try again.', 'error');
+            return;
+        }
         
-        csv += `${idx + 1},"${fullName}","${company}","${jobTitle}","${email}","${phone}","${status}"\n`;
-    });
-    
-    // Create a blob and trigger download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `event-attendees-${eventId}-${new Date().getTime()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification('Attendees exported successfully', 'success');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get event name
+        const eventName = window.currentEventData?.title || 'Event Attendees';
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Event Attendees Report', 14, 20);
+        
+        // Event info
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Event: ${eventName}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+        doc.text(`Total Attendees: ${allData.length}`, 14, 46);
+        
+        // Create table
+        const columns = ['No.', 'Full Name', 'Company', 'Job Title', 'Email', 'Phone', 'Status'];
+        const rows = allData.map((attendee, idx) => [
+            idx + 1,
+            attendee.full_name || attendee.name || '-',
+            attendee.company || '-',
+            attendee.job_title || '-',
+            attendee.email || '-',
+            attendee.phone || attendee.contact_number || '-',
+            attendee.status || 'PENDING'
+        ]);
+        
+        // Apply table styling
+        doc.autoTable({
+            startY: 55,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [85, 156, 218], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 12 },
+                6: { halign: 'center' }
+            }
+        });
+        
+        // Footer with page numbers
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(10);
+            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
+        }
+        
+        // Download
+        const filename = `event-attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        showNotification('Attendees exported to PDF successfully', 'success');
+    } catch (error) {
+        console.error('Error exporting to PDF:', error);
+        showNotification('Error exporting to PDF. Please try again.', 'error');
+    }
 }
 
 // Add event attendee
@@ -2867,6 +2925,8 @@ function handleAddAttendeeSubmit(event) {
     }
     
     // Send to API
+    // All attendees added through this form are automatically considered walk-in attendees
+    // Walk-in attendees are marked as ATTENDED since they're physically present
     const requestPayload = {
         event_id: parseInt(eventId),
         first_name: firstName,
@@ -2876,7 +2936,8 @@ function handleAddAttendeeSubmit(event) {
         company: company,
         job_title: jobTitle,
         participant_phone: phone,
-        status: 'REGISTERED'
+        status: 'ATTENDED',  // Walk-in = already attended
+        is_walkIn: 1  // Always 1 for attendees added via Add Attendee modal
     };
     
     console.log('📤 Sending to API:', JSON.stringify(requestPayload, null, 2));
@@ -3098,11 +3159,7 @@ function createAttendeeRow(attendee, index, isActual) {
 
 // Export attendees to CSV (delegates to event-details.js implementation)
 function exportAttendees() {
-    console.log('📥 exportAttendees called - delegating to event-details.js version');
-    
-    // Check if we have the event-details.js implementation available
-    // The event-details.js version uses attendeesData.initial and attendeesData.actual
-    // and works with the full-page attendees section
+    console.log('📥 exportAttendees called - exporting to PDF');
     
     const allAttendees = (window.attendeesData?.initial || []).concat(window.attendeesData?.actual || []);
     
@@ -3111,33 +3168,74 @@ function exportAttendees() {
         return;
     }
     
-    // Create CSV content
-    let csv = 'NO.,FULL NAME,COMPANY,JOB TITLE,EMAIL,PHONE,STATUS\n';
-    
-    allAttendees.forEach((attendee, idx) => {
-        const fullName = (attendee.full_name || '-').replace(/"/g, '""');
-        const company = (attendee.company || '-').replace(/"/g, '""');
-        const jobTitle = (attendee.job_title || '-').replace(/"/g, '""');
-        const email = (attendee.email || '-').replace(/"/g, '""');
-        const phone = (attendee.phone || '-').replace(/"/g, '""');
-        const status = (window.attendeesData?.actual || []).includes(attendee) ? 'ATTENDED' : 'INITIAL';
+    try {
+        if (typeof window.jspdf === 'undefined') {
+            alert('PDF library not available. Please try again.');
+            return;
+        }
         
-        csv += `${idx + 1},"${fullName}","${company}","${jobTitle}","${email}","${phone}","${status}"\n`;
-    });
-    
-    // Create a blob and trigger download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `attendees-export-${new Date().getTime()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    console.log('✓ Export complete');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get event name
+        const eventName = window.currentEventData?.title || window.selectedEventTitle || 'Event Attendees';
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Event Attendees Report', 14, 20);
+        
+        // Event info
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Event: ${eventName}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+        doc.text(`Total Attendees: ${allAttendees.length}`, 14, 46);
+        
+        // Create table
+        const columns = ['No.', 'Full Name', 'Company', 'Job Title', 'Email', 'Phone', 'Status'];
+        const rows = allAttendees.map((attendee, idx) => [
+            idx + 1,
+            attendee.full_name || '-',
+            attendee.company || '-',
+            attendee.job_title || '-',
+            attendee.email || '-',
+            attendee.phone || '-',
+            (window.attendeesData?.actual || []).includes(attendee) ? 'ATTENDED' : 'INITIAL'
+        ]);
+        
+        // Apply table styling
+        doc.autoTable({
+            startY: 55,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [85, 156, 218], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 12 },
+                6: { halign: 'center' }
+            }
+        });
+        
+        // Footer with page numbers
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(10);
+            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
+        }
+        
+        // Download
+        const filename = `attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        console.log('✓ Export complete - PDF saved');
+    } catch (error) {
+        console.error('Error exporting to PDF:', error);
+        alert('Error exporting to PDF. Please try again.');
+    }
 }
 
 // Add new attendee (redirects to addEventAttendee for modal-based form)
@@ -6964,7 +7062,35 @@ function downloadReport(reportType) { console.log('Download report:', reportType
 
 // Attendee functions  
 function markAttendeeAsAttended(attendeeId, code) { console.log('Mark attended:', code); }
-function markAttendeeAsInitial(attendeeId, code) { console.log('Mark initial:', code); }
+function markAttendeeAsInitial(registrationCode, index) {
+    if (!window.currentEventId) {
+        alert('No event selected');
+        return;
+    }
+    
+    fetch(`${API_BASE}/participants.php`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
+        body: JSON.stringify({
+            event_id: window.currentEventId,
+            registration_code: registrationCode,
+            status: 'REGISTERED'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload attendees list
+            loadEventAttendees({event_id: window.currentEventId}, false);
+        } else {
+            alert(data.message || 'Failed to move attendee to initial list');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error moving attendee to initial list');
+    });
+}
 
 // Mark attendee as attended (full-page view)
 function markAttendeeAsAttended(registrationCode, index) {
@@ -7033,9 +7159,160 @@ function deleteAttendee(registrationCode, index) {
 
 // Show QR Code for attendee registration
 function showQRCode(registrationCode, name) {
-    // This would open a QR code modal or generate a QR code image
-    // For now, just create a simple alert with registration code
-    alert('Registration Code: ' + registrationCode + (name ? '\nName: ' + name : ''));
+    // Show QR code modal for the registration code
+    const qrModal = document.createElement('div');
+    qrModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    const qrContent = document.createElement('div');
+    qrContent.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        text-align: center;
+        max-width: 500px;
+        width: 500px;
+        overflow: hidden;
+    `;
+    
+    // Add gradient header
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = `
+        background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%);
+        padding: 20px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    `;
+    
+    const closeX = document.createElement('button');
+    closeX.innerHTML = '&times;';
+    closeX.style.cssText = `
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    const headerTitle = document.createElement('h3');
+    headerTitle.textContent = 'Registration QR Code';
+    headerTitle.style.cssText = `
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: white;
+        font-family: 'Poppins', sans-serif;
+    `;
+    
+    headerDiv.appendChild(headerTitle);
+    headerDiv.appendChild(closeX);
+    
+    // Store reference to qrModal for close button
+    let qrModalRef = null;
+    closeX.onclick = (e) => {
+        e.stopPropagation();
+        if (qrModalRef) qrModalRef.remove();
+    };
+    
+    qrContent.appendChild(headerDiv);
+    
+    // Content wrapper
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+        padding: 30px;
+    `;
+    
+    // Create container for QR code
+    const qrCodeDiv = document.createElement('div');
+    qrCodeDiv.id = 'qrCodeContainer_' + Date.now();
+    qrCodeDiv.style.cssText = `
+        margin: 20px 0;
+        display: flex;
+        justify-content: center;
+    `;
+    
+    contentWrapper.innerHTML = `
+        ${name ? `<p style="color: #666; margin: 0 0 15px 0; font-size: 14px;"><strong>${escapeHtml(name)}</strong></p>` : ''}
+    `;
+    contentWrapper.appendChild(qrCodeDiv);
+    
+    // Generate QR code using library
+    try {
+        new QRCode(qrCodeDiv.id, {
+            text: registrationCode,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        // Fallback if QRCode library not available
+        qrCodeDiv.innerHTML = `
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(registrationCode)}" 
+                 alt="QR Code" style="border: 1px solid #ddd; border-radius: 4px;">
+        `;
+    }
+    
+    // Add code display
+    const codeDisplay = document.createElement('div');
+    codeDisplay.style.cssText = `
+        margin-top: 20px;
+        padding: 15px;
+        background: #f5f5f5;
+        border-radius: 4px;
+    `;
+    codeDisplay.innerHTML = `
+        <p style="margin: 0 0 10px 0; color: #666; font-size: 12px;">Registration Code:</p>
+        <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1E73BB; letter-spacing: 1px;">${escapeHtml(registrationCode)}</p>
+    `;
+    contentWrapper.appendChild(codeDisplay);
+    
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = `
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #1E73BB;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: 500;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.background = '#1560A0';
+    closeBtn.onmouseout = () => closeBtn.style.background = '#1E73BB';
+    closeBtn.onclick = () => qrModal.remove();
+    contentWrapper.appendChild(closeBtn);
+    
+    qrContent.appendChild(contentWrapper);
+    
+    qrModal.appendChild(qrContent);
+    qrModalRef = qrModal; // Store reference for close button
+    qrModal.onclick = (e) => {
+        if (e.target === qrModal) qrModal.remove();
+    };
+    
+    document.body.appendChild(qrModal);
 }
 
 function viewAttendeeQR(code, name) { showQRCode(code, name); }
