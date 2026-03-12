@@ -5339,7 +5339,666 @@ function updateParticipantsCounts(initialCount, actualCount) {
     if (actualCountSpan) actualCountSpan.textContent = `(${actualCount})`;
 }
 
-function loadReports() { console.log('Reports loading...'); }
+// ====== REPORTS SECTION ======
+let reportCurrentSelection = 'all';
+let reportAllParticipants = [];
+let reportFilteredParticipants = [];
+let reportAllEvents = [];
+
+async function loadReports() {
+    console.log('Loading reports...');
+    try {
+        // Fetch all events
+        const eventsResponse = await fetch(`${API_BASE}/events.php`, {
+            headers: getUserHeaders()
+        });
+        reportAllEvents = await eventsResponse.json();
+        
+        // Fetch all participants data
+        const participantsResponse = await fetch(`${API_BASE}/participants.php`, {
+            headers: getUserHeaders()
+        });
+        
+        const participantsData = await participantsResponse.json();
+        if (Array.isArray(participantsData)) {
+            reportAllParticipants = participantsData;
+        } else if (participantsData.data && Array.isArray(participantsData.data)) {
+            reportAllParticipants = participantsData.data;
+        }
+        
+        // Build event tabs
+        buildReportEventTabs();
+        
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        showToast('Error loading report data', 'error');
+    }
+}
+
+function buildReportEventTabs() {
+    const container = document.getElementById('eventTabsContainer');
+    if (!container || !Array.isArray(reportAllEvents)) return;
+    
+    container.innerHTML = '';
+    
+    reportAllEvents.forEach(event => {
+        const button = document.createElement('button');
+        button.onclick = () => selectReportEvent(event.id);
+        button.style.cssText = `
+            padding: 12px 24px; 
+            background: white; 
+            color: #6b7280; 
+            border: 2px solid #e5e7eb; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 14px; 
+            transition: all 0.2s;
+        `;
+        button.textContent = event.title || 'Unnamed Event';
+        button.id = `eventTab-${event.id}`;
+        container.appendChild(button);
+    });
+}
+
+function selectReportEvent(eventId) {
+    reportCurrentSelection = eventId;
+    
+    // Update button states
+    document.getElementById('allEventsBtn').style.background = eventId === 'all' ? '#3b82f6' : 'white';
+    document.getElementById('allEventsBtn').style.color = eventId === 'all' ? 'white' : '#6b7280';
+    document.getElementById('allEventsBtn').style.borderColor = eventId === 'all' ? '#3b82f6' : '#e5e7eb';
+    
+    // Update event tabs
+    document.querySelectorAll('[id^="eventTab-"]').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#6b7280';
+        btn.style.borderColor = '#e5e7eb';
+    });
+    
+    if (eventId !== 'all') {
+        const selectedTab = document.getElementById(`eventTab-${eventId}`);
+        if (selectedTab) {
+            selectedTab.style.background = '#3b82f6';
+            selectedTab.style.color = 'white';
+            selectedTab.style.borderColor = '#3b82f6';
+        }
+    }
+    
+    // Load participants for selected event(s)
+    loadReportParticipants();
+}
+
+function loadReportParticipants() {
+    let participants = [];
+    
+    if (reportCurrentSelection === 'all') {
+        participants = reportAllParticipants;
+        document.getElementById('selectedEventInfo').innerHTML = 
+            `<strong>All Events</strong> - Showing participants from all events`;
+    } else {
+        const selectedEvent = reportAllEvents.find(e => e.id == reportCurrentSelection);
+        if (selectedEvent) {
+            participants = reportAllParticipants.filter(p => p.event_id == reportCurrentSelection);
+            document.getElementById('selectedEventInfo').innerHTML = 
+                `<strong>${selectedEvent.title}</strong> - ${participants.length} participant(s)`;
+        }
+    }
+    
+    reportFilteredParticipants = participants;
+    
+    // Update stats
+    updateReportStats(participants);
+    
+    // Show containers
+    document.getElementById('reportStatsContainer').style.display = 'grid';
+    document.getElementById('exportButtonsContainer').style.display = 'flex';
+    document.getElementById('participantFiltersContainer').style.display = 'grid';
+    document.getElementById('participantTableContainer').style.display = 'block';
+    
+    // Render table
+    renderReportParticipantsTable(participants);
+}
+
+function updateReportStats(participants) {
+    const total = participants.length;
+    const attended = participants.filter(p => p.attended === '1' || p.attended === 1).length;
+    const rate = total > 0 ? Math.round((attended / total) * 100) : 0;
+    
+    document.getElementById('reportTotalParticipants').textContent = total;
+    document.getElementById('reportTotalAttended').textContent = attended;
+    document.getElementById('reportAttendanceRate').textContent = rate + '%';
+}
+
+function renderReportParticipantsTable(participants) {
+    const tbody = document.getElementById('participantReportTableBody');
+    const noMsg = document.getElementById('noParticipantsMessage');
+    
+    if (!participants || participants.length === 0) {
+        tbody.innerHTML = '';
+        noMsg.style.display = 'block';
+        return;
+    }
+    
+    noMsg.style.display = 'none';
+    tbody.innerHTML = participants.map((p, index) => {
+        const eventName = reportAllEvents.find(e => e.id == p.event_id)?.title || 'Unknown Event';
+        const attended = p.attended === '1' || p.attended === 1;
+        return `
+            <tr style="border-bottom: 1px solid #e5e7eb; hover: background-color: #f9fafb;">
+                <td style="padding: 14px; color: #1f2937; font-weight: 500;">${p.first_name || ''} ${p.last_name || ''}</td>
+                <td style="padding: 14px; color: #6b7280;">${p.email || '-'}</td>
+                <td style="padding: 14px; color: #6b7280;">${p.company || '-'}</td>
+                <td style="padding: 14px; color: #6b7280;">${p.job_title || '-'}</td>
+                <td style="padding: 14px; text-align: center;">
+                    <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: ${attended ? '#d1fae5' : '#fee2e2'}; color: ${attended ? '#065f46' : '#991b1b'};">
+                        ${attended ? '✓ Attended' : 'Registered'}
+                    </span>
+                </td>
+                <td style="padding: 14px; color: #6b7280; font-size: 13px;">${eventName}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterParticipantReport() {
+    const searchText = document.getElementById('participantReportSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('participantReportStatusFilter').value;
+    
+    let filtered = reportFilteredParticipants;
+    
+    // Apply search filter
+    if (searchText) {
+        filtered = filtered.filter(p => {
+            const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+            const email = (p.email || '').toLowerCase();
+            const company = (p.company || '').toLowerCase();
+            return fullName.includes(searchText) || email.includes(searchText) || company.includes(searchText);
+        });
+    }
+    
+    // Apply status filter
+    if (statusFilter) {
+        if (statusFilter === 'attended') {
+            filtered = filtered.filter(p => p.attended === '1' || p.attended === 1);
+        } else if (statusFilter === 'registered') {
+            filtered = filtered.filter(p => p.attended !== '1' && p.attended !== 1);
+        }
+    }
+    
+    renderReportParticipantsTable(filtered);
+}
+
+function exportParticipantsToExcel() {
+    try {
+        const participants = reportFilteredParticipants;
+        if (participants.length === 0) {
+            showToast('No participants to export', 'warning');
+            return;
+        }
+        
+        // Create CSV content
+        let csv = 'First Name,Last Name,Email,Company,Job Title,Contact,Attendance,Event,Registration Date\n';
+        
+        participants.forEach(p => {
+            const eventName = reportAllEvents.find(e => e.id == p.event_id)?.title || 'Unknown';
+            const attended = p.attended === '1' || p.attended === 1 ? 'Attended' : 'Registered';
+            const regDate = p.registration_date ? new Date(p.registration_date).toLocaleDateString() : '-';
+            
+            // Escape CSV values
+            const escape = (val) => {
+                if (!val) return '';
+                return `"${String(val).replace(/"/g, '""')}"`;
+            };
+            
+            csv += `${escape(p.first_name)},${escape(p.last_name)},${escape(p.email)},${escape(p.company)},${escape(p.job_title)},${escape(p.contact || p.phone)},${attended},${escape(eventName)},${regDate}\n`;
+        });
+        
+        // Create blob and download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const eventName = reportCurrentSelection === 'all' ? 'All_Events' : 
+                         reportAllEvents.find(e => e.id == reportCurrentSelection)?.title || 'Report';
+        const filename = `Participants_${eventName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('Participants exported to Excel successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        showToast('Error exporting data', 'error');
+    }
+}
+
+function exportParticipantsToPDF() {
+    try {
+        const participants = reportFilteredParticipants;
+        if (participants.length === 0) {
+            showToast('No participants to export', 'warning');
+            return;
+        }
+        
+        // Generate PDF using jsPDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Title
+        const eventName = reportCurrentSelection === 'all' ? 'All Events' : 
+                         reportAllEvents.find(e => e.id == reportCurrentSelection)?.title || 'Event Report';
+        
+        doc.setFontSize(18);
+        doc.text('Participant Report', 14, 20);
+        
+        doc.setFontSize(12);
+        doc.text(`Event: ${eventName}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+        doc.text(`Total Participants: ${participants.length}`, 14, 46);
+        
+        // Create table
+        const columns = ['Name', 'Email', 'Company', 'Job Title', 'Attendance'];
+        const rows = participants.map(p => {
+            const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+            const attended = p.attended === '1' || p.attended === 1 ? 'Attended' : 'Registered';
+            return [
+                fullName,
+                p.email || '-',
+                p.company || '-',
+                p.job_title || '-',
+                attended
+            ];
+        });
+        
+        doc.autoTable({
+            startY: 55,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+        
+        // Download
+        const filename = `Participants_${eventName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        showToast('Participants exported to PDF successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting to PDF:', error);
+        showToast('Error exporting PDF. Make sure jsPDF is loaded.', 'error');
+    }
+}
+
+// ================================================================================
+// REPORT TYPE SWITCHING SYSTEM
+// ================================================================================
+
+function switchReportType(reportType) {
+    // Hide all report content
+    document.getElementById('reportContent-participants').style.display = 'none';
+    document.getElementById('reportContent-events').style.display = 'none';
+    document.getElementById('reportContent-attendance').style.display = 'none';
+    
+    // Update button styles
+    document.getElementById('reportTypeBtn-participants').style.background = reportType === 'participants' ? '#3b82f6' : 'white';
+    document.getElementById('reportTypeBtn-participants').style.color = reportType === 'participants' ? 'white' : '#6b7280';
+    document.getElementById('reportTypeBtn-participants').style.borderColor = reportType === 'participants' ? '#3b82f6' : '#e5e7eb';
+    
+    document.getElementById('reportTypeBtn-events').style.background = reportType === 'events' ? '#3b82f6' : 'white';
+    document.getElementById('reportTypeBtn-events').style.color = reportType === 'events' ? 'white' : '#6b7280';
+    document.getElementById('reportTypeBtn-events').style.borderColor = reportType === 'events' ? '#3b82f6' : '#e5e7eb';
+    
+    document.getElementById('reportTypeBtn-attendance').style.background = reportType === 'attendance' ? '#3b82f6' : 'white';
+    document.getElementById('reportTypeBtn-attendance').style.color = reportType === 'attendance' ? 'white' : '#6b7280';
+    document.getElementById('reportTypeBtn-attendance').style.borderColor = reportType === 'attendance' ? '#3b82f6' : '#e5e7eb';
+    
+    // Show the selected report type
+    if (reportType === 'participants') {
+        document.getElementById('reportContent-participants').style.display = 'block';
+    } else if (reportType === 'events') {
+        document.getElementById('reportContent-events').style.display = 'block';
+        loadEventSummaryReport();
+    } else if (reportType === 'attendance') {
+        document.getElementById('reportContent-attendance').style.display = 'block';
+        loadAttendanceReport();
+    }
+}
+
+// ================================================================================
+// EVENT SUMMARY REPORT
+// ================================================================================
+
+async function loadEventSummaryReport() {
+    try {
+        const tbody = document.getElementById('eventSummaryTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #6b7280;">Loading...</td></tr>';
+        
+        // Get all events and participants data
+        const events = reportAllEvents || [];
+        const participants = reportAllParticipants || [];
+        
+        if (events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #9ca3af;">No events found</td></tr>';
+            return;
+        }
+        
+        // Build summary data
+        const summaryData = events.map(event => {
+            const eventParticipants = participants.filter(p => p.event_id == event.id);
+            const attended = eventParticipants.filter(p => p.attended === '1' || p.attended === 1).length;
+            
+            return {
+                id: event.id,
+                title: event.title || 'Unnamed Event',
+                location: event.location || '-',
+                date: event.event_date ? new Date(event.event_date).toLocaleDateString() : '-',
+                registrations: eventParticipants.length,
+                attended: attended,
+                rate: eventParticipants.length > 0 ? Math.round((attended / eventParticipants.length) * 100) : 0
+            };
+        });
+        
+        // Render table
+        tbody.innerHTML = summaryData.map(event => `
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 14px; color: #1f2937; font-weight: 500;">${event.title}</td>
+                <td style="padding: 14px; color: #6b7280;">${event.location}</td>
+                <td style="padding: 14px; text-align: center; color: #6b7280;">${event.date}</td>
+                <td style="padding: 14px; text-align: center; font-weight: 600;">${event.registrations}</td>
+                <td style="padding: 14px; text-align: center; font-weight: 600; color: #10b981;">${event.attended}</td>
+                <td style="padding: 14px; text-align: center;">
+                    <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: ${event.rate >= 80 ? '#d1fae5' : event.rate >= 50 ? '#fef3c7' : '#fee2e2'}; color: ${event.rate >= 80 ? '#065f46' : event.rate >= 50 ? '#92400e' : '#991b1b'};">
+                        ${event.rate}%
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Store summary data for export
+        window.currentEventSummaryData = summaryData;
+        
+    } catch (error) {
+        console.error('Error loading event summary:', error);
+        showToast('Error loading event summary', 'error');
+    }
+}
+
+function filterEventSummaryReport() {
+    const searchText = document.getElementById('eventSummarySearch').value.toLowerCase();
+    const tbody = document.getElementById('eventSummaryTableBody');
+    
+    if (!window.currentEventSummaryData) return;
+    
+    let filtered = window.currentEventSummaryData;
+    
+    if (searchText) {
+        filtered = filtered.filter(event => 
+            event.title.toLowerCase().includes(searchText) || 
+            event.location.toLowerCase().includes(searchText)
+        );
+    }
+    
+    tbody.innerHTML = filtered.map(event => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 14px; color: #1f2937; font-weight: 500;">${event.title}</td>
+            <td style="padding: 14px; color: #6b7280;">${event.location}</td>
+            <td style="padding: 14px; text-align: center; color: #6b7280;">${event.date}</td>
+            <td style="padding: 14px; text-align: center; font-weight: 600;">${event.registrations}</td>
+            <td style="padding: 14px; text-align: center; font-weight: 600; color: #10b981;">${event.attended}</td>
+            <td style="padding: 14px; text-align: center;">
+                <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: ${event.rate >= 80 ? '#d1fae5' : event.rate >= 50 ? '#fef3c7' : '#fee2e2'}; color: ${event.rate >= 80 ? '#065f46' : event.rate >= 50 ? '#92400e' : '#991b1b'};">
+                ${event.rate}%
+            </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function exportEventSummaryToExcel() {
+    try {
+        const summaryData = window.currentEventSummaryData || [];
+        if (summaryData.length === 0) {
+            showToast('No events to export', 'warning');
+            return;
+        }
+        
+        let csv = 'Event Title,Location,Date,Total Registrations,Total Attended,Attendance Rate (%)\n';
+        
+        summaryData.forEach(event => {
+            const escape = (val) => {
+                if (!val) return '';
+                return `"${String(val).replace(/"/g, '""')}"`;
+            };
+            
+            csv += `${escape(event.title)},${escape(event.location)},${escape(event.date)},${event.registrations},${event.attended},${event.rate}%\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const filename = `Event_Summary_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('Event summary exported to Excel successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting event summary:', error);
+        showToast('Error exporting data', 'error');
+    }
+}
+
+function exportEventSummaryToPDF() {
+    try {
+        const summaryData = window.currentEventSummaryData || [];
+        if (summaryData.length === 0) {
+            showToast('No events to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text('Event Summary Report', 14, 20);
+        
+        doc.setFontSize(12);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+        doc.text(`Total Events: ${summaryData.length}`, 14, 38);
+        
+        const columns = ['Event Title', 'Location', 'Date', 'Registrations', 'Attended', 'Rate (%)'];
+        const rows = summaryData.map(event => [
+            event.title,
+            event.location,
+            event.date,
+            event.registrations.toString(),
+            event.attended.toString(),
+            event.rate + '%'
+        ]);
+        
+        doc.autoTable({
+            startY: 45,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+        
+        const filename = `Event_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        showToast('Event summary exported to PDF successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting event summary PDF:', error);
+        showToast('Error exporting PDF', 'error');
+    }
+}
+
+// ================================================================================
+// ATTENDANCE REPORT
+// ================================================================================
+
+async function loadAttendanceReport() {
+    try {
+        const tbody = document.getElementById('attendanceTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #6b7280;">Loading...</td></tr>';
+        
+        const events = reportAllEvents || [];
+        const participants = reportAllParticipants || [];
+        
+        if (events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #9ca3af;">No events found</td></tr>';
+            return;
+        }
+        
+        // Build attendance data
+        const attendanceData = events.map(event => {
+            const eventParticipants = participants.filter(p => p.event_id == event.id);
+            const attended = eventParticipants.filter(p => p.attended === '1' || p.attended === 1).length;
+            const noShow = eventParticipants.length - attended;
+            const rate = eventParticipants.length > 0 ? Math.round((attended / eventParticipants.length) * 100) : 0;
+            
+            return {
+                title: event.title || 'Unnamed Event',
+                registrations: eventParticipants.length,
+                attended: attended,
+                noShow: noShow,
+                rate: rate
+            };
+        });
+        
+        // Calculate overall stats
+        const totalReg = attendanceData.reduce((sum, e) => sum + e.registrations, 0);
+        const totalAtt = attendanceData.reduce((sum, e) => sum + e.attended, 0);
+        const overallRate = totalReg > 0 ? Math.round((totalAtt / totalReg) * 100) : 0;
+        
+        document.getElementById('attendanceTotalReg').textContent = totalReg;
+        document.getElementById('attendanceTotalAtt').textContent = totalAtt;
+        document.getElementById('attendanceOverallRate').textContent = overallRate + '%';
+        
+        // Render table
+        tbody.innerHTML = attendanceData.map(event => `
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 14px; color: #1f2937; font-weight: 500;">${event.title}</td>
+                <td style="padding: 14px; text-align: center; font-weight: 600;">${event.registrations}</td>
+                <td style="padding: 14px; text-align: center; font-weight: 600; color: #10b981;">${event.attended}</td>
+                <td style="padding: 14px; text-align: center; font-weight: 600; color: #ef4444;">${event.noShow}</td>
+                <td style="padding: 14px; text-align: center;">
+                    <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: ${event.rate >= 80 ? '#d1fae5' : event.rate >= 50 ? '#fef3c7' : '#fee2e2'}; color: ${event.rate >= 80 ? '#065f46' : event.rate >= 50 ? '#92400e' : '#991b1b'};">
+                        ${event.rate}%
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Store for export
+        window.currentAttendanceData = attendanceData;
+        
+    } catch (error) {
+        console.error('Error loading attendance report:', error);
+        showToast('Error loading attendance report', 'error');
+    }
+}
+
+function exportAttendanceReportToExcel() {
+    try {
+        const attendanceData = window.currentAttendanceData || [];
+        if (attendanceData.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        let csv = 'Event,Registrations,Attended,No-Show,Attendance Rate (%)\n';
+        
+        attendanceData.forEach(event => {
+            const escape = (val) => {
+                if (!val) return '';
+                return `"${String(val).replace(/"/g, '""')}"`;
+            };
+            
+            csv += `${escape(event.title)},${event.registrations},${event.attended},${event.noShow},${event.rate}%\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const filename = `Attendance_Report_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('Attendance report exported to Excel successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting attendance report:', error);
+        showToast('Error exporting data', 'error');
+    }
+}
+
+function exportAttendanceReportToPDF() {
+    try {
+        const attendanceData = window.currentAttendanceData || [];
+        if (attendanceData.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text('Attendance Report', 14, 20);
+        
+        doc.setFontSize(12);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+        
+        const columns = ['Event', 'Registrations', 'Attended', 'No-Show', 'Rate (%)'];
+        const rows = attendanceData.map(event => [
+            event.title,
+            event.registrations.toString(),
+            event.attended.toString(),
+            event.noShow.toString(),
+            event.rate + '%'
+        ]);
+        
+        doc.autoTable({
+            startY: 40,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+        
+        const filename = `Attendance_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        showToast('Attendance report exported to PDF successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting attendance PDF:', error);
+        showToast('Error exporting PDF', 'error');
+    }
+}
 
 let qrScanner = null;
 function initQRScannerPage() { console.log('QR Scanner initializing...'); }

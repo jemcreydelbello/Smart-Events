@@ -631,17 +631,18 @@
 
     /* Event Details Tab Styles */
     .event-tab-btn {
-      padding: 12px 16px;
+      padding: 3px 5px;
       border: none;
       background: none;
       cursor: pointer;
       font-weight: 600;
       color: #999;
-      font-size: 14px;
+      font-size: 9px;
       border-bottom: 2px solid #e5e7eb;
       margin-bottom: -2px;
       transition: all 0.3s;
       white-space: nowrap;
+      line-height: 1;
     }
 
     /* Finance and Postmortem tabs visibility controlled by JavaScript */
@@ -868,22 +869,22 @@
           </div>
 
           <!-- Tab Navigation -->
-          <div style= "margin-bottom: 15px;" class="bg-white rounded-lg shadow-sm mb-6 border border-gray-200">
-            <div class="flex flex-wrap items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div class="flex flex-wrap gap-2">
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">Dashboard</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('details')" data-tab="details">Event Details</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('attendees')" data-tab="attendees">Attendees</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('tasks')" data-tab="tasks">Tasks</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="try { console.log('KPI button clicked, switchTab defined:', typeof switchTab); switchTab('kpi'); } catch(e) { alert('Error: ' + e.message); console.error(e); }" data-tab="kpi">KPI</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('emails')" data-tab="emails">Emails</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('program')" data-tab="program">Program</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('marketing')" data-tab="marketing">Marketing</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('logistics')" data-tab="logistics">Logistics</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('finance')" data-tab="finance">Finance</button>
-                <button class="px-4 py-2 text-sm font-medium event-tab-btn" onclick="switchTab('postmortem')" data-tab="postmortem">Postmortem</button>
+          <div style="margin-bottom: 15px;" class="bg-white rounded-lg shadow-sm mb-6 border border-gray-200">
+            <div style="display: flex; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 15px 15px; gap: 15px; width: 100%;" class="border-b border-gray-200">
+              <div style="display: flex; flex-wrap: nowrap; gap: 15px; min-width: min-content;">
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">Dashboard</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('details')" data-tab="details">Event Details</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('attendees')" data-tab="attendees">Attendees</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('tasks')" data-tab="tasks">Tasks</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="try { console.log('KPI button clicked, switchTab defined:', typeof switchTab); switchTab('kpi'); } catch(e) { alert('Error: ' + e.message); console.error(e); }" data-tab="kpi">KPI</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('emails')" data-tab="emails">Emails</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('program')" data-tab="program">Program</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('marketing')" data-tab="marketing">Marketing</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('logistics')" data-tab="logistics">Logistics</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('finance')" data-tab="finance">Finance</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('postmortem')" data-tab="postmortem">Postmortem</button>
               </div>
-              <button style="padding: 8px 16px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; margin-left: 16px; flex-shrink: 0;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
+              <button style="margin-left: auto; padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 15px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; white-space: nowrap;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
             </div>
           </div>
 
@@ -927,21 +928,21 @@
                   <div id="taskStatusList" class="space-y-3 text-sm">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">Done</span>
+                        <span class="text-gray-600 min-w-20">Done</span>
                         <div class="flex-1 h-2 bg-green-500 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
                     </div>
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">In Progress</span>
+                        <span class="text-gray-600 min-w-20">In Progress</span>
                         <div class="flex-1 h-2 bg-yellow-500 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
                     </div>
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">Pending</span>
+                        <span class="text-gray-600 min-w-20">Pending</span>
                         <div class="flex-1 h-2 bg-gray-400 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
@@ -955,21 +956,21 @@
                   <div id="emailActivityList" class="space-y-3 text-sm">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">Sent</span>
+                        <span class="text-gray-600 min-w-20">Sent</span>
                         <div class="flex-1 h-2 bg-blue-500 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
                     </div>
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">Scheduled</span>
+                        <span class="text-gray-600 min-w-20">Scheduled</span>
                         <div class="flex-1 h-2 bg-purple-500 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
                     </div>
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600">Draft</span>
+                        <span class="text-gray-600 min-w-20">Draft</span>
                         <div class="flex-1 h-2 bg-gray-300 rounded-full"></div>
                       </div>
                       <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
@@ -1174,7 +1175,7 @@
             <div id="lookupCoordinatorModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div style="background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column;">
                 <!-- Header -->
-                <div style="background: linear-gradient(135deg, #1E73BB 0%, #155a9b 100%); padding: 32px 24px; border-radius: 16px 16px 0 0;">
+                <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 32px 24px; border-radius: 16px 16px 0 0;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                       <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Assign Coordinators</h2>
@@ -2415,22 +2416,197 @@ try {
 
         <!-- Reports Page -->
         <div id="reports" class="page">
-          <h2 style="font-size: 28px; font-weight: 700; color: #1f2937; margin-bottom: 24px;">Reports</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-lg p-6 border border-gray-200">
-              <div class="text-lg font-semibold text-gray-900">Event Summary</div>
-              <p class="text-sm text-gray-600 mt-2">Get overview of all events</p>
-              <button class="mt-4 btn btn-secondary">Generate</button>
+          <div style="margin-bottom: 32px;">
+            <h2 style="font-size: 32px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">Reports & Analytics</h2>
+            <p style="color: #6b7280; font-size: 15px;">Generate and export comprehensive reports from your events</p>
+          </div>
+
+          <!-- Report Type Selector -->
+          <div style="display: flex; gap: 12px; margin-bottom: 32px; flex-wrap: wrap;">
+            <button onclick="switchReportType('participants')" id="reportTypeBtn-participants" 
+                    style="padding: 12px 24px; background: #3b82f6; color: white; border: 2px solid #3b82f6; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Participant List
+            </button>
+            <button onclick="switchReportType('events')" id="reportTypeBtn-events" 
+                    style="padding: 12px 24px; background: white; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Event Summary
+            </button>
+            <button onclick="switchReportType('attendance')" id="reportTypeBtn-attendance" 
+                    style="padding: 12px 24px; background: white; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+              Attendance Report
+            </button>
+          </div>
+
+          <!-- Participants Report Content -->
+          <div id="reportContent-participants" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            
+            <!-- Event Selection Section -->
+            <div style="margin-bottom: 32px;">
+              <label style="display: block; font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Select Event</label>
+              
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                <button id="allEventsBtn" onclick="selectReportEvent('all')" style="padding: 12px 24px; background: #3b82f6; color: white; border: 2px solid #3b82f6; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;">
+                  All Events
+                </button>
+                <div id="eventTabsContainer" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+              </div>
+              <p id="selectedEventInfo" style="color: #6b7280; font-size: 13px; padding: 12px; background: #f3f4f6; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                Select an event to view participants
+              </p>
             </div>
-            <div class="bg-white rounded-lg p-6 border border-gray-200">
-              <div class="text-lg font-semibold text-gray-900">Participant List</div>
-              <p class="text-sm text-gray-600 mt-2">Export all registrations</p>
-              <button class="mt-4 btn btn-secondary">Generate</button>
+
+            <!-- Stats Row -->
+            <div id="reportStatsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; display: none;">
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Participants</p>
+                <p id="reportTotalParticipants" style="font-size: 28px; font-weight: 700; color: #1f2937;">0</p>
+              </div>
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Attended</p>
+                <p id="reportTotalAttended" style="font-size: 28px; font-weight: 700; color: #10b981;">0</p>
+              </div>
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Attendance Rate</p>
+                <p id="reportAttendanceRate" style="font-size: 28px; font-weight: 700; color: #f59e0b;">0%</p>
+              </div>
             </div>
-            <div class="bg-white rounded-lg p-6 border border-gray-200">
-              <div class="text-lg font-semibold text-gray-900">Attendance Report</div>
-              <p class="text-sm text-gray-600 mt-2">Check-in statistics</p>
-              <button class="mt-4 btn btn-secondary">Generate</button>
+
+            <!-- Export Options -->
+            <div id="exportButtonsContainer" style="display: none; display: flex; gap: 12px; margin-bottom: 24px;">
+              <button onclick="exportParticipantsToExcel()" style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to Excel
+              </button>
+              <button onclick="exportParticipantsToPDF()" style="padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to PDF
+              </button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div id="participantFiltersContainer" style="display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+              <div>
+                <input type="text" id="participantReportSearch" placeholder="Search by name, email, company..." 
+                       onkeyup="filterParticipantReport()" 
+                       style="width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: black; transition: border-color 0.2s;">
+              </div>
+              <div>
+                <select id="participantReportStatusFilter" onchange="filterParticipantReport()" 
+                        style="width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: black; background: white; cursor: pointer; transition: border-color 0.2s;">
+                  <option value="">All Attendance</option>
+                  <option value="attended">Attended</option>
+                  <option value="registered">Not Attended</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Participants Table -->
+            <div id="participantTableContainer" style="display: none; overflow-x: auto; margin-top: 24px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <tr>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Name</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Email</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Company</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Job Title</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Attendance</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Event</th>
+                  </tr>
+                </thead>
+                <tbody id="participantReportTableBody" style="padding: 24px;"></tbody>
+              </table>
+              <p id="noParticipantsMessage" style="text-align: center; padding: 32px; color: #9ca3af;">No participants found. Select an event to view data.</p>
+            </div>
+          </div>
+
+          <!-- Events Summary Report Content -->
+          <div id="reportContent-events" style="display: none; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            
+            <!-- Export Options -->
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+              <button onclick="exportEventSummaryToExcel()" style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to Excel
+              </button>
+              <button onclick="exportEventSummaryToPDF()" style="padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to PDF
+              </button>
+            </div>
+
+            <!-- Search -->
+            <div style="margin-bottom: 24px;">
+              <input type="text" id="eventSummarySearch" placeholder="Search by event name or location..." 
+                     onkeyup="filterEventSummaryReport()" 
+                     style="width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: black; transition: border-color 0.2s;">
+            </div>
+
+            <!-- Events Table -->
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <tr>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Event Title</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Location</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Date</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Registrations</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Attended</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="eventSummaryTableBody" style="padding: 24px;"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Attendance Report Content -->
+          <div id="reportContent-attendance" style="display: none; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            
+            <!-- Stats Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px;">
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Registrations</p>
+                <p id="attendanceTotalReg" style="font-size: 28px; font-weight: 700; color: #1f2937;">0</p>
+              </div>
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Attended</p>
+                <p id="attendanceTotalAtt" style="font-size: 28px; font-weight: 700; color: #10b981;">0</p>
+              </div>
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Overall Rate</p>
+                <p id="attendanceOverallRate" style="font-size: 28px; font-weight: 700; color: #f59e0b;">0%</p>
+              </div>
+            </div>
+
+            <!-- Export Options -->
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+              <button onclick="exportAttendanceReportToExcel()" style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to Excel
+              </button>
+              <button onclick="exportAttendanceReportToPDF()" style="padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Export to PDF
+              </button>
+            </div>
+
+            <!-- Attendance Table -->
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <tr>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Event</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Registrations</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Attended</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">No-Show</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Attendance %</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody" style="padding: 24px;"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2997,17 +3173,18 @@ try {
 
   <!-- Lookup In Coordinator Modal -->
   <div id="lookupCoordinatorModal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 mb-2">Assign Coordinator to Event</h2>
-          <p class="text-sm text-gray-600">Select a coordinator to manage this event.</p>
-        </div>
-        <button type="button" onclick="closeLookupCoordinatorModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+    <div class="modal-content" style="max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Assign Coordinator to Event</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Select a coordinator to manage this event.</p>
       </div>
       
-      <!-- Search Bar -->
-      <div class="mb-6">
+      <div style="padding: 24px;">
+        <button type="button" onclick="closeLookupCoordinatorModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+        
+        <!-- Search Bar -->
+        <div class="mb-6">
         <input 
           type="text" 
           id="coordinatorSearchInput" 
@@ -3021,6 +3198,7 @@ try {
       <div id="coordinatorsListContainer" class="space-y-3" style="max-height: 400px; overflow-y: auto;">
         <!-- Pending Setup Coordinators will be populated here -->
         <p class="text-center text-gray-500 py-8">Loading coordinators...</p>
+      </div>
       </div>
     </div>
   </div>
@@ -3119,13 +3297,16 @@ try {
 
   <!-- Create Other Information Modal -->
   <div id="createOtherInformationModal" class="modal">
-    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-        <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Create Other Information</h2>
-        <button type="button" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #d1d5db; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Create Other Information</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Add additional information or details for this event.</p>
+        <button type="button" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
       </div>
       
-      <form id="otherInformationForm" style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="padding: 24px;">
+        <form id="otherInformationForm" style="display: flex; flex-direction: column; gap: 20px;">
         <input type="hidden" id="otherInfoEventId" value="">
         
         <!-- Field Name -->
@@ -3156,18 +3337,22 @@ try {
           </button>
         </div>
       </form>
+      </div>
     </div>
   </div>
 
   <!-- Edit Other Information Modal -->
   <div id="editOtherInformationModal" class="modal">
-    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-        <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0;">Edit Other Information</h2>
-        <button type="button" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #d1d5db; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Edit Other Information</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Update additional information or details for this event.</p>
+        <button type="button" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
       </div>
       
-      <form id="editOtherInformationForm" style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="padding: 24px;">
+        <form id="editOtherInformationForm" style="display: flex; flex-direction: column; gap: 20px;">
         <input type="hidden" id="editOtherInfoMetadataId" value="">
         <input type="hidden" id="editOtherInfoEventId" value="">
         
@@ -3199,6 +3384,7 @@ try {
           </button>
         </div>
       </form>
+      </div>
     </div>
   </div>
 
