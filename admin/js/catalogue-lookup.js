@@ -352,6 +352,8 @@ const CatalogueLookup = {
                 publishBtn.textContent = '✓ Publish to Catalogue';
             }
         });
+    },
+
     // Helper: Get proper image URL
     getImageUrl: function(path) {
         if (!path) return '';

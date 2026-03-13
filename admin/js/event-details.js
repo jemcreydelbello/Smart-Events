@@ -2030,60 +2030,313 @@ function closeAddTaskModal() {
     document.getElementById('taskErrorMessage').style.display = 'none';
 }
 
+// ========== TASK COORDINATOR LOOKUP FUNCTIONS ==========
+
+function openLookupCoordinatorTaskModal() {
+    if (!currentEventId) {
+        alert('Please save the event first before assigning coordinators to tasks');
+        return;
+    }
+    console.log('🔍 Opening Task Coordinator Lookup modal for event:', currentEventId);
+    const modal = document.getElementById('lookupCoordinatorTaskModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    loadEventAssignedCoordinatorsForTask();
+}
+
+function closeLookupCoordinatorTaskModal() {
+    console.log('✕ Closing Task Coordinator Lookup modal');
+    const modal = document.getElementById('lookupCoordinatorTaskModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+}
+
+async function loadEventAssignedCoordinatorsForTask() {
+    try {
+        console.log('📥 Fetching coordinators for event:', currentEventId);
+        
+        // Build the API URL
+        const apiUrl = `${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`;
+        console.log('API URL:', apiUrl);
+        
+        // Fetch coordinators assigned to this specific event
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: getUserHeaders()
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            console.log('✓ Coordinators loaded:', data.data);
+            // Store coordinators globally for later use
+            window.allEventCoordinators = data.data || [];
+            displayEventCoordinatorsForTask(data.data || []);
+        } else {
+            console.error('❌ API returned error:', data.message);
+            document.getElementById('coordinatorsTaskList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + (data.message || 'Unknown error') + '</p>';
+        }
+    } catch (error) {
+        console.error('❌ Error loading coordinators:', error);
+        document.getElementById('coordinatorsTaskList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + error.message + '</p>';
+    }
+}
+
+function displayEventCoordinatorsForTask(coordinators) {
+    const listContainer = document.getElementById('coordinatorsTaskList');
+    
+    console.log('🎨 Displaying coordinators:', coordinators);
+    console.log('📊 Current selections:', window.selectedCoordinatorsForTask ? Array.from(window.selectedCoordinatorsForTask.keys()) : 'none');
+    
+    if (!coordinators || coordinators.length === 0) {
+        console.warn('⚠️ No coordinators found');
+        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">No coordinators assigned to this event. Please assign coordinators in the Event Details tab first.</p>';
+        return;
+    }
+    
+    let html = '';
+    coordinators.forEach(coordinator => {
+        // Skip coordinators that are already selected (already in preview)
+        if (window.selectedCoordinatorsForTask && window.selectedCoordinatorsForTask.has(coordinator.coordinator_id)) {
+            console.log(`⊘ Skipping already selected: ${coordinator.coordinator_name}`);
+            return;
+        }
+        
+        // Build profile image path
+        let profileImageUrl = '/assets/placeholder-avatar.png'; // Default placeholder
+        if (coordinator.coordinator_image) {
+            // Check if it's a full URL or just a filename
+            if (coordinator.coordinator_image.includes('data:image')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else if (coordinator.coordinator_image.includes('http')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else {
+                // Assume it's a filename in uploads/coordinators directory
+                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
+            }
+        }
+        
+        // Encode coordinator data for safe passing through onclick
+        const coordDataJson = JSON.stringify(coordinator).replace(/"/g, '&quot;');
+        
+        html += `
+            <label class="coordinator-card-task" data-coordinator-id="${coordinator.coordinator_id}" style="border: 2px solid #e5e7eb; border-radius: 6px; padding: 16px; display: flex; align-items: center; background: white; margin-bottom: 12px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#1E73BB'" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'" onclick="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', null, '${coordDataJson}')">
+                <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" data-coordinator-name="${coordinator.coordinator_name.replace(/"/g, '&quot;')}" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;" onchange="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', event, '${coordDataJson}')">
+                <div style="display: flex; gap: 12px; align-items: center; flex: 1; margin-left: 12px;">
+                    <!-- Profile Picture -->
+                    <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
+                    </div>
+                    <div style="flex: 1;">
+                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #1f2937; font-size: 14px;">${coordinator.coordinator_name}</p>
+                        <p style="margin: 0 0 2px 0; font-size: 13px; color: #6b7280;">${coordinator.email || 'No email'}</p>
+                        <p style="margin: 0; font-size: 12px; color: #9ca3af;">${coordinator.contact_number || 'No phone'}</p>
+                    </div>
+                </div>
+            </label>
+        `;
+    });
+    
+    if (html === '') {
+        html = '<p style="text-align: center; color: #9ca3af; padding: 20px;">All assigned coordinators have been selected. ✓</p>';
+    }
+    
+    listContainer.innerHTML = html;
+    console.log('✓ Coordinators rendered with checkboxes');
+}
+
+function filterCoordinatorsTaskList() {
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+    console.log('🔎 Filtering coordinators with:', searchValue);
+    const cards = document.querySelectorAll('.coordinator-card-task');
+    
+    let visibleCount = 0;
+    cards.forEach(card => {
+        const name = card.querySelector('p').textContent.toLowerCase();
+        const emailElement = card.querySelectorAll('p')[1];
+        const email = emailElement ? emailElement.textContent.toLowerCase() : '';
+        
+        if (name.includes(searchValue) || email.includes(searchValue)) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    console.log('Found', visibleCount, 'matching coordinators');
+}
+
+function selectCoordinatorForTask(coordinatorId, coordinatorName, event) {
+    if (event) event.stopPropagation();
+    
+    console.log('✓ Old selectCoordinatorForTask called - using new toggle selection');
+    toggleCoordinatorSelection(coordinatorId, coordinatorName, event);
+}
+
+function displaySelectedCoordinatorsPreview() {
+    const previewContainer = document.getElementById('selectedCoordinatorsPreview');
+    const previewContent = document.getElementById('selectedCoordinatorsPreviewContent');
+    
+    if (!previewContainer || !previewContent) return;
+    
+    if (!window.selectedCoordinatorsForTask || window.selectedCoordinatorsForTask.size === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+    
+    // Calculate if scrolling is needed (more than 4 coordinators)
+    const isScrollable = window.selectedCoordinatorsForTask.size > 4;
+    const maxHeight = isScrollable ? '280px' : 'auto';
+    const overflowStyle = isScrollable ? 'overflow-y: auto; overflow-x: hidden;' : '';
+    
+    let previewHtml = `
+        <div style="${overflowStyle} ${isScrollable ? 'max-height: ' + maxHeight + '; border: 1px solid #e5e7eb; border-radius: 6px;' : ''}">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #e5e7eb; background: #f9fafb; ${isScrollable ? 'position: sticky; top: 0; z-index: 10;' : ''}">
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 50px;">PHOTO</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 20%;">NAME</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 25%;">EMAIL ADDRESS</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">COMPANY</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">CONTACT NUMBER</th>
+                        <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #6b7280; width: 50px;">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    window.selectedCoordinatorsForTask.forEach(coordinator => {
+        // Build profile image path
+        let profileImageUrl = '/assets/placeholder-avatar.png';
+        if (coordinator.coordinator_image) {
+            if (coordinator.coordinator_image.includes('data:image')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else if (coordinator.coordinator_image.includes('http')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else {
+                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
+            }
+        }
+        
+        previewHtml += `
+            <tr style="border-bottom: 1px solid #e5e7eb; background: white;">
+                <td style="padding: 12px 8px; text-align: center;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
+                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
+                    </div>
+                </td>
+                <td style="padding: 12px 8px; color: #1f2937; font-weight: 500;">${coordinator.coordinator_name}</td>
+                <td style="padding: 12px 8px; color: #6b7280; word-break: break-all;">${coordinator.email || 'No email'}</td>
+                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.company || 'N/A'}</td>
+                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.contact_number || 'No phone'}</td>
+                <td style="padding: 12px 8px; text-align: center;">
+                    <button type="button" onclick="removeCoordinatorFromSelection(${coordinator.coordinator_id})" style="background: none; border: 1px solid #ef4444; color: #ef4444; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'" onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    previewHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    previewContent.innerHTML = previewHtml;
+    previewContainer.style.display = 'block';
+    console.log('✓ Preview table displayed', window.selectedCoordinatorsForTask.size, 'coordinators', isScrollable ? '(scrollable)' : '(fixed height)');
+}
+
+function removeCoordinatorFromSelection(coordinatorId) {
+    if (window.selectedCoordinatorsForTask) {
+        window.selectedCoordinatorsForTask.delete(coordinatorId);
+        console.log(`✖️ Removed coordinator ${coordinatorId} from selection`);
+        
+        // Update the preview
+        displaySelectedCoordinatorsPreview();
+        
+        // Update preview in form if still needed
+        updateTaskResponsibleField();
+        
+        // Refresh the lookup list to show the deleted coordinator again
+        if (window.allEventCoordinators) {
+            console.log('🔄 Refreshing lookup coordinator list...');
+            displayEventCoordinatorsForTask(window.allEventCoordinators);
+        }
+    }
+}
+
+function updateTaskResponsibleField() {
+    const responsibleField = document.getElementById('taskResponsible');
+    if (!responsibleField) return;
+    
+    if (!window.selectedCoordinatorsForTask || window.selectedCoordinatorsForTask.size === 0) {
+        responsibleField.value = '';
+        responsibleField.dataset.coordinatorIds = '';
+        const previewContainer = document.getElementById('selectedCoordinatorsPreview');
+        if (previewContainer) {
+            previewContainer.style.display = 'none';
+        }
+    } else {
+        const coordinatorNames = Array.from(window.selectedCoordinatorsForTask.values()).map(c => c.coordinator_name).join(', ');
+        const coordinatorIds = Array.from(window.selectedCoordinatorsForTask.keys()).join(',');
+        responsibleField.value = coordinatorNames;
+        responsibleField.dataset.coordinatorIds = coordinatorIds;
+    }
+}
+
 function handleTaskFormSubmit(event) {
     event.preventDefault();
     
-    const taskId = document.getElementById('task_id').value;
-    const taskName = document.getElementById('task_name').value.trim();
-    const dueDate = document.getElementById('task_due_date').value;
-    const partyResponsible = document.getElementById('party_responsible').value.trim();
-    const status = document.getElementById('task_status').value;
-    const remarks = document.getElementById('task_remarks').value.trim();
-    const submitBtn = document.getElementById('taskSubmitBtn');
-    const errorDiv = document.getElementById('taskErrorMessage');
+    const taskName = document.getElementById('taskName').value.trim();
+    const dueDate = document.getElementById('taskDueDate').value;
+    const partyResponsible = document.getElementById('taskResponsible').value.trim();
+    const status = document.getElementById('taskStatus').value;
+    const remarks = document.getElementById('taskRemarks').value.trim();
+    const submitBtn = event.target.querySelector('button[type="submit"]');
     
     // Validation
-    if (!taskName || !dueDate) {
-        errorDiv.textContent = 'Please fill in all required fields';
-        errorDiv.style.display = 'block';
+    if (!taskName || !dueDate || !partyResponsible) {
+        alert('Please fill in all required fields (Task, Due Date, and Party Responsible)');
         return;
     }
     
     if (taskName.length < 3) {
-        errorDiv.textContent = 'Task name must be at least 3 characters long';
-        errorDiv.style.display = 'block';
+        alert('Task name must be at least 3 characters long');
         return;
     }
-    
-    // Convert date from yyyy-mm-dd to mm/dd/yyyy for API
-    const dateObj = new Date(dueDate + 'T00:00:00Z');
-    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getUTCDate()).padStart(2, '0');
-    const year = dateObj.getUTCFullYear();
-    const formattedDate = `${month}/${day}/${year}`;
     
     const payload = {
         event_id: currentEventId,
         task_name: taskName,
-        due_date: formattedDate,
+        due_date: dueDate,
         party_responsible: partyResponsible,
         status: status,
         remarks: remarks
     };
     
-    const isEdit = taskId !== '';
-    const method = isEdit ? 'PUT' : 'POST';
-    
-    if (isEdit) {
-        payload.task_id = taskId;
-    }
-    
     // Disable submit button
     submitBtn.disabled = true;
-    submitBtn.textContent = isEdit ? 'Updating...' : 'Creating...';
+    submitBtn.textContent = 'Creating...';
     
     fetch(`${API_BASE}/tasks.php`, {
-        method: method,
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
         body: JSON.stringify(payload)
     })
@@ -5189,13 +5442,101 @@ console.log('✅ event-details.js fully loaded - switchTab function available:',
         console.error('❌ [WINDOW SETUP] switchTab function not found!');
     }
     
+    // Task Coordinator Lookup Functions
+    if (typeof openLookupCoordinatorTaskModal === 'function') {
+        window.openLookupCoordinatorTaskModal = openLookupCoordinatorTaskModal;
+        console.log('✅ [WINDOW SETUP] window.openLookupCoordinatorTaskModal assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] openLookupCoordinatorTaskModal function not found!');
+    }
+    
+    if (typeof closeLookupCoordinatorTaskModal === 'function') {
+        window.closeLookupCoordinatorTaskModal = closeLookupCoordinatorTaskModal;
+        console.log('✅ [WINDOW SETUP] window.closeLookupCoordinatorTaskModal assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] closeLookupCoordinatorTaskModal function not found!');
+    }
+    
+    if (typeof loadEventAssignedCoordinatorsForTask === 'function') {
+        window.loadEventAssignedCoordinatorsForTask = loadEventAssignedCoordinatorsForTask;
+        console.log('✅ [WINDOW SETUP] window.loadEventAssignedCoordinatorsForTask assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] loadEventAssignedCoordinatorsForTask function not found!');
+    }
+    
+    if (typeof displayEventCoordinatorsForTask === 'function') {
+        window.displayEventCoordinatorsForTask = displayEventCoordinatorsForTask;
+        console.log('✅ [WINDOW SETUP] window.displayEventCoordinatorsForTask assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] displayEventCoordinatorsForTask function not found!');
+    }
+    
+    if (typeof filterCoordinatorsTaskList === 'function') {
+        window.filterCoordinatorsTaskList = filterCoordinatorsTaskList;
+        console.log('✅ [WINDOW SETUP] window.filterCoordinatorsTaskList assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] filterCoordinatorsTaskList function not found!');
+    }
+    
+    if (typeof selectCoordinatorForTask === 'function') {
+        window.selectCoordinatorForTask = selectCoordinatorForTask;
+        console.log('✅ [WINDOW SETUP] window.selectCoordinatorForTask assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] selectCoordinatorForTask function not found!');
+    }
+    
+    if (typeof toggleCoordinatorSelection === 'function') {
+        window.toggleCoordinatorSelection = toggleCoordinatorSelection;
+        console.log('✅ [WINDOW SETUP] window.toggleCoordinatorSelection assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] toggleCoordinatorSelection function not found!');
+    }
+    
+    if (typeof updateConfirmButtonState === 'function') {
+        window.updateConfirmButtonState = updateConfirmButtonState;
+        console.log('✅ [WINDOW SETUP] window.updateConfirmButtonState assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] updateConfirmButtonState function not found!');
+    }
+    
+    if (typeof confirmCoordinatorSelection === 'function') {
+        window.confirmCoordinatorSelection = confirmCoordinatorSelection;
+        console.log('✅ [WINDOW SETUP] window.confirmCoordinatorSelection assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] confirmCoordinatorSelection function not found!');
+    }
+    
+    if (typeof displaySelectedCoordinatorsPreview === 'function') {
+        window.displaySelectedCoordinatorsPreview = displaySelectedCoordinatorsPreview;
+        console.log('✅ [WINDOW SETUP] window.displaySelectedCoordinatorsPreview assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] displaySelectedCoordinatorsPreview function not found!');
+    }
+    
+    if (typeof removeCoordinatorFromSelection === 'function') {
+        window.removeCoordinatorFromSelection = removeCoordinatorFromSelection;
+        console.log('✅ [WINDOW SETUP] window.removeCoordinatorFromSelection assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] removeCoordinatorFromSelection function not found!');
+    }
+    
+    if (typeof updateTaskResponsibleField === 'function') {
+        window.updateTaskResponsibleField = updateTaskResponsibleField;
+        console.log('✅ [WINDOW SETUP] window.updateTaskResponsibleField assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] updateTaskResponsibleField function not found!');
+    }
+    
     console.log('🟢 [WINDOW SETUP] Completed. KPI functions available:', {
         saveKPIDetails: typeof window.saveKPIDetails,
         loadKPIData: typeof window.loadKPIData,
         loadSavedKPIData: typeof window.loadSavedKPIData,
         initializeKPIInputListeners: typeof window.initializeKPIInputListeners,
         setDefaultKPIValues: typeof window.setDefaultKPIValues,
-        switchTab: typeof window.switchTab
+        switchTab: typeof window.switchTab,
+        openLookupCoordinatorTaskModal: typeof window.openLookupCoordinatorTaskModal,
+        closeLookupCoordinatorTaskModal: typeof window.closeLookupCoordinatorTaskModal,
+        selectCoordinatorForTask: typeof window.selectCoordinatorForTask
     });
 })();
 

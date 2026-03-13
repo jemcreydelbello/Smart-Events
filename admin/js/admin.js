@@ -3274,10 +3274,19 @@ function switchTasksView(view) {
                 calendarView.classList.add('hidden');
                 calendarView.style.display = 'none';
             }
-            if (listBtn) listBtn.className = 'px-4 py-1 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded';
+            if (listBtn) {
+                listBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
+                listBtn.style.color = 'white';
+                // Remove hover effects from active button
+                listBtn.onmouseover = null;
+                listBtn.onmouseout = null;
+            }
             if (calendarBtn) {
-                calendarBtn.style.background = '#e5e7eb';
-                calendarBtn.style.color = '#374151';
+                calendarBtn.style.background = '#f3f4f6';
+                calendarBtn.style.color = '#4b5563';
+                // Add hover effects to inactive button
+                calendarBtn.onmouseover = () => calendarBtn.style.background = '#e5e7eb';
+                calendarBtn.onmouseout = () => calendarBtn.style.background = '#f3f4f6';
             }
         } else if (view === 'calendar') {
             console.log('Switching to calendar view');
@@ -3292,10 +3301,19 @@ function switchTasksView(view) {
             } else {
                 console.error('Calendar view element not found');
             }
-            if (listBtn) listBtn.className = 'px-4 py-1 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded';
+            if (listBtn) {
+                listBtn.style.background = '#f3f4f6';
+                listBtn.style.color = '#4b5563';
+                // Add hover effects to inactive button
+                listBtn.onmouseover = () => listBtn.style.background = '#e5e7eb';
+                listBtn.onmouseout = () => listBtn.style.background = '#f3f4f6';
+            }
             if (calendarBtn) {
                 calendarBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
                 calendarBtn.style.color = 'white';
+                // Remove hover effects from active button
+                calendarBtn.onmouseover = null;
+                calendarBtn.onmouseout = null;
             }
             
             // Render calendar when switching to calendar view
@@ -3487,28 +3505,21 @@ function showTasksDayDetails(day, tasks) {
     
     let html = '';
     tasks.forEach(task => {
-        const statusColors = {
-            'Done': '#dbeafe',
-            'In Progress': '#fef3c7',
-            'Pending': '#f3e8ff'
-        };
-        const statusBg = statusColors[task.status] || '#f0f0f0';
-        
         html += `
-            <div style="background: ${statusBg}; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #9ca3af;">
-                <div style="font-weight: 600; color: #111827; margin-bottom: 6px; font-size: 14px;">${escapeHtml(task.task_name)}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-bottom: 3px;">
+            <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
+                <div style="font-weight: 600; color: #111827; font-size: 14px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">${escapeHtml(task.task_name)}</div>
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
                     <strong>Due:</strong> ${task.due_date}
                 </div>
-                <div style="color: #6b7280; font-size: 12px; margin-bottom: 3px;">
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
                     <strong>Responsible:</strong> ${escapeHtml(task.party_responsible || '-')}
                 </div>
-                <div style="color: #6b7280; font-size: 12px; margin-bottom: 3px;">
-                    <strong>Status:</strong> <span style="background: white; padding: 2px 6px; border-radius: 3px;">${task.status}</span>
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
+                    <strong>Status:</strong> ${task.status}
                 </div>
-                ${task.remarks ? `<div style="color: #6b7280; font-size: 12px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.1);">
-                    <strong>Remarks:</strong> ${escapeHtml(task.remarks)}
-                </div>` : ''}
+                <div style="color: #6b7280; font-size: 12px;">
+                    <strong>Remarks:</strong> ${task.remarks ? escapeHtml(task.remarks) : '-'}
+                </div>
             </div>
         `;
     });
@@ -3552,10 +3563,16 @@ function switchTasksCalendarView(view) {
             if (monthBtn) {
                 monthBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
                 monthBtn.style.color = 'white';
+                // Remove hover effects from active button
+                monthBtn.onmouseover = null;
+                monthBtn.onmouseout = null;
             }
             if (listBtn) {
-                listBtn.style.background = '#e5e7eb';
-                listBtn.style.color = '#374151';
+                listBtn.style.background = '#f3f4f6';
+                listBtn.style.color = '#4b5563';
+                // Add hover effects to inactive button
+                listBtn.onmouseover = () => listBtn.style.background = '#e5e7eb';
+                listBtn.onmouseout = () => listBtn.style.background = '#f3f4f6';
             }
         } else if (view === 'list') {
             if (monthViewContainer) {
@@ -3563,17 +3580,25 @@ function switchTasksCalendarView(view) {
             }
             if (listViewContainer) {
                 listViewContainer.style.display = 'flex';
+                console.log('[Tasks] List container set to flex, styles:', listViewContainer.getAttribute('style'));
             }
             if (monthBtn) {
-                monthBtn.style.background = '#e5e7eb';
-                monthBtn.style.color = '#374151';
+                monthBtn.style.background = '#f3f4f6';
+                monthBtn.style.color = '#4b5563';
+                // Add hover effects to inactive button
+                monthBtn.onmouseover = () => monthBtn.style.background = '#e5e7eb';
+                monthBtn.onmouseout = () => monthBtn.style.background = '#f3f4f6';
             }
             if (listBtn) {
-                listBtn.style.background = '#3b82f6';
+                listBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
                 listBtn.style.color = 'white';
+                // Remove hover effects from active button
+                listBtn.onmouseover = null;
+                listBtn.onmouseout = null;
             }
             
             // Render tasks list
+            console.log('[Tasks] Calling renderTasksListView...');
             renderTasksListView();
         }
     } catch (error) {
@@ -3585,31 +3610,43 @@ function switchTasksCalendarView(view) {
 function renderTasksListView() {
     try {
         const listContainer = document.getElementById('tasksEventsList');
-        if (!listContainer) return;
+        if (!listContainer) {
+            console.error('tasksEventsList container not found');
+            return;
+        }
 
         const tasks = window.currentEventTasks?.all || [];
+        console.log('[Tasks List] Current tasks count:', tasks.length);
+        console.log('[Tasks List] Tasks data:', tasks);
         
-        if (tasks.length === 0) {
-            listContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No tasks found</div>';
+        // Get current month and year from calendar state
+        const currentMonth = tasksCalendarState.currentDate.getMonth();
+        const currentYear = tasksCalendarState.currentDate.getFullYear();
+        console.log('[Tasks List] Filtering for month:', currentMonth, 'year:', currentYear);
+        
+        // Filter tasks for current month
+        const monthTasks = tasks.filter(task => {
+            if (!task.due_date) return false;
+            const taskDate = new Date(task.due_date);
+            return taskDate.getMonth() === currentMonth && taskDate.getFullYear() === currentYear;
+        });
+        
+        console.log('[Tasks List] Month tasks count:', monthTasks.length);
+        
+        if (monthTasks.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No tasks found for this month</div>';
             return;
         }
 
         // Sort tasks by due date
-        const sortedTasks = [...tasks].sort((a, b) => {
+        const sortedTasks = [...monthTasks].sort((a, b) => {
             return new Date(a.due_date) - new Date(b.due_date);
         });
 
         let html = '';
         sortedTasks.forEach(task => {
-            const statusColors = {
-                'Done': '#dbeafe',
-                'In Progress': '#fef3c7',
-                'Pending': '#f3e8ff'
-            };
-            const statusBg = statusColors[task.status] || '#f0f0f0';
-            
             html += `
-                <div style="background: ${statusBg}; padding: 12px; border-radius: 6px; border-left: 3px solid #9ca3af; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+                <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
                     <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${escapeHtml(task.task_name)}</div>
                     <div style="color: #6b7280; font-size: 12px; margin-bottom: 2px;">
                         <strong>Due:</strong> ${task.due_date}
@@ -3618,13 +3655,15 @@ function renderTasksListView() {
                         <strong>Responsible:</strong> ${escapeHtml(task.party_responsible || '-')}
                     </div>
                     <div style="color: #6b7280; font-size: 12px;">
-                        <strong>Status:</strong> <span style="background: white; padding: 2px 6px; border-radius: 3px;">${task.status}</span>
+                        <strong>Status:</strong> <span style="padding: 2px 6px; border-radius: 3px;">${task.status}</span>
                     </div>
                 </div>
             `;
         });
 
         listContainer.innerHTML = html;
+        console.log('[Tasks List] ✓ HTML rendered successfully, length:', html.length);
+        console.log('[Tasks List] Container:', listContainer);
     } catch (error) {
         console.error('Error in renderTasksListView:', error);
     }
@@ -3679,6 +3718,382 @@ function closeAddTaskModal() {
     
     // Clear editing flag
     window.editingTaskId = null;
+}
+
+// ========== TASK COORDINATOR LOOKUP FUNCTIONS ==========
+
+function openLookupCoordinatorTaskModal() {
+    if (!window.currentEventId) {
+        alert('Please save the event first before assigning coordinators to tasks');
+        return;
+    }
+    console.log('🔍 Opening Task Coordinator Lookup modal for event:', window.currentEventId);
+    const modal = document.getElementById('lookupCoordinatorTaskModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    loadEventAssignedCoordinatorsForTask();
+}
+
+function closeLookupCoordinatorTaskModal() {
+    console.log('✕ Closing Task Coordinator Lookup modal');
+    const modal = document.getElementById('lookupCoordinatorTaskModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+}
+
+async function loadEventAssignedCoordinatorsForTask() {
+    try {
+        console.log('📥 Fetching coordinators for event:', window.currentEventId);
+        
+        // Build the API URL
+        const apiUrl = `${API_BASE}/events.php?action=get_event_coordinators&event_id=${window.currentEventId}`;
+        console.log('API URL:', apiUrl);
+        
+        // Fetch coordinators assigned to this specific event
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: getUserHeaders()
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            console.log('✓ Coordinators loaded:', data.data);
+            displayEventCoordinatorsForTask(data.data || []);
+        } else {
+            console.error('❌ API returned error:', data.message);
+            const listContainer = document.getElementById('coordinatorsTaskList');
+            if (listContainer) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + (data.message || 'Unknown error') + '</p>';
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading coordinators:', error);
+        const listContainer = document.getElementById('coordinatorsTaskList');
+        if (listContainer) {
+            listContainer.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + error.message + '</p>';
+        }
+    }
+}
+
+// Store selected coordinators for multi-select
+let selectedCoordinatorsForTask = new Map(); // Map of coordinator_id -> full coordinator object
+let allEventCoordinators = []; // Store all coordinators for reference
+
+function displayEventCoordinatorsForTask(coordinators) {
+    const listContainer = document.getElementById('coordinatorsTaskList');
+    
+    if (!listContainer) {
+        console.error('❌ coordinatorsTaskList container not found');
+        return;
+    }
+    
+    // Store all coordinators for later reference
+    allEventCoordinators = coordinators;
+    
+    console.log('🎨 Displaying coordinators:', coordinators);
+    console.log('📊 Current selections:', Array.from(selectedCoordinatorsForTask.keys()));
+    
+    if (!coordinators || coordinators.length === 0) {
+        console.warn('⚠️ No coordinators found');
+        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">No coordinators assigned to this event. Please assign coordinators in the Event Details tab first.</p>';
+        return;
+    }
+    
+    let html = '';
+    coordinators.forEach(coordinator => {
+        // Skip coordinators that are already selected (already in preview)
+        if (selectedCoordinatorsForTask.has(coordinator.coordinator_id)) {
+            console.log(`⊘ Skipping already selected: ${coordinator.coordinator_name}`);
+            return;
+        }
+        
+        // Build profile image path
+        let profileImageUrl = '/assets/placeholder-avatar.png'; // Default placeholder
+        if (coordinator.coordinator_image) {
+            // Check if it's a full URL or just a filename
+            if (coordinator.coordinator_image.includes('data:image')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else if (coordinator.coordinator_image.includes('http')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else {
+                // Assume it's a filename in uploads/coordinators directory
+                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
+            }
+        }
+        
+        // Encode coordinator data for safe passing through onclick
+        const coordDataJson = JSON.stringify(coordinator).replace(/"/g, '&quot;');
+        
+        html += `
+            <label class="coordinator-card-task" data-coordinator-id="${coordinator.coordinator_id}" style="border: 2px solid #e5e7eb; border-radius: 6px; padding: 16px; display: flex; align-items: center; background: white; margin-bottom: 12px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#1E73BB'" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'" onclick="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', null, '${coordDataJson}')">
+                <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" data-coordinator-name="${coordinator.coordinator_name.replace(/"/g, '&quot;')}" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;" onchange="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', event, '${coordDataJson}')">
+                <div style="display: flex; gap: 12px; align-items: center; flex: 1; margin-left: 12px;">
+                    <!-- Profile Picture -->
+                    <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
+                    </div>
+                    <div style="flex: 1;">
+                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #1f2937; font-size: 14px;">${coordinator.coordinator_name}</p>
+                        <p style="margin: 0 0 2px 0; font-size: 13px; color: #6b7280;">${coordinator.email || 'No email'}</p>
+                        <p style="margin: 0; font-size: 12px; color: #9ca3af;">${coordinator.contact_number || 'No phone'}</p>
+                    </div>
+                </div>
+            </label>
+        `;
+    });
+    
+    if (html === '') {
+        html = '<p style="text-align: center; color: #9ca3af; padding: 20px;">All assigned coordinators have been selected. ✓</p>';
+    }
+    
+    listContainer.innerHTML = html;
+    console.log('✓ Coordinators rendered with checkboxes');
+}
+
+function toggleCoordinatorSelection(coordinatorId, coordinatorName, event, coordinatorDataJson) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    // Parse coordinator data if provided
+    let coordinatorData = null;
+    if (coordinatorDataJson) {
+        try {
+            coordinatorData = JSON.parse(coordinatorDataJson);
+        } catch (e) {
+            console.error('Failed to parse coordinator data:', e);
+            coordinatorData = {
+                coordinator_id: coordinatorId,
+                coordinator_name: coordinatorName
+            };
+        }
+    }
+    
+    if (selectedCoordinatorsForTask.has(coordinatorId)) {
+        selectedCoordinatorsForTask.delete(coordinatorId);
+        console.log(`✖️ Removed coordinator: ${coordinatorName}`);
+    } else {
+        selectedCoordinatorsForTask.set(coordinatorId, coordinatorData || {
+            coordinator_id: coordinatorId,
+            coordinator_name: coordinatorName
+        });
+        console.log(`✅ Added coordinator: ${coordinatorName}`);
+    }
+    
+    // Update checkbox visually
+    const checkbox = document.querySelector(`.coordinator-checkbox[data-coordinator-id="${coordinatorId}"]`);
+    if (checkbox) {
+        checkbox.checked = selectedCoordinatorsForTask.has(coordinatorId);
+    }
+    
+    // Update card styling
+    const card = document.querySelector(`.coordinator-card-task[data-coordinator-id="${coordinatorId}"]`);
+    if (card) {
+        if (selectedCoordinatorsForTask.has(coordinatorId)) {
+            card.style.borderColor = '#1E73BB';
+            card.style.background = '#EFF5FB';
+        } else {
+            card.style.borderColor = '#e5e7eb';
+            card.style.background = 'white';
+        }
+    }
+    
+    updateConfirmButtonState();
+    console.log(`📊 Selected coordinators: ${selectedCoordinatorsForTask.size}`);
+}
+
+function updateConfirmButtonState() {
+    const confirmBtn = document.getElementById('confirmCoordinatorSelectionBtn');
+    if (!confirmBtn) return;
+    
+    if (selectedCoordinatorsForTask.size > 0) {
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.pointerEvents = 'auto';
+        confirmBtn.style.background = '#1E73BB';
+        confirmBtn.textContent = `Confirm Selection (${selectedCoordinatorsForTask.size})`;
+    } else {
+        confirmBtn.style.opacity = '0.5';
+        confirmBtn.style.pointerEvents = 'none';
+        confirmBtn.style.background = '#9ca3af';
+        confirmBtn.textContent = 'Confirm Selection';
+    }
+}
+
+function confirmCoordinatorSelection() {
+    if (selectedCoordinatorsForTask.size === 0) {
+        alert('Please select at least one coordinator');
+        return;
+    }
+    
+    const coordinatorNames = Array.from(selectedCoordinatorsForTask.values()).map(c => c.coordinator_name).join(', ');
+    const coordinatorIds = Array.from(selectedCoordinatorsForTask.keys()).join(',');
+    
+    // Set the values in the task form
+    const responsibleField = document.getElementById('taskResponsible');
+    if (responsibleField) {
+        responsibleField.value = coordinatorNames;
+        // Store coordinator IDs in a data attribute for submission
+        responsibleField.dataset.coordinatorIds = coordinatorIds;
+    }
+    
+    // Display preview of selected coordinators
+    displaySelectedCoordinatorsPreview();
+    
+    console.log(`✅ Selected ${selectedCoordinatorsForTask.size} coordinators: ${coordinatorNames}`);
+    closeLookupCoordinatorTaskModal();
+}
+
+function displaySelectedCoordinatorsPreview() {
+    const previewContainer = document.getElementById('selectedCoordinatorsPreview');
+    const previewContent = document.getElementById('selectedCoordinatorsPreviewContent');
+    
+    if (!previewContainer || !previewContent) return;
+    
+    if (selectedCoordinatorsForTask.size === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+    
+    // Calculate if scrolling is needed (more than 4 coordinators)
+    const isScrollable = selectedCoordinatorsForTask.size > 4;
+    const maxHeight = isScrollable ? '280px' : 'auto';
+    const overflowStyle = isScrollable ? 'overflow-y: auto; overflow-x: hidden;' : '';
+    
+    let previewHtml = `
+        <div style="${overflowStyle} ${isScrollable ? 'max-height: ' + maxHeight + '; border: 1px solid #e5e7eb; border-radius: 6px;' : ''}">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #e5e7eb; background: #f9fafb; ${isScrollable ? 'position: sticky; top: 0; z-index: 10;' : ''}">
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 50px;">PHOTO</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 20%;">NAME</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 25%;">EMAIL ADDRESS</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">COMPANY</th>
+                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">CONTACT NUMBER</th>
+                        <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #6b7280; width: 50px;">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    selectedCoordinatorsForTask.forEach(coordinator => {
+        // Build profile image path
+        let profileImageUrl = '/assets/placeholder-avatar.png';
+        if (coordinator.coordinator_image) {
+            if (coordinator.coordinator_image.includes('data:image')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else if (coordinator.coordinator_image.includes('http')) {
+                profileImageUrl = coordinator.coordinator_image;
+            } else {
+                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
+            }
+        }
+        
+        previewHtml += `
+            <tr style="border-bottom: 1px solid #e5e7eb; background: white;">
+                <td style="padding: 12px 8px; text-align: center;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
+                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
+                    </div>
+                </td>
+                <td style="padding: 12px 8px; color: #1f2937; font-weight: 500;">${coordinator.coordinator_name}</td>
+                <td style="padding: 12px 8px; color: #6b7280; word-break: break-all;">${coordinator.email || 'No email'}</td>
+                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.company || 'N/A'}</td>
+                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.contact_number || 'No phone'}</td>
+                <td style="padding: 12px 8px; text-align: center;">
+                    <button type="button" onclick="removeCoordinatorFromSelection(${coordinator.coordinator_id})" style="background: none; border: 1px solid #ef4444; color: #ef4444; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'" onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    previewHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    previewContent.innerHTML = previewHtml;
+    previewContainer.style.display = 'block';
+    console.log('✓ Preview table displayed', selectedCoordinatorsForTask.size, 'coordinators', isScrollable ? '(scrollable)' : '(fixed height)');
+}
+
+function removeCoordinatorFromSelection(coordinatorId) {
+    selectedCoordinatorsForTask.delete(coordinatorId);
+    console.log(`✖️ Removed coordinator ${coordinatorId} from selection`);
+    
+    // Update the preview
+    displaySelectedCoordinatorsPreview();
+    
+    // Update preview in form if still needed
+    updateTaskResponsibleField();
+    
+    // Refresh the lookup list to show the deleted coordinator again
+    console.log('🔄 Refreshing lookup coordinator list...');
+    displayEventCoordinatorsForTask(allEventCoordinators);
+}
+
+function updateTaskResponsibleField() {
+    const responsibleField = document.getElementById('taskResponsible');
+    if (!responsibleField) return;
+    
+    if (selectedCoordinatorsForTask.size === 0) {
+        responsibleField.value = '';
+        responsibleField.dataset.coordinatorIds = '';
+        const previewContainer = document.getElementById('selectedCoordinatorsPreview');
+        if (previewContainer) {
+            previewContainer.style.display = 'none';
+        }
+    } else {
+        const coordinatorNames = Array.from(selectedCoordinatorsForTask.values()).map(c => c.coordinator_name).join(', ');
+        const coordinatorIds = Array.from(selectedCoordinatorsForTask.keys()).join(',');
+        responsibleField.value = coordinatorNames;
+        responsibleField.dataset.coordinatorIds = coordinatorIds;
+    }
+}
+
+function filterCoordinatorsTaskList() {
+    const searchInput = document.getElementById('coordinatorTaskSearchInput');
+    const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+    console.log('🔎 Filtering coordinators with:', searchValue);
+    const cards = document.querySelectorAll('.coordinator-card-task');
+    
+    let visibleCount = 0;
+    cards.forEach(card => {
+        const name = card.querySelector('p').textContent.toLowerCase();
+        const emailElement = card.querySelectorAll('p')[1];
+        const email = emailElement ? emailElement.textContent.toLowerCase() : '';
+        
+        if (name.includes(searchValue) || email.includes(searchValue)) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    console.log('Found', visibleCount, 'matching coordinators');
+}
+
+function selectCoordinatorForTask(coordinatorId, coordinatorName, event) {
+    if (event) event.stopPropagation();
+    
+    console.log('✓ Old selectCoordinatorForTask called - using new toggle selection');
+    toggleCoordinatorSelection(coordinatorId, coordinatorName, event);
 }
 
 // Handle Add Task Form Submission
@@ -3830,9 +4245,9 @@ function renderEventTasksTab(event) {
         <!-- Controls Row -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; gap: 16px;">
           <!-- Left: View Toggle -->
-          <div style="display: flex; gap: 12px;">
-            <button id="eventTasksListBtn" onclick="switchEventTasksView('list')" style="padding: 8px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">List</button>
-            <button id="eventTasksCalendarBtn" onclick="switchEventTasksView('calendar')" style="padding: 8px 24px; background: #f0f0f0; color: #374151; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 14px; transition: all 0.2s;">Calendar</button>
+          <div style="display: flex; gap: 2px; background: #f0f0f0; padding: 4px; border-radius: 8px;">
+            <button id="eventTasksListBtn" onclick="switchEventTasksView('list')" style="padding: 8px 16px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; transition: all 0.2s ease;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">List</button>
+            <button id="eventTasksCalendarBtn" onclick="switchEventTasksView('calendar')" style="padding: 8px 16px; background: white; color: #4b5563; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'">Calendar</button>
           </div>
           
           <!-- Right: Add Task Button -->
@@ -3893,7 +4308,7 @@ function renderEventTasksTab(event) {
             </div>
 
             <!-- Deadline Details Panel -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb;">
+            <div style="background: white; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb;">
               <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #111827;">Deadline Details</h4>
               <div id="eventTasksDeadlineDetails" style="font-size: 13px; color: #6b7280;">
                 <p style="margin: 0;">No deadlines selected</p>
@@ -3921,6 +4336,9 @@ function renderEventTasksTab(event) {
             console.log('  - Table body found:', !!tableBody);
             if (listBtn && calendarBtn && tableBody) {
                 console.log('[Tasks] ✓ New tasks layout rendered successfully');
+                // Initialize to List view with gradient color
+                switchEventTasksView('list');
+                console.log('[Tasks] ✓ Initialized to List view with gradient');
             } else {
                 console.error('[Tasks] ✗ New layout elements missing after render');
             }
@@ -4023,43 +4441,43 @@ function renderEventTasksTable(tasks, tableBody) {
     console.log('[Tasks] Rendering', tasks.length, 'tasks...');
     tasks.forEach((task, idx) => {
         const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #e5e7eb';
+        row.style.borderBottom = '1px solid #d1d5db';
         
         // Format date
         const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '-';
         
-        // Status badge styling
-        let statusBadgeStyle = '';
+        // Status badge styling - background and text color
+        let statusStyle = '';
         let statusText = task.status || 'Pending';
         
         if (statusText === 'Done') {
-            statusBadgeStyle = 'background: #dbeafe; color: #0369a1;';
+            statusStyle = 'background: #dbeafe; color: #0369a1;';
         } else if (statusText === 'In Progress') {
-            statusBadgeStyle = 'background: #fef3c7; color: #b45309;';
+            statusStyle = 'background: #fef3c7; color: #b45309;';
         } else {
-            statusBadgeStyle = 'background: #dbeafe; color: #0369a1;';
+            statusStyle = 'background: #e5e7eb; color: #6b7280;';
         }
         
         row.innerHTML = `
-            <td style="padding: 12px 16px; color: #111827; font-size: 14px;">
-                <input type="text" value="${dueDate}" readonly style="border: none; background: none; cursor: pointer; color: #111827; font-size: 14px; width: 120px; padding: 4px;" />
+            <td style="padding: 12px 16px; color: #111827; font-size: 14px; word-break: break-word;">
+                <input type="text" value="${dueDate}" readonly style="border: 1px solid #d1d5db; background: white; cursor: pointer; color: #111827; font-size: 14px; width: 120px; padding: 6px 8px; border-radius: 4px;" />
             </td>
-            <td style="padding: 12px 16px; color: #111827; font-size: 14px;">${escapeHtml(task.task_name || '-')}</td>
-            <td style="padding: 12px 16px; color: #4b5563; font-size: 14px;">${escapeHtml(task.party_responsible || '-')}</td>
-            <td style="padding: 12px 16px;">
-                <select onchange="updateEventTaskStatus(${task.task_id}, this.value)" style="padding: 4px 8px; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; ${statusBadgeStyle} cursor: pointer;">
+            <td style="padding: 12px 16px; color: #111827; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.task_name || '-')}</td>
+            <td style="padding: 12px 16px; color: #4b5563; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.party_responsible || '-')}</td>
+            <td style="padding: 12px 16px; word-break: break-word;">
+                <select onchange="updateEventTaskStatus(${task.task_id}, this.value)" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-weight: 500; width: 130px; ${statusStyle} cursor: pointer;">
                     <option value="Pending" ${statusText === 'Pending' ? 'selected' : ''}>Pending</option>
                     <option value="In Progress" ${statusText === 'In Progress' ? 'selected' : ''}>In Progress</option>
                     <option value="Done" ${statusText === 'Done' ? 'selected' : ''}>Done</option>
                 </select>
             </td>
-            <td style="padding: 12px 16px; color: #4b5563; font-size: 14px;">${escapeHtml(task.remarks || '-')}</td>
-            <td style="padding: 12px 16px; text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                <button onclick="editEventTask(${task.task_id})" style="background: transparent; border: none; padding: 4px; cursor: pointer; line-height: 1; color: #3b82f6; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center;" title="Edit task">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+            <td style="padding: 12px 16px; color: #4b5563; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.remarks || '-')}</td>
+            <td style="padding: 12px 16px; text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; height: 100%; min-height: 36px;">
+                <button onclick="editEventTask(${task.task_id})" style="background: none; border: 1px solid #3b82f6; color: #3b82f6; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e40af'" onmouseout="this.style.background='none'; this.style.borderColor='#3b82f6'" title="Edit task">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
                 </button>
-                <button onclick="deleteEventTask(${task.task_id})" style="background: transparent; border: none; padding: 4px; cursor: pointer; line-height: 1; color: #ef5350; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center;" title="Delete task">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                <button onclick="deleteEventTask(${task.task_id})" style="background: none; border: 1px solid #ef4444; color: #ef4444; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'" onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'" title="Delete task">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                 </button>
             </td>
         `;
@@ -4079,27 +4497,32 @@ function switchEventTasksView(view) {
     const calendarContent = document.getElementById('eventTasksCalendarContent');
     
     if (view === 'list') {
-        // Highlight List button
+        // Show List button with gradient, Calendar button white
         if (listBtn) {
             listBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
             listBtn.style.color = 'white';
+            listBtn.style.opacity = '1';
         }
         if (calendarBtn) {
-            calendarBtn.style.background = '#f0f0f0';
-            calendarBtn.style.color = '#374151';
+            calendarBtn.style.background = 'white';
+            calendarBtn.style.color = '#4b5563';
+            calendarBtn.style.opacity = '1';
         }
         
         if (listContent) listContent.style.display = 'block';
         if (calendarContent) calendarContent.style.display = 'none';
+        console.log('[Tasks] ✓ Switched to List view');
     } else if (view === 'calendar') {
-        // Highlight Calendar button
+        // Show Calendar button with gradient, List button white
         if (calendarBtn) {
             calendarBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
             calendarBtn.style.color = 'white';
+            calendarBtn.style.opacity = '1';
         }
         if (listBtn) {
-            listBtn.style.background = '#f0f0f0';
-            listBtn.style.color = '#374151';
+            listBtn.style.background = 'white';
+            listBtn.style.color = '#4b5563';
+            listBtn.style.opacity = '1';
         }
         
         if (listContent) listContent.style.display = 'none';
@@ -4107,6 +4530,7 @@ function switchEventTasksView(view) {
         
         // Render calendar
         renderEventTasksCalendar();
+        console.log('[Tasks] ✓ Switched to Calendar view');
     }
 }
 
@@ -4158,7 +4582,7 @@ function renderEventTasksCalendar() {
     for (let i = 0; i < firstDay; i++) {
         const emptyCell = document.createElement('div');
         emptyCell.style.background = '#ffffff';
-        emptyCell.style.minHeight = '100px';
+        emptyCell.style.height = '120px';
         calendarDays.appendChild(emptyCell);
     }
     
@@ -4166,12 +4590,15 @@ function renderEventTasksCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.style.background = '#ffffff';
-        dayCell.style.minHeight = '100px';
+        dayCell.style.height = '120px';
         dayCell.style.padding = '8px';
         dayCell.style.cursor = 'pointer';
         dayCell.style.borderRadius = '4px';
         dayCell.style.position = 'relative';
         dayCell.style.overflow = 'hidden';
+        dayCell.style.display = 'flex';
+        dayCell.style.flexDirection = 'column';
+        dayCell.style.boxSizing = 'border-box';
         
         // Check if today
         const today = new Date();
@@ -4187,6 +4614,7 @@ function renderEventTasksCalendar() {
         dayNum.style.color = '#111827';
         dayNum.style.marginBottom = '4px';
         dayNum.style.fontSize = '14px';
+        dayNum.style.flexShrink = '0';
         dayCell.appendChild(dayNum);
         
         // Tasks for this day
@@ -4194,10 +4622,16 @@ function renderEventTasksCalendar() {
         if (dayTasks.length > 0) {
             const tasksContainer = document.createElement('div');
             tasksContainer.style.fontSize = '11px';
+            tasksContainer.style.overflow = 'hidden';
+            tasksContainer.style.flex = '1';
+            tasksContainer.style.display = 'flex';
+            tasksContainer.style.flexDirection = 'column';
+            tasksContainer.style.minHeight = '0';
             
             dayTasks.slice(0, 2).forEach(task => {
                 const taskElement = document.createElement('div');
-                taskElement.textContent = task.task_name;
+                const truncatedName = task.task_name.length > 10 ? task.task_name.substring(0, 10) + '...' : task.task_name;
+                taskElement.textContent = truncatedName;
                 taskElement.style.background = '#fef3c7';
                 taskElement.style.color = '#78350f';
                 taskElement.style.padding = '2px 4px';
@@ -4207,6 +4641,8 @@ function renderEventTasksCalendar() {
                 taskElement.style.overflow = 'hidden';
                 taskElement.style.textOverflow = 'ellipsis';
                 taskElement.style.fontWeight = '500';
+                taskElement.style.maxWidth = '100%';
+                taskElement.style.flexShrink = '0';
                 tasksContainer.appendChild(taskElement);
             });
             
@@ -4215,6 +4651,10 @@ function renderEventTasksCalendar() {
                 moreElement.textContent = `+${dayTasks.length - 2} more`;
                 moreElement.style.fontSize = '10px';
                 moreElement.style.color = '#6b7280';
+                moreElement.style.whiteSpace = 'nowrap';
+                moreElement.style.overflow = 'hidden';
+                moreElement.style.textOverflow = 'ellipsis';
+                moreElement.style.flexShrink = '0';
                 tasksContainer.appendChild(moreElement);
             }
             
@@ -4241,25 +4681,21 @@ function showEventTasksDayDetails(day, tasks) {
     let html = `<p style="margin: 0 0 8px 0; font-weight: 600; color: #111827;">${tasks.length} task${tasks.length > 1 ? 's' : ''} found</p>`;
     
     tasks.forEach(task => {
-        const statusColors = {
-            'Done': '#dbeafe',
-            'In Progress': '#fef3c7',
-            'Pending': '#f3e8ff'
-        };
-        const statusBg = statusColors[task.status] || '#f0f0f0';
-        
         html += `
-            <div style="background: ${statusBg}; padding: 8px; border-radius: 4px; margin-bottom: 8px; border-left: 2px solid #9ca3af;">
-                <div style="font-weight: 600; color: #111827; margin-bottom: 3px;">${escapeHtml(task.task_name)}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-bottom: 2px;">
+            <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+                <div style="font-weight: 600; color: #111827; font-size: 14px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">${escapeHtml(task.task_name)}</div>
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
+                    <strong>Due:</strong> ${task.due_date || '-'}
+                </div>
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
                     <strong>Responsible:</strong> ${escapeHtml(task.party_responsible || '-')}
                 </div>
-                <div style="color: #6b7280; font-size: 12px; margin-bottom: 2px;">
+                <div style="color: #6b7280; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
                     <strong>Status:</strong> ${task.status}
                 </div>
-                ${task.remarks ? `<div style="color: #6b7280; font-size: 12px;">
-                    <strong>Remarks:</strong> ${escapeHtml(task.remarks)}
-                </div>` : ''}
+                <div style="color: #6b7280; font-size: 12px;">
+                    <strong>Remarks:</strong> ${task.remarks ? escapeHtml(task.remarks) : '-'}
+                </div>
             </div>
         `;
     });
@@ -4295,46 +4731,22 @@ function addEventTask(eventId) {
 async function updateEventTaskStatus(taskId, newStatus) {
     console.log('[Tasks] Updating task', taskId, 'status to:', newStatus);
     
-    // Ask for remarks when status changes
-    const remarks = prompt(`Add remarks for status change to "${newStatus}":`, '');
+    // Store values globally for modal submission
+    window.pendingTaskStatusUpdate = {
+        taskId: taskId,
+        newStatus: newStatus
+    };
     
-    if (remarks === null) {
-        // User cancelled - reload to reset the select
-        location.reload();
-        return;
-    }
+    // Show modal for remarks
+    const modal = document.getElementById('taskStatusRemarksModal');
+    const statusDisplay = document.getElementById('modalStatusDisplay');
+    const remarksInput = document.getElementById('taskRemarksInput');
     
-    try {
-        const response = await fetch(`${API_BASE}/tasks.php?action=update`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...getUserHeaders()
-            },
-            body: JSON.stringify({
-                task_id: taskId,
-                status: newStatus,
-                remarks: remarks
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log('[Tasks] ✓ Task status updated');
-            showNotification(`Task status changed to "${newStatus}"`, 'success');
-            
-            // Reload tasks table to show updated data
-            if (window.currentEventData) {
-                loadEventTasks(window.currentEventData);
-            }
-        } else {
-            console.error('[Tasks] Error:', data.message);
-            showNotification('Error updating task: ' + data.message, 'error');
-        }
-    } catch (error) {
-        console.error('[Tasks] Error updating status:', error);
-        showNotification('Error updating task status', 'error');
+    if (modal && statusDisplay && remarksInput) {
+        statusDisplay.textContent = newStatus;
+        remarksInput.value = '';
+        remarksInput.focus();
+        modal.style.display = 'flex';
     }
 }
 
@@ -4418,6 +4830,64 @@ async function editEventTask(taskId) {
     } catch (error) {
         console.error('[Tasks] Error editing task:', error);
         showNotification('Error loading task: ' + error.message, 'error');
+    }
+}
+
+// Modal functions for task status remarks
+function closeTaskStatusRemarksModal() {
+    const modal = document.getElementById('taskStatusRemarksModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    window.pendingTaskStatusUpdate = null;
+}
+
+async function submitTaskStatusRemarksModal() {
+    const remarksInput = document.getElementById('taskRemarksInput');
+    const remarks = remarksInput ? remarksInput.value : '';
+    
+    if (!window.pendingTaskStatusUpdate) {
+        console.error('[Tasks] No pending task status update');
+        showNotification('Error: No task update in progress', 'error');
+        return;
+    }
+    
+    const { taskId, newStatus } = window.pendingTaskStatusUpdate;
+    
+    try {
+        const response = await fetch(`${API_BASE}/tasks.php?action=update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getUserHeaders()
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                status: newStatus,
+                remarks: remarks
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('[Tasks] ✓ Task status updated');
+            showNotification(`Task status changed to "${newStatus}"`, 'success');
+            
+            // Close modal
+            closeTaskStatusRemarksModal();
+            
+            // Reload tasks table to show updated data
+            if (window.currentEventData) {
+                loadEventTasks(window.currentEventData);
+            }
+        } else {
+            console.error('[Tasks] Error:', data.message);
+            showNotification('Error updating task: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('[Tasks] Error updating status:', error);
+        showNotification('Error updating task status', 'error');
     }
 }
 
@@ -9687,13 +10157,36 @@ function renderProgramTimeline(items) {
         return;
     }
     
-    container.innerHTML = items.map((item, index) => `
+    // Helper function to format date
+    function formatDateDisplay(dateStr) {
+        if (!dateStr) return '';
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        // Handle format YYYY-MM (month input)
+        if (dateStr.match(/^\d{4}-\d{2}$/)) {
+            const [year, month] = dateStr.split('-');
+            const monthIndex = parseInt(month) - 1;
+            return `${monthNames[monthIndex]} ${year}`;
+        }
+        
+        // Fallback for old YYYY-MM-DD format if any exist
+        const date = new Date(dateStr + 'T00:00:00');
+        const month = monthNames[date.getMonth()];
+        const year = date.getFullYear();
+        return `${month} ${year}`;
+    }
+    
+    container.innerHTML = items.map((item, index) => {
+        const dateDisplay = item.month ? formatDateDisplay(item.month) : '';
+        const weekText = `Week ${item.week_number}${dateDisplay ? ` in Month of ${dateDisplay}` : ''}`;
+        
+        return `
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div class="flex justify-between items-start gap-4">
                 <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-2">
-                        <h4 class="font-semibold text-gray-900">Week ${item.week_number}</h4>
-                        <h4 class="font-semibold text-gray-900">${item.title}</h4>
+                    <div class="mb-2">
+                        <h4 class="font-semibold text-gray-900 mb-1">${weekText}</h4>
+                        <h4 class="font-semibold text-gray-900 text-blue-600">${item.title}</h4>
                     </div>
                     <p class="text-sm text-gray-600">${item.description || ''}</p>
                 </div>
@@ -9704,14 +10197,17 @@ function renderProgramTimeline(items) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
                     </button>
                     <button onclick="deleteProgramTimeline(${item.timeline_id})" 
-                            style="background: transparent; border: none; color: #ef5350; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" 
-                            title="Delete timeline item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                            style="background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" 
+                            title="Delete timeline item"
+                            onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'"
+                            onmouseout="this.style.background='white'; this.style.borderColor='#ef4444'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
                     </button>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderProgramFlow(items) {
@@ -9766,6 +10262,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (entryType === 'timeline') {
                 const weekNumber = document.getElementById('programWeek').value;
+                const dateValue = document.getElementById('programDate').value;
                 const title = document.getElementById('programTitle').value;
                 const description = document.getElementById('programNotes').value;
                 
@@ -9778,6 +10275,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const action = editTimelineId ? 'update-timeline' : 'create-timeline';
                 const body = {
                     event_id: eventId,
+                    entry_type: 'timeline',
+                    month: dateValue,
                     week_number: weekNumber,
                     title: title,
                     description: description
@@ -9873,8 +10372,8 @@ function editProgramTimeline(timelineId) {
         .then(data => {
             if (data.success && data.data) {
                 const item = data.data;
-                document.getElementById('programEntryType').value = 'timeline';
                 document.getElementById('programWeek').value = item.week_number || '';
+                document.getElementById('programDate').value = item.month || '';
                 document.getElementById('programTitle').value = item.title || '';
                 document.getElementById('programNotes').value = item.description || '';
                 updateProgramFormFields();
