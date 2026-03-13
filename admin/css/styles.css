@@ -1566,13 +1566,10 @@ select:focus {
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    animation: spin 1s linear infinite;
+    background: linear-gradient(90deg, rgba(255,0,0,0.1) 25%, rgba(255,0,0,0.3) 75%, rgba(255,0,0,0.1) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
     margin: 20px auto;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 /* Reports */
