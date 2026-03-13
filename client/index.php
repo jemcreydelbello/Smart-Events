@@ -72,6 +72,34 @@
             max-height: 300px;
             opacity: 1;
         }
+        
+        /* Gallery Modal Responsive */
+        #galleryViewerModal > div > div:nth-child(2) > div:first-child {
+            height: 50vh;
+        }
+        
+        @media (min-width: 1024px) {
+            #galleryViewerModal > div > div:nth-child(2) > div:first-child {
+                height: auto;
+                flex: 1 1 0%;
+            }
+        }
+        
+        /* Gallery Modal Scrollable with Hidden Scrollbar */
+        #galleryViewerModal .overflow-y-auto {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+            overflow-y: auto;
+        }
+        
+        #galleryViewerModal .overflow-y-auto::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, and Opera */
+        }
+        
+        /* Ensure prev/next buttons appear on top */
+        #galleryViewerModal > button {
+            z-index: 60;
+        }
     </style>
 </head>
 <body class="bg-slate-50 overflow-x-hidden">
@@ -161,14 +189,9 @@
                                         type="text" 
                                         id="privateEventCode"
                                         placeholder="Enter Code" 
-                                        class="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:border-blue-600 w-full sm:w-auto"
-                                    >
-                                    <button 
-                                        id="submitCodeBtn"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition active:scale-95 text-sm whitespace-nowrap"
-                                    >
-                                        Join Event →
-                                    </button>
+                                        class="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:border-blue-600 w-full sm:w-auto">
+                                    <button id="submitCodeBtn"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition active:scale-95 text-sm whitespace-nowrap">Join Event →</button>
                                 </div>
                             </div>
                         </div>
@@ -233,6 +256,89 @@
         </div>
     </footer>
 
+    <!-- EVENT GALLERY VIEWER MODAL -->
+    <div id="galleryViewerModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 sm:p-4">
+        <!-- Prev Button Outside Modal -->
+        <button onclick="galleryPrevEvent()" class="absolute left-1 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-gray-100 text-gray-800 p-2 sm:p-3 rounded-full transition shadow-lg">
+            <i class="bi bi-chevron-left text-lg sm:text-2xl"></i>
+        </button>
+        
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl sm:max-w-4xl lg:max-w-6xl h-[95vh] sm:h-[90vh] flex flex-col overflow-y-auto">
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-200 px-3 sm:px-6 py-2 sm:py-4 flex justify-between items-center flex-shrink-0">
+                <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 line-clamp-1"><span id="galleryEventName"></span> <span class="text-gray-500">Gallery</span></h2>
+                <button onclick="closeGalleryViewer()" class="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-light ml-2 flex-shrink-0">×</button>
+            </div>
+            
+            <!-- Two Column Layout - Stack on mobile -->
+            <div class="flex flex-col lg:flex-row flex-1 overflow-y-auto min-h-0">
+                <!-- Left Column: Large Image Preview -->
+                <div class="flex flex-col p-3 sm:p-6 lg:border-r border-gray-200 border-b lg:border-b-0 min-h-0">
+                    <!-- Main Image with Side Navigation -->
+                    <div class="flex-1 relative mb-2 sm:mb-4 flex items-center justify-center group min-h-0">
+                        <div id="galleryMainImage" class="w-full h-full bg-gray-100 rounded-lg bg-cover bg-center" style="background-size: contain; background-repeat: no-repeat;"></div>
+                        
+                        <!-- Left Arrow Button -->
+                        <button onclick="galleryPrev()" class="absolute left-1 sm:left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-2 sm:p-3 rounded-full transition opacity-0 group-hover:opacity-100">
+                            <i class="bi bi-chevron-left text-base sm:text-xl"></i>
+                        </button>
+                        
+                        <!-- Right Arrow Button -->
+                        <button onclick="galleryNext()" class="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-2 sm:p-3 rounded-full transition opacity-0 group-hover:opacity-100">
+                            <i class="bi bi-chevron-right text-base sm:text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Counter -->
+                    <div class="text-center text-gray-600 font-medium text-xs sm:text-sm">
+                        <span id="galleryCounter"></span>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Thumbnail Grid & Event Details - Full width on mobile -->
+                <div class="w-full lg:w-64 flex flex-col p-2 lg:p-6 overflow-y-auto border-t lg:border-t-0 lg:border-l border-gray-200 flex-1 lg:flex-none">
+                    <!-- Thumbnails Section -->
+                    <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-4 flex-shrink-0">Event Gallery</p>
+                    <div id="galleryThumbnails" class="grid grid-cols-3 gap-1 lg:gap-2 mb-4 lg:mb-6 auto-rows-max">
+                        <!-- Thumbnails will be populated here -->
+                    </div>
+                    
+                    <!-- Event Details Section -->
+                    <div class="border-t border-gray-200 pt-3 sm:pt-4 lg:pt-6 flex-shrink-0">
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-3">Event Details</p>
+                        
+                        <!-- Date -->
+                        <div class="mb-3">
+                            <p class="text-xs text-gray-500 flex items-center gap-2">
+                                <i class="bi bi-calendar-event text-gray-600"></i>
+                                <span id="galleryEventDate" class="text-xs sm:text-sm text-gray-700">-</span>
+                            </p>
+                        </div>
+                        
+                        <!-- Location -->
+                        <div class="mb-3">
+                            <p class="text-xs text-gray-500 flex items-center gap-2">
+                                <i class="bi bi-geo-alt text-gray-600"></i>
+                                <span id="galleryEventLocation" class="text-xs sm:text-sm text-gray-700">-</span>
+                            </p>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">Description</p>
+                            <p id="galleryEventDescription" class="text-xs sm:text-sm text-gray-700 line-clamp-4">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Next Button Outside Modal -->
+        <button onclick="galleryNextEvent()" class="absolute right-1 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-gray-100 text-gray-800 p-2 sm:p-3 rounded-full transition shadow-lg">
+            <i class="bi bi-chevron-right text-lg sm:text-2xl"></i>
+        </button>
+    </div>
+
     <!-- REGISTRATION MODAL -->
     <?php include 'registration_modal.html'; ?>
 
@@ -246,7 +352,9 @@
 
         // Format date from YYYY-MM-DD to MMM DD, YYYY
         function formatDate(dateString) {
-            const date = new Date(dateString + 'T00:00:00');
+            // Handle both "YYYY-MM-DD" and "YYYY-MM-DD HH:MM:SS" formats
+            const dateOnly = dateString.split(' ')[0];
+            const date = new Date(dateOnly + 'T00:00:00');
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
             return date.toLocaleDateString('en-US', options).toUpperCase();
         }
@@ -262,6 +370,7 @@
         
         // Store current event ID globally
         let currentEventId = null;
+        let catalogueAutoPlayInterval = null;
         
         // Load event on page load
         window.addEventListener('DOMContentLoaded', async function() {
@@ -433,10 +542,14 @@
                 const container = document.getElementById('catalogueCarousel');
                 
                 if (data.success && data.events.length > 0) {
-                    container.innerHTML = data.events.map(event => {
+                    // Store all events for gallery navigation
+                    allCatalogueEvents = data.events;
+                    
+                    // Helper function to generate event HTML
+                    const generateEventHTML = (event, index) => {
                         return `
                         <div class="min-w-full">
-                            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <div class="bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onclick="openGalleryViewer(${event.id || event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'")}', ${index})">
                                 <div class="h-72 md:h-96 bg-cover bg-center" style="background-image:url('../uploads/events/${event.image_url || ''}');"></div>
                                 <div class="p-6">
                                     <h3 class="text-lg font-semibold">${event.event_name}</h3>
@@ -449,14 +562,22 @@
                             </div>
                         </div>
                     `;
-                    }).join('');
+                    };
+                    
+                    // Build carousel with cloned first and last items for infinite loop
+                    const lastEvent = data.events[data.events.length - 1];
+                    const firstEvent = data.events[0];
+                    let carouselHTML = generateEventHTML(lastEvent, data.events.length - 1); // Clone of last at beginning
+                    carouselHTML += data.events.map((event, index) => generateEventHTML(event, index)).join('');
+                    carouselHTML += generateEventHTML(firstEvent, 0); // Clone of first at end
+                    
+                    container.innerHTML = carouselHTML;
                     
                     // Initialize carousel navigation
                     const catalogueCarousel = document.getElementById('catalogueCarousel');
                     const cataloguePrev = document.getElementById('cataloguePrev');
                     const catalogueNext = document.getElementById('catalogueNext');
-                    let currentIndex = 0;
-                    let autoPlayInterval;
+                    let currentIndex = 1; // Start at 1 because index 0 is the cloned last item
                     
                     function updateCarouselPosition() {
                         const translateX = -currentIndex * 100;
@@ -464,30 +585,74 @@
                         catalogueCarousel.setAttribute('data-index', currentIndex);
                     }
                     
+                    // Set initial position to show first real event (index 1)
+                    updateCarouselPosition();
+                    
                     function autoPlayNext() {
-                        currentIndex = (currentIndex + 1) % data.events.length;
-                        updateCarouselPosition();
+                        currentIndex += 1;
+                        catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                        
+                        // If we reach the cloned first item, loop back
+                        if (currentIndex === data.events.length + 1) {
+                            catalogueCarousel.addEventListener('transitionend', function loopHandler() {
+                                catalogueCarousel.removeEventListener('transitionend', loopHandler);
+                                catalogueCarousel.style.transition = 'none';
+                                currentIndex = 1;
+                                catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                                setTimeout(() => {
+                                    catalogueCarousel.style.transition = '';
+                                }, 50);
+                            }, { once: true });
+                        }
                     }
                     
                     function resetAutoPlay() {
-                        clearInterval(autoPlayInterval);
-                        autoPlayInterval = setInterval(autoPlayNext, 5000); // Auto advance every 5 seconds
+                        clearInterval(catalogueAutoPlayInterval);
+                        catalogueAutoPlayInterval = setInterval(autoPlayNext, 5000); // Auto advance every 5 seconds
                     }
                     
                     cataloguePrev.addEventListener('click', () => {
-                        currentIndex = (currentIndex - 1 + data.events.length) % data.events.length;
-                        updateCarouselPosition();
+                        currentIndex -= 1;
+                        catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                        
+                        // If we reach the cloned last item, loop back
+                        if (currentIndex === 0) {
+                            catalogueCarousel.addEventListener('transitionend', function loopHandler() {
+                                catalogueCarousel.removeEventListener('transitionend', loopHandler);
+                                catalogueCarousel.style.transition = 'none';
+                                currentIndex = data.events.length;
+                                catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                                setTimeout(() => {
+                                    catalogueCarousel.style.transition = '';
+                                }, 50);
+                            }, { once: true });
+                        }
+                        
                         resetAutoPlay();
                     });
                     
                     catalogueNext.addEventListener('click', () => {
-                        currentIndex = (currentIndex + 1) % data.events.length;
-                        updateCarouselPosition();
+                        currentIndex += 1;
+                        catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                        
+                        // If we reach the cloned first item, loop back
+                        if (currentIndex === data.events.length + 1) {
+                            catalogueCarousel.addEventListener('transitionend', function loopHandler() {
+                                catalogueCarousel.removeEventListener('transitionend', loopHandler);
+                                catalogueCarousel.style.transition = 'none';
+                                currentIndex = 1;
+                                catalogueCarousel.style.transform = `translateX(${-currentIndex * 100}%)`;
+                                setTimeout(() => {
+                                    catalogueCarousel.style.transition = '';
+                                }, 50);
+                            }, { once: true });
+                        }
+                        
                         resetAutoPlay();
                     });
                     
                     // Start auto-play
-                    autoPlayInterval = setInterval(autoPlayNext, 5000);
+                    catalogueAutoPlayInterval = setInterval(autoPlayNext, 5000);
                 } else {
                     container.innerHTML = '<div class="min-w-full text-center py-12"><p class="text-gray-500">No past events in catalogue</p></div>';
                 }
@@ -1199,6 +1364,269 @@ function performRegistration(form, submitBtn, originalText) {
         }
     });
 }
+
+// Gallery Viewer Functions
+let currentGalleryIndex = 0;
+let currentGalleryImages = [];
+let allCatalogueEvents = [];
+let currentCatalogueEventIndex = -1;
+
+async function openGalleryViewer(catalogueId, eventName, eventIndex = -1) {
+    try {
+        // Stop carousel auto-play when gallery opens
+        clearInterval(catalogueAutoPlayInterval);
+        
+        // Set the index directly if provided, otherwise try to find it
+        if (eventIndex >= 0) {
+            currentCatalogueEventIndex = eventIndex;
+        } else {
+            currentCatalogueEventIndex = allCatalogueEvents.findIndex(e => (e.id || e.catalogue_id) === catalogueId);
+        }
+        
+        // Fetch gallery images for this catalogue event
+        const response = await fetch(`../api/catalogue.php?action=get_gallery&catalogue_id=${catalogueId}`);
+        const data = await response.json();
+        
+        // Get the cover image from the event
+        const currentEvent = allCatalogueEvents[currentCatalogueEventIndex];
+        const coverImage = {
+            image_url: currentEvent.image_url,
+            is_cover: true
+        };
+        
+        // Start with cover image, then add gallery images if they exist
+        let galleryImages = [coverImage];
+        
+        if (data.success && data.data && data.data.length > 0) {
+            galleryImages = [coverImage, ...data.data];
+        }
+        
+        // Only show if there's no cover image
+        if (!currentEvent.image_url) {
+            return;
+        }
+        
+        // Proceed with showing the gallery (with cover image at minimum)
+        currentGalleryImages = galleryImages;
+        currentGalleryIndex = 0;
+        
+        // Update modal header
+        document.getElementById('galleryEventName').textContent = eventName;
+        
+        // Display main image
+        const mainImage = document.getElementById('galleryMainImage');
+        const imageUrl = currentGalleryImages[0].is_cover 
+            ? `../uploads/events/${currentGalleryImages[0].image_url}`
+            : `../uploads/events_img/${currentGalleryImages[0].image_url}`;
+        mainImage.style.backgroundImage = `url('${imageUrl}')`;
+        
+        // Update counter
+        updateGalleryCounter();
+        
+        // Populate thumbnails
+        populateGalleryThumbnails();
+        
+        // Populate event details
+        populateGalleryEventDetails();
+        
+        // Show modal
+        document.getElementById('galleryViewerModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    } catch (error) {
+        console.error('Error loading gallery:', error);
+        alert('Error loading gallery images');
+    }
+}
+
+function closeGalleryViewer() {
+    document.getElementById('galleryViewerModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    currentGalleryImages = [];
+    currentGalleryIndex = 0;
+}
+
+
+function galleryNext() {
+    if (currentGalleryImages.length === 0) return;
+    currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryImages.length;
+    updateGalleryDisplay();
+}
+
+function galleryPrev() {
+    if (currentGalleryImages.length === 0) return;
+    currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryImages.length) % currentGalleryImages.length;
+    updateGalleryDisplay();
+}
+
+function updateGalleryDisplay() {
+    const mainImage = document.getElementById('galleryMainImage');
+    const currentImage = currentGalleryImages[currentGalleryIndex];
+    const imageUrl = currentImage.is_cover 
+        ? `../uploads/events/${currentImage.image_url}`
+        : `../uploads/events_img/${currentImage.image_url}`;
+    mainImage.style.backgroundImage = `url('${imageUrl}')`;
+    updateGalleryCounter();
+    updateThumbnailSelection();
+}
+
+function updateGalleryCounter() {
+    const counter = document.getElementById('galleryCounter');
+    counter.textContent = `${currentGalleryIndex + 1} of ${currentGalleryImages.length}`;
+}
+
+function populateGalleryThumbnails() {
+    const thumbnailsContainer = document.getElementById('galleryThumbnails');
+    thumbnailsContainer.innerHTML = currentGalleryImages.map((image, index) => {
+        const imagePath = image.is_cover 
+            ? `../uploads/events/${image.image_url}`
+            : `../uploads/events_img/${image.image_url}`;
+        return `
+            <div class="w-full aspect-square bg-gray-200 rounded cursor-pointer overflow-hidden border-2 transition-all ${
+                index === currentGalleryIndex ? 'border-blue-500' : 'border-transparent hover:border-gray-300'
+            }" 
+            style="background-image: url('${imagePath}'); background-size: cover; background-position: center;"
+            onclick="selectGalleryImage(${index})"></div>
+        `;
+    }).join('');
+}
+
+function populateGalleryEventDetails() {
+    const currentEvent = allCatalogueEvents[currentCatalogueEventIndex];
+    if (!currentEvent) return;
+    
+    // Format and display event date (with time if available)
+    const eventDate = formatDate(currentEvent.event_date);
+    let dateDisplay = eventDate;
+    
+    // Only add time if start_time is available
+    if (currentEvent.start_time && currentEvent.end_time) {
+        const eventTime = `${formatTime(currentEvent.start_time)} to ${formatTime(currentEvent.end_time)}`;
+        dateDisplay = `${eventDate} · ${eventTime}`;
+    }
+    document.getElementById('galleryEventDate').textContent = dateDisplay;
+    
+    // Display event location
+    document.getElementById('galleryEventLocation').textContent = currentEvent.location || '-';
+    
+    // Display event description
+    document.getElementById('galleryEventDescription').textContent = currentEvent.description || 'No description available';
+}
+
+function selectGalleryImage(index) {
+    currentGalleryIndex = index;
+    updateGalleryDisplay();
+}
+
+function updateThumbnailSelection() {
+    const thumbnails = document.querySelectorAll('#galleryThumbnails > div');
+    thumbnails.forEach((thumb, index) => {
+        if (index === currentGalleryIndex) {
+            thumb.classList.remove('border-transparent', 'hover:border-gray-300');
+            thumb.classList.add('border-blue-500');
+        } else {
+            thumb.classList.add('border-transparent', 'hover:border-gray-300');
+            thumb.classList.remove('border-blue-500');
+        }
+    });
+}
+
+async function galleryNextEvent() {
+    // Find next event with gallery, looping to start if necessary
+    let nextIndex = currentCatalogueEventIndex + 1;
+    let searched = false;
+    
+    while (searched === false) {
+        // If we've reached the end, loop back to the start
+        if (nextIndex >= allCatalogueEvents.length) {
+            nextIndex = 0;
+            // If we've looped all the way through without finding anything, break
+            if (nextIndex === currentCatalogueEventIndex) {
+                alert('No events with galleries available');
+                return;
+            }
+        }
+        
+        const event = allCatalogueEvents[nextIndex];
+        const eventId = event.id || event.catalogue_id;
+        const eventName = event.event_name;
+        
+        // Try to load gallery for this event
+        try {
+            const response = await fetch(`../api/catalogue.php?action=get_gallery&catalogue_id=${eventId}`);
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.length > 0) {
+                // Found event with gallery - open it with correct index
+                openGalleryViewer(eventId, eventName, nextIndex);
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking gallery:', error);
+        }
+        nextIndex++;
+        
+        // Safety check: if we've searched through all events, stop
+        if (nextIndex > allCatalogueEvents.length + currentCatalogueEventIndex) {
+            searched = true;
+        }
+    }
+    
+    // No events with galleries found
+    alert('No events with galleries available');
+}
+
+async function galleryPrevEvent() {
+    // Find previous event with gallery, looping to end if necessary
+    let prevIndex = currentCatalogueEventIndex - 1;
+    let searched = false;
+    
+    while (searched === false) {
+        // If we've gone before the start, loop back to the end
+        if (prevIndex < 0) {
+            prevIndex = allCatalogueEvents.length - 1;
+            // If we've looped all the way through without finding anything, break
+            if (prevIndex === currentCatalogueEventIndex) {
+                alert('No events with galleries available');
+                return;
+            }
+        }
+        
+        const event = allCatalogueEvents[prevIndex];
+        const eventId = event.id || event.catalogue_id;
+        const eventName = event.event_name;
+        
+        // Try to load gallery for this event
+        try {
+            const response = await fetch(`../api/catalogue.php?action=get_gallery&catalogue_id=${eventId}`);
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.length > 0) {
+                // Found event with gallery - open it with correct index
+                openGalleryViewer(eventId, eventName, prevIndex);
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking gallery:', error);
+        }
+        prevIndex--;
+        
+        // Safety check: if we've searched through all events, stop
+        if (prevIndex < currentCatalogueEventIndex - allCatalogueEvents.length) {
+            searched = true;
+        }
+    }
+    
+    // No events with galleries found
+    alert('No events with galleries available');
+}
+
+// Close gallery modal when clicking outside
+document.addEventListener('click', function(e) {
+    const galleryModal = document.getElementById('galleryViewerModal');
+    if (e.target === galleryModal) {
+        closeGalleryViewer();
+    }
+});
 
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {

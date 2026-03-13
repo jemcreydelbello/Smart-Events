@@ -21,8 +21,13 @@ function getImageUrl(imagePath) {
         return imagePath;
     }
     
-    // If it's just a filename (no slashes), construct the full path for events
+    // If it's just a filename (no slashes), construct the full path
     if (!imagePath.includes('/')) {
+        // Gallery images start with "gallery_" and go in events_img folder
+        if (imagePath.startsWith('gallery_')) {
+            return '../uploads/events_img/' + imagePath;
+        }
+        // Regular event images go in events folder
         return '../uploads/events/' + imagePath;
     }
     
@@ -174,17 +179,86 @@ function formatDate(dateString) {
 
 // Show notification helper
 function showNotification(message, type = 'success') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
-    
-    const container = document.querySelector('.main-content');
-    if (container) {
-        container.insertBefore(alertDiv, container.firstChild);
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 3000);
+    // Create notification container if it doesn't exist
+    let notificationContainer = document.getElementById('notificationContainer');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notificationContainer';
+        notificationContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(notificationContainer);
     }
+
+    // Create notification toast
+    const toast = document.createElement('div');
+    const isSuccess = type === 'success';
+    const bgColor = isSuccess ? '#1E73BB' : '#ef4444';
+    
+    toast.style.cssText = `
+        background-color: ${bgColor};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        font-weight: 500;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out;
+        pointer-events: auto;
+        min-width: 300px;
+        max-width: 400px;
+    `;
+    
+    toast.innerHTML = `<span>${message}</span>`;
+    
+    // Add animation styles if not already present
+    if (!document.getElementById('notificationStyles')) {
+        const style = document.createElement('style');
+        style.id = 'notificationStyles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    notificationContainer.appendChild(toast);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 4000);
 }
 
 // Copy to clipboard helper
@@ -5671,25 +5745,43 @@ function renderCatalogue(events) {
     const html = events.map(event => {
         const imageUrl = event.image_url ? getImageUrl(event.image_url) : null;
         const eventDate = new Date(event.event_date);
-        const formattedDate = eventDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const month = monthNames[eventDate.getMonth()];
+        const day = eventDate.getDate();
+        const year = eventDate.getFullYear();
+        const formattedDate = `${month} ${day}, ${year}`;
+        
+        const badgeColor = event.is_private == 1 ? '#fecaca' : '#dbeafe';
+        const badgeTextColor = event.is_private == 1 ? '#991b1b' : '#1d4ed8';
+        const badgeText = event.is_private == 1 ? 'Private' : 'Public';
+        const uniqueId = `menu-${event.catalogue_id}`;
         
         return `
-        <div class="catalogue-card" style="position: relative; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: white; aspect-ratio: 1 / 1;">
-            <div class="catalogue-image" style="height: 50%; background-size: cover; background-position: center; background-color: #f0f0f0; position: relative; ${imageUrl ? `background-image: url('${imageUrl}');` : ''}">
-                ${!imageUrl ? '<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📷</div>' : ''}
-                <div style="position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; justify-content: space-between; pointer-events: none;">
-                    ${event.is_manual == 1 ? '<span class="event-badge" style="background: #FFA500; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: bold;">Manual</span>' : '<span class="event-badge" style="background: #4CAF50; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: bold;">Synced</span>'}
-                    ${event.is_private == 1 ? '<span class="event-badge" style="background: #C41E3A; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold;">Private</span>' : '<span class="event-badge" style="background: #E8E5FF; color: #6c63ff; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold;">Public</span>'}
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-200 hover:scale-[1.02] catalogue-event-card" 
+             style="cursor: default;">
+            <div class="h-40 bg-cover bg-center bg-gray-100 relative" style="${imageUrl ? `background-image:url('${imageUrl}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}">
+                <button class="absolute top-4 right-4 z-10 bg-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-slate-100 transition shadow-md" style="border: none; cursor: pointer; padding: 0;" onclick="event.stopPropagation(); toggleCatalogueMenu('${uniqueId}')" title="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: #374151;"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                </button>
+                <div id="${uniqueId}" class="hidden absolute top-14 right-4 bg-white rounded-lg shadow-lg border border-gray-200 w-64 z-50" style="min-width: 240px;">
+                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium text-gray-700 border-b border-gray-100" onclick="event.stopPropagation(); editEventCover(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
+                        <i class="bi bi-image" style="margin-right: 8px;"></i>Edit Event cover
+                    </button>
+                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium text-gray-700 border-b border-gray-100" onclick="event.stopPropagation(); openEditGalleryModal(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
+                        <i class="bi bi-collection" style="margin-right: 8px;"></i>Edit event gallery
+                    </button>
+                    <button class="w-full text-left px-4 py-2 hover:bg-red-50 transition text-sm font-medium text-red-600" onclick="event.stopPropagation(); CatalogueManager.showRemoveConfirmation(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
+                        <i class="bi bi-trash" style="margin-right: 8px;"></i>Remove
+                    </button>
                 </div>
             </div>
-            <div class="catalogue-content" style="flex: 1; display: flex; flex-direction: column; padding: 12px; overflow: hidden;">
-                <h3 class="catalogue-name" style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0; color: #222; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${event.event_name}</h3>
-                <div class="catalogue-date" style="font-size: 11px; color: #666; margin: 2px 0; display: flex; align-items: center; gap: 3px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="currentColor" d="M8.5 14a1.25 1.25 0 1 0 0-2.5a1.25 1.25 0 0 0 0 2.5m0 3.5a1.25 1.25 0 1 0 0-2.5a1.25 1.25 0 0 0 0 2.5m4.75-4.75a1.25 1.25 0 1 1-2.5 0a1.25 1.25 0 0 1 2.5 0M12 17.5a1.25 1.25 0 1 0 0-2.5a1.25 1.25 0 0 0 0 2.5m4.75-4.75a1.25 1.25 0 1 1-2.5 0a1.25 1.25 0 0 1 2.5 0"/><path fill="currentColor" fill-rule="evenodd" d="M8 3.25a.75.75 0 0 1 .75.75v.75h6.5V4a.75.75 0 0 1 1.5 0v.758q.228.006.425.022c.38.03.736.098 1.073.27a2.75 2.75 0 0 1 1.202 1.202c.172.337.24.693.27 1.073c.03.365.03.81.03 1.345v7.66c0 .535 0 .98-.03 1.345c-.03.38-.098.736-.27 1.073a2.75 2.75 0 0 1-1.201 1.202c-.338.172-.694.24-1.074.27c-.365.03-.81.03-1.344.03H8.17c-.535 0-.98 0-1.345-.03c-.38-.03-.736-.098-1.073-.27a2.75 2.75 0 0 1-1.202-1.2c-.172-.338-.24-.694-.27-1.074c-.03-.365-.03-.81-.03-1.344V8.67c0-.535 0-.98.03-1.345c.03-.38.098-.736.27-1.073A2.75 2.75 0 0 1 5.752 5.05c.337-.172.693-.24 1.073-.27q.197-.016.425-.022V4A.75.75 0 0 1 8 3.25m10.25 7H5.75v6.05c0 .572 0 .957.025 1.252c.023.288.065.425.111.515c.12.236.311.427.547.547c.09.046.227.088.514.111c.296.024.68.025 1.253.025h7.6c.572 0 .957 0 1.252-.025c.288-.023.425-.065.515-.111a1.25 1.25 0 0 0 .547-.547c.046-.09.088-.227.111-.515c.024-.295.025-.68.025-1.252zM10.5 7a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5z" clip-rule="evenodd"/></svg> <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${formattedDate}</span></div>
-                ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div class="catalogue-location" style="font-size: 11px; color: #666; margin: 2px 0; display: flex; align-items: center; gap: 3px; overflow: hidden;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 512 512" style="flex-shrink: 0;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 48c-79.5 0-144 61.39-144 137c0 87 96 224.87 131.25 272.49a15.77 15.77 0 0 0 25.5 0C304 409.89 400 272.07 400 185c0-75.61-64.5-137-144-137"/><circle cx="256" cy="192" r="48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/></svg> <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${event.location}</span></div>` : ''}
-                <div class="catalogue-actions" style="margin-top: auto; padding-top: 8px; border-top: 1px solid #eee; display: flex; gap: 6px;">
-                    <button class="btn-text" style="flex: 1; padding: 6px; text-align: center; color: #0284c7; font-size: 11px; font-weight: 600; border: none; background: none; cursor: pointer; border-radius: 4px; transition: all 0.2s;" onclick="CatalogueManager.viewEvent(${event.catalogue_id})" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='none'">👁️ View</button>
-                    <button class="btn-text" style="flex: 1; padding: 6px; text-align: center; color: #dc2626; font-size: 11px; font-weight: 600; border: none; background: none; cursor: pointer; border-radius: 4px; transition: all 0.2s;" onclick="CatalogueManager.removeEvent(${event.catalogue_id})" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">🗑️ Remove</button>
+            <div class="p-5 flex-1 flex flex-col">
+                <h3 class="text-lg font-semibold text-gray-900">${event.event_name}</h3>
+                <div class="mt-2 text-sm text-slate-500 space-y-1">
+                    <div><i class="bi bi-calendar-event"></i> ${formattedDate}</div>
+                    ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div><i class="bi bi-geo-alt"></i> ${event.location}</div>` : ''}
                 </div>
+                <p class="mt-3 text-sm text-slate-600 line-clamp-3">${event.description || 'No description provided'}</p>
             </div>
         </div>
         `;
@@ -5697,9 +5789,53 @@ function renderCatalogue(events) {
     
     container.innerHTML = html;
     console.log('✓ Catalogue rendered to container');
+    
+    // Attach dropdown menu handlers after rendering
+    attachCatalogueDropdownHandlers();
+}
+
+// Handle catalogue dropdown menu behavior
+function attachCatalogueDropdownHandlers() {
+    const menus = document.querySelectorAll('[id^="menu-"]');
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+        // Check if click is outside all menus and buttons
+        if (!e.target.closest('[id^="menu-"]') && !e.target.closest('svg')) {
+            menus.forEach(menu => menu.classList.add('hidden'));
+        }
+    });
+}
+
+// Toggle a specific catalogue menu
+function toggleCatalogueMenu(menuId) {
+    const clickedMenu = document.getElementById(menuId);
+    if (!clickedMenu) return;
+    
+    // Close all other menus
+    document.querySelectorAll('[id^="menu-"]').forEach(menu => {
+        if (menu.id !== menuId) {
+            menu.classList.add('hidden');
+        }
+    });
+    
+    // Toggle current menu
+    clickedMenu.classList.toggle('hidden');
+}
+
+// Close catalogue dropdown menu
+function closeCatalogueMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if (menu) {
+        menu.classList.add('hidden');
+    }
 }
 
 const CatalogueManager = {
+    isAddManyMode: false,
+    selectedEventIds: new Set(),
+    allPastEvents: [],
+    
     refreshCatalogue: function() {
         loadCatalogue();
     },
@@ -5732,6 +5868,7 @@ const CatalogueManager = {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.data) {
+                    this.allPastEvents = data.data;
                     this.renderPastEventsList(data.data);
                 } else {
                     container.innerHTML = '<p class="text-center text-gray-500 py-4">No past events available</p>';
@@ -5753,6 +5890,27 @@ const CatalogueManager = {
             const startTime = event.start_time ? event.start_time.substring(0, 5) : '9:00 AM';
             const endTime = event.end_time ? event.end_time.substring(0, 5) : '10:30 AM';
             const eventImage = event.image_url ? getImageUrl(event.image_url) : null;
+            // Determine which ID to use (event_id for new/non-manual events, catalogue_id for manual)
+            const eventId = event.event_id || event.catalogue_id;
+            const buttonOnClick = `CatalogueManager.addEventToCatalogue(${eventId}, '${event.event_name.replace(/'/g, "\\'")}')`; 
+            const buttonText = 'Add';
+            
+            // Determine action element (button or checkbox)
+            let actionElement = '';
+            if (this.isAddManyMode) {
+                const isChecked = this.selectedEventIds.has(eventId);
+                actionElement = `
+                    <input 
+                        type="checkbox" 
+                        id="event-checkbox-${eventId}"
+                        onchange="CatalogueManager.toggleEventSelection(${eventId}, '${event.event_name.replace(/'/g, "\\'")}')"
+                        ${isChecked ? 'checked' : ''}
+                        style="width: 24px; height: 24px; cursor: pointer; flex-shrink: 0; accent-color: #1E73BB;"
+                    >
+                `;
+            } else {
+                actionElement = `<button onclick="${buttonOnClick}" style="padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; height: fit-content;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">${buttonText}</button>`;
+            }
             
             return `
             <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; display: flex; gap: 16px; padding: 12px; background: white; transition: all 0.2s; align-items: center;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'" data-event-name="${event.event_name}" data-event-location="${event.location || ''}">
@@ -5762,7 +5920,7 @@ const CatalogueManager = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">${formattedDate} · ${startTime} to ${endTime}</div>
                     ${event.location ? `<div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="#6b7280" d="M16 10c0-2.21-1.79-4-4-4s-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4m-6 0c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2"/><path fill="#6b7280" d="M11.42 21.81c.17.12.38.19.58.19s.41-.06.58-.19c.3-.22 7.45-5.37 7.42-11.82c0-4.41-3.59-8-8-8s-8 3.59-8 8c-.03 6.44 7.12 11.6 7.42 11.82M12 4c3.31 0 6 2.69 6 6c.02 4.44-4.39 8.43-6 9.74c-1.61-1.31-6.02-5.29-6-9.74c0-3.31 2.69-6 6-6"/></svg>${event.location}</div>` : ''}
                 </div>
-                <button onclick="openLookupImageModal(${event.event_id}, '${event.event_name.replace(/'/g, "\\'")}')" style="padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; height: fit-content;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Add</button>
+                ${actionElement}
             </div>
             `;
         }).join('');
@@ -5785,6 +5943,33 @@ const CatalogueManager = {
             const matches = eventName.includes(query) || eventLocation.includes(query);
             item.style.display = matches ? '' : 'none';
         });
+    },
+    
+    republishManualEvent: function(catalogueId, eventName) {
+        console.log('Republishing manual event:', catalogueId);
+        
+        fetch(`${API_BASE}/catalogue.php`, {
+            method: 'POST',
+            headers: { ...getUserHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'republish',
+                catalogue_id: catalogueId
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(eventName + ' is now published!', 'success');
+                    this.closeLookupModal();
+                    loadCatalogue();
+                } else {
+                    showNotification('Error: ' + (data.message || 'Failed to republish event'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error republishing event:', error);
+                showNotification('Error republishing event', 'error');
+            });
     },
     
     addEventToCatalogue: function(eventId) {
@@ -5823,11 +6008,43 @@ const CatalogueManager = {
             });
     },
     
-    removeEvent: function(catalogueId) {
-        if (!confirm('Are you sure you want to remove this event from the catalogue?')) {
-            return;
-        }
+    showRemoveConfirmation: function(catalogueId, eventName) {
+        // Create modal HTML
+        const modalHTML = `
+            <div id="removeConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                    <div class="px-6 py-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-2">Remove Event</h2>
+                        <p class="text-gray-600">Are you sure you want to remove <strong>${eventName}</strong> from catalogue?</p>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                        <button onclick="document.getElementById('removeConfirmationModal')?.remove()" 
+                                class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button onclick="CatalogueManager.removeEvent(${catalogueId}); document.getElementById('removeConfirmationModal')?.remove()" 
+                                class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
         
+        // Add modal to page
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = modalHTML;
+        document.body.appendChild(modalContainer.firstElementChild);
+        
+        // Add click handler for outside modal
+        document.getElementById('removeConfirmationModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'removeConfirmationModal') {
+                e.target.remove();
+            }
+        });
+    },
+    
+    removeEvent: function(catalogueId) {
         console.log('Removing catalogue event', catalogueId);
         
         fetch(`${API_BASE}/catalogue.php`, {
@@ -5859,8 +6076,638 @@ const CatalogueManager = {
             console.log('Viewing catalogue event:', event);
             showNotification('Event: ' + event.event_name, 'info');
         }
+    },
+    
+    // Add event to catalogue directly without modal
+    addEventToCatalogue: function(eventId, eventName) {
+        console.log('📤 Adding event to catalogue:', { eventId, eventName });
+        
+        const formData = new FormData();
+        formData.append('action', 'add_with_image');
+        
+        // Send the ID as both catalogue_id and event_id - the API will use whichever one applies
+        // For regular events, event_id will be used; for manually added events, catalogue_id will be used
+        formData.append('event_id', eventId);
+        formData.append('catalogue_id', eventId);
+        
+        const headers = getUserHeaders();
+        delete headers['Content-Type'];
+        
+        fetch(`${API_BASE}/catalogue.php`, {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Event "' + eventName + '" added to catalogue!', 'success');
+                    CatalogueManager.closeLookupModal();
+                    console.log('🔄 Refreshing catalogue...');
+                    loadCatalogue();
+                } else {
+                    showNotification('Error: ' + (data.message || 'Failed to add event'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error adding event:', error);
+                showNotification('Error adding event to catalogue: ' + error.message, 'error');
+            });
+    },
+    
+    // Open image modal for managing event gallery
+    
+    // Toggle "Add Many" mode
+    toggleAddMany: function() {
+        this.isAddManyMode = !this.isAddManyMode;
+        
+        if (this.isAddManyMode) {
+            // Entering Add Many mode
+            this.selectedEventIds.clear();
+            document.getElementById('addManyToggleLink').style.opacity = '0.7';
+            document.getElementById('selectedCountDiv').style.display = 'flex';
+            document.getElementById('addManyButtonsDiv').style.display = 'flex';
+            document.getElementById('selectedCount').textContent = '0';
+        } else {
+            // Exiting Add Many mode
+            this.selectedEventIds.clear();
+            document.getElementById('addManyToggleLink').style.opacity = '1';
+            document.getElementById('selectedCountDiv').style.display = 'none';
+            document.getElementById('addManyButtonsDiv').style.display = 'none';
+            document.getElementById('confirmAddManyBtn').disabled = true;
+            document.getElementById('confirmAddManyBtn').style.opacity = '0.5';
+            document.getElementById('cancelAddManyBtn').disabled = true;
+            document.getElementById('cancelAddManyBtn').style.opacity = '0.5';
+        }
+        
+        // Re-render events list with new mode
+        this.renderPastEventsList(this.allPastEvents);
+    },
+    
+    // Toggle event selection in Add Many mode
+    toggleEventSelection: function(eventId, eventName) {
+        if (this.selectedEventIds.has(eventId)) {
+            this.selectedEventIds.delete(eventId);
+        } else {
+            this.selectedEventIds.add(eventId);
+        }
+        
+        // Update selected count display
+        document.getElementById('selectedCount').textContent = this.selectedEventIds.size;
+        
+        // Enable/disable buttons based on selection
+        const hasSelection = this.selectedEventIds.size > 0;
+        const confirmBtn = document.getElementById('confirmAddManyBtn');
+        const cancelBtn = document.getElementById('cancelAddManyBtn');
+        
+        confirmBtn.disabled = !hasSelection;
+        confirmBtn.style.opacity = hasSelection ? '1' : '0.5';
+        confirmBtn.style.cursor = hasSelection ? 'pointer' : 'not-allowed';
+        
+        cancelBtn.disabled = !hasSelection;
+        cancelBtn.style.opacity = hasSelection ? '1' : '0.5';
+        cancelBtn.style.cursor = hasSelection ? 'pointer' : 'not-allowed';
+    },
+    
+    // Confirm and add all selected events
+    confirmAddMany: function() {
+        if (this.selectedEventIds.size === 0) {
+            showNotification('Please select at least one event', 'error');
+            return;
+        }
+        
+        const selectedIds = Array.from(this.selectedEventIds);
+        const selectedEvents = this.allPastEvents.filter(event => {
+            const eventId = event.event_id || event.catalogue_id;
+            return selectedIds.includes(eventId);
+        });
+        
+        console.log('Adding', selectedEvents.length, 'events to catalogue');
+        
+        // Show loading state
+        const confirmBtn = document.getElementById('confirmAddManyBtn');
+        const cancelBtn = document.getElementById('cancelAddManyBtn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        confirmBtn.textContent = '⏳ Adding...';
+        
+        // Add all events one by one
+        let completed = 0;
+        let failed = 0;
+        const self = this;  // Capture 'this' context for use in promises
+        
+        selectedEvents.forEach((event, index) => {
+            const eventId = event.event_id || event.catalogue_id;
+            
+            const formData = new FormData();
+            formData.append('action', 'add_with_image');
+            formData.append('event_id', eventId);
+            formData.append('catalogue_id', eventId);
+            
+            const headers = getUserHeaders();
+            delete headers['Content-Type'];
+            
+            fetch(`${API_BASE}/catalogue.php`, {
+                method: 'POST',
+                headers: headers,
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        completed++;
+                    } else {
+                        failed++;
+                    }
+                    
+                    // Check if all requests are done
+                    if (completed + failed === selectedEvents.length) {
+                        console.log('✅ All Add Many requests completed');
+                        
+                        // Restore button
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = originalText;
+                        confirmBtn.style.opacity = '1';
+                        cancelBtn.disabled = false;
+                        
+                        // Show result notification
+                        if (failed === 0) {
+                            showNotification(completed + ' event(s) added to catalogue!', 'success');
+                        } else {
+                            showNotification(completed + ' added, ' + failed + ' failed', 'error');
+                        }
+                        
+                        // Close the lookup modal BEFORE calling cancelAddMany
+                        console.log('🔴 Attempting to close lookup modal from Add Many');
+                        const modal = document.getElementById('lookupEventsModal');
+                        console.log('Modal found:', !!modal, 'Modal classes:', modal ? modal.className : 'N/A');
+                        if (modal) {
+                            modal.classList.remove('active');
+                            console.log('✅ Modal closed, new classes:', modal.className);
+                        }
+                        
+                        // Reset and refresh - this must come after modal close
+                        setTimeout(() => {
+                            self.cancelAddMany();
+                            loadCatalogue();
+                        }, 100);
+                    }
+                })
+                .catch(error => {
+                    failed++;
+                    console.error('Error adding event:', error);
+                    
+                    if (completed + failed === selectedEvents.length) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = originalText;
+                        confirmBtn.style.opacity = '1';
+                        cancelBtn.disabled = false;
+                        showNotification('Error adding events', 'error');
+                        
+                        // Close the lookup modal
+                        console.log('🔴 Attempting to close lookup modal from Add Many (error)');
+                        const modal = document.getElementById('lookupEventsModal');
+                        if (modal) {
+                            modal.classList.remove('active');
+                        }
+                        
+                        setTimeout(() => {
+                            self.cancelAddMany();
+                        }, 100);
+                    }
+                });
+        });
+    },
+    
+    // Cancel Add Many mode
+    cancelAddMany: function() {
+        this.isAddManyMode = false;
+        this.selectedEventIds.clear();
+        
+        document.getElementById('addManyToggleLink').style.opacity = '1';
+        document.getElementById('addManyToggleLink').style.pointerEvents = 'auto';
+        document.getElementById('selectedCountDiv').style.display = 'none';
+        document.getElementById('addManyButtonsDiv').style.display = 'none';
+        document.getElementById('selectedCount').textContent = '0';
+        
+        // Disable buttons
+        const confirmBtn = document.getElementById('confirmAddManyBtn');
+        const cancelBtn = document.getElementById('cancelAddManyBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
+        confirmBtn.style.cursor = 'not-allowed';
+        cancelBtn.disabled = true;
+        cancelBtn.style.opacity = '0.5';
+        cancelBtn.style.cursor = 'not-allowed';
+        
+        // Re-render events list
+        this.renderPastEventsList(this.allPastEvents);
     }
 };
+
+// Edit event cover image
+function editEventCover(catalogueId, eventName) {
+    console.log('Editing event cover for:', { catalogueId, eventName });
+    
+    // Set the hidden fields
+    document.getElementById('editCoverCatalogueId').value = catalogueId;
+    document.getElementById('editCoverEventName').value = eventName;
+    
+    // Reset the form
+    document.getElementById('editCoverImageInput').value = '';
+    document.getElementById('editCoverImagePreview').innerHTML = `
+        <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <span>Click to upload or drag & drop</span>
+    `;
+    
+    // Show the modal
+    document.getElementById('editEventCoverModal').classList.add('active');
+    
+    // Setup drag and drop for the preview area
+    const previewArea = document.getElementById('editCoverImagePreview');
+    previewArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        previewArea.style.borderColor = '#3b82f6';
+        previewArea.style.backgroundColor = '#f0f4f8';
+    });
+    
+    previewArea.addEventListener('dragleave', () => {
+        previewArea.style.borderColor = '#cbd5e1';
+        previewArea.style.backgroundColor = 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';
+    });
+    
+    previewArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        previewArea.style.borderColor = '#cbd5e1';
+        previewArea.style.backgroundColor = 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            document.getElementById('editCoverImageInput').files = files;
+            previewEditCoverImage({ target: { files: files } });
+        }
+    });
+}
+
+// Close edit event cover modal
+function closeEditEventCoverModal() {
+    document.getElementById('editEventCoverModal').classList.remove('active');
+}
+
+// Preview the selected cover image
+function previewEditCoverImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+        showNotification('Please select a valid image file', 'error');
+        return;
+    }
+    
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+        showNotification('Image size must be less than 5MB', 'error');
+        document.getElementById('editCoverImageInput').value = '';
+        return;
+    }
+    
+    // Create a preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const previewArea = document.getElementById('editCoverImagePreview');
+        previewArea.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">`;
+        previewArea.style.backgroundColor = '#fff';
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Submit the edit cover form
+function submitEditEventCover() {
+    const catalogueId = document.getElementById('editCoverCatalogueId').value;
+    const eventName = document.getElementById('editCoverEventName').value;
+    const fileInput = document.getElementById('editCoverImageInput');
+    
+    if (!catalogueId) {
+        showNotification('Missing event information', 'error');
+        return;
+    }
+    
+    if (!fileInput.files[0]) {
+        showNotification('Please select an image to upload', 'error');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('catalogue_id', catalogueId);
+    formData.append('action', 'update_cover');
+    formData.append('cover_image', file);
+    
+    // Get user headers
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    const fetchOptions = {
+        method: 'POST',
+        body: formData
+    };
+    
+    // Add custom headers for authorization (exclude Content-Type for FormData)
+    const customHeaders = {};
+    if (headers['X-User-Role']) customHeaders['X-User-Role'] = headers['X-User-Role'];
+    if (headers['X-User-Id']) customHeaders['X-User-Id'] = headers['X-User-Id'];
+    if (headers['X-Coordinator-Id']) customHeaders['X-Coordinator-Id'] = headers['X-Coordinator-Id'];
+    if (headers['Authorization']) customHeaders['Authorization'] = headers['Authorization'];
+    if (headers['X-Admin-Token']) customHeaders['X-Admin-Token'] = headers['X-Admin-Token'];
+    
+    if (Object.keys(customHeaders).length > 0) {
+        fetchOptions.headers = customHeaders;
+    }
+    
+    // Send the upload request
+    fetch(`${API_BASE}/catalogue.php`, fetchOptions)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Event cover updated successfully!', 'success');
+                closeEditEventCoverModal();
+                // Reload the catalogue to show the updated cover
+                loadCatalogue();
+            } else {
+                showNotification('Error: ' + (data.message || data.error || 'Failed to update cover'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading cover:', error);
+            showNotification('Error uploading cover image: ' + error.message, 'error');
+        });
+}
+
+// Store gallery files for edit gallery modal
+let editGalleryFilesStore = [];
+let editGalleryExistingImages = []; // Track existing images from database
+
+// Open edit event gallery modal
+function openEditGalleryModal(catalogueId, eventName) {
+    console.log('Opening edit gallery modal for:', { catalogueId, eventName });
+    
+    document.getElementById('editGalleryCatalogueId').value = catalogueId;
+    document.getElementById('editGalleryEventName').value = eventName;
+    
+    // Reset the form and gallery
+    document.getElementById('editGalleryImageInput').value = '';
+    editGalleryFilesStore = [];
+    editGalleryExistingImages = [];
+    
+    const container = document.getElementById('editGalleryImagesContainer');
+    const plusBox = document.getElementById('editGalleryPlusBox');
+    
+    // Remove all existing image divs (keep only the plus box)
+    const imageElements = container.querySelectorAll('div[style*="aspect-ratio"], div[style*="position: relative"]');
+    imageElements.forEach(el => el.remove());
+    
+    // Show the plus box
+    plusBox.style.display = 'flex';
+    
+    // Show the modal
+    document.getElementById('editEventGalleryModal').classList.add('active');
+    
+    // Fetch existing gallery images
+    fetch(`${API_BASE}/catalogue.php?action=get_gallery&catalogue_id=${catalogueId}`, {
+        headers: getUserHeaders()
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Gallery fetch response:', data);
+            if (data.success && data.data && Array.isArray(data.data)) {
+                editGalleryExistingImages = data.data;
+                displayExistingGalleryImages(data.data);
+                
+                // Hide plus box if already have 5 images
+                if (data.data.length >= 5) {
+                    document.getElementById('editGalleryPlusBox').style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching gallery images:', error);
+        });
+}
+
+// Display existing gallery images
+function displayExistingGalleryImages(images) {
+    if (!images || images.length === 0) return;
+    
+    const container = document.getElementById('editGalleryImagesContainer');
+    const plusBox = document.getElementById('editGalleryPlusBox');
+    
+    images.forEach(image => {
+        const imageDiv = document.createElement('div');
+        imageDiv.style.cssText = 'position: relative; border-radius: 8px; overflow: hidden; background: #f0f0f0; aspect-ratio: 1; width: 100px; height: 100px;';
+        imageDiv.innerHTML = `
+            <img src="${getImageUrl(image.image_url)}" alt="Gallery image" style="width: 100%; height: 100%; object-fit: cover;">
+            <button type="button" onclick="removeExistingGalleryImage(${image.image_id})" 
+                    style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">×</button>
+        `;
+        container.insertBefore(imageDiv, plusBox);
+    });
+}
+
+// Close edit gallery modal
+function closeEditGalleryModal() {
+    document.getElementById('editEventGalleryModal').classList.remove('active');
+}
+
+// Preview gallery images for edit modal
+function previewEditGalleryImages(event) {
+    const files = event.target.files;
+    const container = document.getElementById('editGalleryImagesContainer');
+    const plusBox = document.getElementById('editGalleryPlusBox');
+    
+    if (!files || files.length === 0) {
+        return;
+    }
+    
+    // Count existing images (excluding plus box)
+    const existingImages = container.children.length - 1; // -1 for plus box
+    const remainingSlots = 5 - existingImages;
+    
+    if (remainingSlots <= 0) {
+        showNotification('Maximum 5 images allowed for the gallery.', 'error');
+        event.target.value = '';
+        return;
+    }
+    
+    // Only process up to remaining slots
+    const filesToAdd = Array.from(files).slice(0, remainingSlots);
+    
+    filesToAdd.forEach((file) => {
+        // Store the actual file object
+        editGalleryFilesStore.push(file);
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imageDiv = document.createElement('div');
+            imageDiv.style.cssText = 'position: relative; border-radius: 8px; overflow: hidden; background: #f0f0f0; aspect-ratio: 1; width: 100px; height: 100px;';
+            imageDiv.innerHTML = `
+                <img src="${e.target.result}" alt="Gallery image" style="width: 100%; height: 100%; object-fit: cover;">
+                <button type="button" onclick="removeEditGalleryImage(this, '${file.name}')" 
+                        style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">×</button>
+            `;
+            // Insert before the plus box
+            container.insertBefore(imageDiv, plusBox);
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Check if max images reached
+    const newImageCount = existingImages + filesToAdd.length;
+    if (newImageCount >= 5) {
+        plusBox.style.display = 'none';
+    }
+    
+    // Reset the file input
+    event.target.value = '';
+}
+
+// Remove image from edit gallery
+function removeEditGalleryImage(btn, fileName) {
+    btn.parentElement.remove();
+    // Remove from gallery files store
+    editGalleryFilesStore = editGalleryFilesStore.filter(f => f.name !== fileName);
+    
+    // Show plus button if we're below max
+    const container = document.getElementById('editGalleryImagesContainer');
+    const plusBox = document.getElementById('editGalleryPlusBox');
+    
+    // Count images (excluding plus box)
+    const imageCount = container.children.length - 1;
+    if (imageCount < 5) {
+        plusBox.style.display = 'flex';
+    }
+}
+
+// Remove existing gallery image from database
+function removeExistingGalleryImage(imageId) {
+    window.pendingGalleryImageId = imageId;
+    document.getElementById('removeExistingGalleryImageModal').classList.add('active');
+}
+
+function closeRemoveGalleryImageModal() {
+    document.getElementById('removeExistingGalleryImageModal').classList.remove('active');
+    window.pendingGalleryImageId = null;
+}
+
+function confirmRemoveGalleryImage() {
+    const imageId = window.pendingGalleryImageId;
+    closeRemoveGalleryImageModal();
+    
+    const catalogueId = document.getElementById('editGalleryCatalogueId').value;
+    
+    fetch(`${API_BASE}/catalogue.php`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...getUserHeaders()
+        },
+        body: JSON.stringify({
+            action: 'delete_gallery_image',
+            image_id: imageId,
+            catalogue_id: catalogueId
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Image deleted successfully', 'success');
+                // Remove from DOM
+                const container = document.getElementById('editGalleryImagesContainer');
+                const imageDiv = Array.from(container.querySelectorAll('div')).find(div => 
+                    div.innerHTML.includes(`onclick="removeExistingGalleryImage(${imageId})`)
+                );
+                if (imageDiv) imageDiv.remove();
+                
+                // Show plus button if we're below max
+                const plusBox = document.getElementById('editGalleryPlusBox');
+                const imageCount = container.children.length - 1;
+                if (imageCount < 5) {
+                    plusBox.style.display = 'flex';
+                }
+            } else {
+                showNotification('Error deleting image: ' + (data.message || data.error), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting image:', error);
+            showNotification('Error deleting image', 'error');
+        });
+}
+
+// Submit edit gallery images
+function submitEditGalleryImages() {
+    const catalogueId = document.getElementById('editGalleryCatalogueId').value;
+    const eventName = document.getElementById('editGalleryEventName').value;
+    
+    if (!catalogueId) {
+        showNotification('Missing event information', 'error');
+        return;
+    }
+    
+    // If no new images to add, just close the modal
+    if (editGalleryFilesStore.length === 0) {
+        showNotification('No new images to upload', 'info');
+        closeEditGalleryModal();
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'add_gallery');
+    formData.append('catalogue_id', catalogueId);
+    
+    // Add gallery images
+    editGalleryFilesStore.forEach((file, index) => {
+        formData.append(`gallery_images[${index}]`, file);
+    });
+    
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    const fetchOptions = {
+        method: 'POST',
+        body: formData
+    };
+    
+    // Add custom headers for authorization (exclude Content-Type for FormData)
+    const customHeaders = {};
+    if (headers['X-User-Role']) customHeaders['X-User-Role'] = headers['X-User-Role'];
+    if (headers['X-User-Id']) customHeaders['X-User-Id'] = headers['X-User-Id'];
+    if (headers['X-Coordinator-Id']) customHeaders['X-Coordinator-Id'] = headers['X-Coordinator-Id'];
+    if (headers['Authorization']) customHeaders['Authorization'] = headers['Authorization'];
+    if (headers['X-Admin-Token']) customHeaders['X-Admin-Token'] = headers['X-Admin-Token'];
+    
+    if (Object.keys(customHeaders).length > 0) {
+        fetchOptions.headers = customHeaders;
+    }
+    
+    // Send the upload request
+    fetch(`${API_BASE}/catalogue.php`, fetchOptions)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(editGalleryFilesStore.length + ' image(s) added to gallery!', 'success');
+                closeEditGalleryModal();
+                loadCatalogue();
+            } else {
+                showNotification('Error: ' + (data.message || data.error || 'Failed to add images'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading gallery images:', error);
+            showNotification('Error uploading gallery images: ' + error.message, 'error');
+        });
+}
 
 // Toggle catalogue event visibility (private/public)
 function toggleCatalogueVisibility(catalogueId, currentPrivateStatus) {
