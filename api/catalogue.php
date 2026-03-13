@@ -81,6 +81,73 @@ function ensureCatalogueTableExists($conn) {
     }
 }
 
+// Ensure events_images table exists
+function ensureEventsImagesTableExists($conn) {
+    $check_query = "SHOW TABLES LIKE 'events_images'";
+    $result = $conn->query($check_query);
+    
+    if ($result->num_rows == 0) {
+        $create_query = "CREATE TABLE IF NOT EXISTS events_images (
+            image_id INT AUTO_INCREMENT PRIMARY KEY,
+            catalogue_id INT NOT NULL,
+            image_url VARCHAR(255) NOT NULL,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (catalogue_id) REFERENCES catalogue(catalogue_id) ON DELETE CASCADE
+        )";
+        
+        if (!$conn->query($create_query)) {
+            throw new Exception('Failed to create events_images table: ' . $conn->error);
+        }
+    }
+}
+
+// Handle gallery images upload
+function handleGalleryImagesUpload($conn, $catalogue_id) {
+    ensureEventsImagesTableExists($conn);
+    
+    if (!isset($_FILES['gallery_images'])) {
+        return; // No gallery images to process
+    }
+    
+    $upload_dir = '../uploads/events_img/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+    
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    
+    // Handle array of files
+    $files = $_FILES['gallery_images'];
+    $file_count = count($files['name']);
+    
+    for ($i = 0; $i < $file_count; $i++) {
+        if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+            continue; // Skip failed uploads
+        }
+        
+        $file_ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+        if (!in_array($file_ext, $allowed)) {
+            continue; // Skip invalid formats
+        }
+        
+        // Generate unique filename
+        $file_name = 'gallery_' . time() . '_' . uniqid() . '.' . $file_ext;
+        $file_path = $upload_dir . $file_name;
+        
+        if (move_uploaded_file($files['tmp_name'][$i], $file_path)) {
+            // Insert into events_images table
+            $insert_query = "INSERT INTO events_images (catalogue_id, image_url) VALUES (?, ?)";
+            $stmt = $conn->prepare($insert_query);
+            
+            if ($stmt) {
+                $stmt->bind_param('is', $catalogue_id, $file_name);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
+}
+
 try {
     // GET REQUEST
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -170,12 +237,18 @@ try {
         }
         elseif ($action === 'lookup') {
             ensureCatalogueTableExists($conn);
-            // Show past/completed events from the events table that haven't been added to catalogue yet
-            $query = "SELECT e.event_id, e.event_name, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.image_url, e.is_private, e.description
+            // Show past/completed events from the events table that haven't been PUBLISHED to catalogue yet
+            // UNION with unpublished manual events from the catalogue table (is_manual=1 AND is_published=0)
+            $query = "(SELECT NULL as catalogue_id, e.event_id, e.event_name, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.image_url, e.is_private, e.description
                       FROM events e
                       WHERE e.end_event < NOW()
-                      AND e.event_id NOT IN (SELECT event_id FROM catalogue WHERE event_id IS NOT NULL)
-                      ORDER BY e.start_event DESC";
+                      AND e.event_id NOT IN (SELECT event_id FROM catalogue WHERE event_id IS NOT NULL AND is_published = 1))
+                      UNION
+                      (SELECT c.catalogue_id, c.event_id, c.event_name, c.event_date, NULL as start_time, NULL as end_time, c.location, c.image_url, c.is_private, c.description
+                      FROM catalogue c
+                      WHERE c.is_manual = 1
+                      AND c.is_published = 0)
+                      ORDER BY event_date DESC";
             
             $stmt = $conn->prepare($query);
             if (!$stmt) {
@@ -192,7 +265,42 @@ try {
             }
             echo json_encode(['success' => true, 'data' => $events]);
             $stmt->close();
-        } 
+        }
+        elseif ($action === 'get_gallery') {
+            ensureEventsImagesTableExists($conn);
+            $catalogue_id = intval($_GET['catalogue_id'] ?? 0);
+            
+            if (!$catalogue_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Catalogue ID required']);
+                exit;
+            }
+            
+            // Get all images for this catalogue
+            $query = "SELECT image_id, image_url, uploaded_at FROM events_images WHERE catalogue_id = ? ORDER BY uploaded_at DESC";
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Query failed: ' . $conn->error]);
+                exit;
+            }
+            
+            $stmt->bind_param('i', $catalogue_id);
+            if (!$stmt->execute()) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Execution failed: ' . $stmt->error]);
+                exit;
+            }
+            
+            $result = $stmt->get_result();
+            $images = [];
+            while ($row = $result->fetch_assoc()) {
+                $images[] = $row;
+            }
+            $stmt->close();
+            
+            echo json_encode(['success' => true, 'data' => $images]);
+        }
         else {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
@@ -217,30 +325,61 @@ try {
         if ($action === 'add_with_image') {
             ensureCatalogueTableExists($conn);
             $event_id = intval($_POST['event_id'] ?? 0);
+            $catalogue_id = intval($_POST['catalogue_id'] ?? 0);
             
-            if (!$event_id) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Event ID required']);
-                exit;
+            $event = null;
+            $is_manual_event = false;
+            
+            // Try to get event from catalogue table FIRST (for manually added unpublished events)
+            if ($catalogue_id > 0) {
+                $event_query = "SELECT catalogue_id, event_id, event_name, event_date, location, is_private, description, image_url, is_manual FROM catalogue WHERE catalogue_id = ?";
+                $stmt = $conn->prepare($event_query);
+                if (!$stmt) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Query preparation failed: ' . $conn->error]);
+                    exit;
+                }
+                $stmt->bind_param('i', $catalogue_id);
+                if (!$stmt->execute()) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Query execution failed: ' . $stmt->error]);
+                    exit;
+                }
+                $result = $stmt->get_result();
+                $event = $result->fetch_assoc();
+                $stmt->close();
+                
+                if ($event) {
+                    $is_manual_event = true;
+                    // Set event_id to NULL if it wasn't set in catalogue (manual event)
+                    if ($event['event_id'] === null) {
+                        $event_id = null;
+                    } else {
+                        $event_id = $event['event_id'];
+                    }
+                }
             }
             
-            // Get event details
-            $event_query = "SELECT event_id, event_name, DATE(start_event) as event_date, location, is_private, description, image_url FROM events WHERE event_id = ?";
-            $stmt = $conn->prepare($event_query);
-            if (!$stmt) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Query preparation failed: ' . $conn->error]);
-                exit;
+            // If not found in catalogue, try events table (for regular events)
+            if (!$event && $event_id > 0) {
+                $event_query = "SELECT event_id, event_name, DATE(start_event) as event_date, location, is_private, description, image_url FROM events WHERE event_id = ?";
+                $stmt = $conn->prepare($event_query);
+                if (!$stmt) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Query preparation failed: ' . $conn->error]);
+                    exit;
+                }
+                $stmt->bind_param('i', $event_id);
+                if (!$stmt->execute()) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Query execution failed: ' . $stmt->error]);
+                    exit;
+                }
+                $result = $stmt->get_result();
+                $event = $result->fetch_assoc();
+                $stmt->close();
+                $is_manual_event = false;
             }
-            $stmt->bind_param('i', $event_id);
-            if (!$stmt->execute()) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Query execution failed: ' . $stmt->error]);
-                exit;
-            }
-            $result = $stmt->get_result();
-            $event = $result->fetch_assoc();
-            $stmt->close();
             
             if (!$event) {
                 http_response_code(404);
@@ -280,14 +419,28 @@ try {
             }
             
             // Check if event already in catalogue
-            $check_query = "SELECT catalogue_id FROM catalogue WHERE event_id = ?";
-            $check_stmt = $conn->prepare($check_query);
-            if (!$check_stmt) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Check query failed: ' . $conn->error]);
-                exit;
+            if ($is_manual_event && $catalogue_id) {
+                // For manually added events, check by catalogue_id
+                $check_query = "SELECT catalogue_id FROM catalogue WHERE catalogue_id = ?";
+                $check_stmt = $conn->prepare($check_query);
+                if (!$check_stmt) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Check query failed: ' . $conn->error]);
+                    exit;
+                }
+                $check_stmt->bind_param('i', $catalogue_id);
+            } else {
+                // For regular events, check by event_id
+                $check_query = "SELECT catalogue_id FROM catalogue WHERE event_id = ?";
+                $check_stmt = $conn->prepare($check_query);
+                if (!$check_stmt) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Check query failed: ' . $conn->error]);
+                    exit;
+                }
+                $check_stmt->bind_param('i', $event_id);
             }
-            $check_stmt->bind_param('i', $event_id);
+            
             if (!$check_stmt->execute()) {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Check execution failed: ' . $check_stmt->error]);
@@ -318,6 +471,9 @@ try {
                 }
                 
                 if ($update_stmt->execute()) {
+                    $catalogue_id = $catalogue_row['catalogue_id'];
+                    // Handle gallery images upload
+                    handleGalleryImagesUpload($conn, $catalogue_id);
                     echo json_encode(['success' => true, 'message' => 'Event published to catalogue']);
                 } else {
                     throw new Exception('Failed to publish event: ' . $update_stmt->error);
@@ -325,7 +481,16 @@ try {
                 $update_stmt->close();
             } else {
                 // Event not in catalogue yet - insert with is_published = 1
-                $insert_query = "INSERT INTO catalogue (event_id, is_manual, event_name, event_date, location, description, image_url, is_private, is_published) VALUES (?, 0, ?, ?, ?, ?, ?, ?, 1)";
+                $is_manual_flag = $is_manual_event ? 1 : 0;
+                
+                if ($event_id) {
+                    // Regular event - include event_id
+                    $insert_query = "INSERT INTO catalogue (event_id, is_manual, event_name, event_date, location, description, image_url, is_private, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
+                } else {
+                    // Manually added event - event_id will be NULL
+                    $insert_query = "INSERT INTO catalogue (event_id, is_manual, event_name, event_date, location, description, image_url, is_private, is_published) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, 1)";
+                }
+                
                 $insert_stmt = $conn->prepare($insert_query);
                 if (!$insert_stmt) {
                     http_response_code(500);
@@ -334,7 +499,7 @@ try {
                 }
                 
                 // Extract values to variables for proper binding
-                $event_id_val = intval($event['event_id']);
+                $event_id_val = $event_id ? intval($event['event_id']) : null;
                 $event_name = $event['event_name'];
                 $event_date = $event['event_date'];
                 $location = $event['location'] ?? '';
@@ -342,13 +507,22 @@ try {
                 $image_url_val = $image_url ?? '';
                 $is_private = intval($event['is_private']);
                 
-                $insert_stmt->bind_param('isssssi', $event_id_val, $event_name, $event_date, $location, $description, $image_url_val, $is_private);
+                if ($event_id) {
+                    $insert_stmt->bind_param('sisssssi', $event_id_val, $is_manual_flag, $event_name, $event_date, $location, $description, $image_url_val, $is_private);
+                } else {
+                    $insert_stmt->bind_param('isssssi', $is_manual_flag, $event_name, $event_date, $location, $description, $image_url_val, $is_private);
+                }
                 
                 if (!$insert_stmt->execute()) {
                     http_response_code(500);
                     echo json_encode(['success' => false, 'message' => 'Insert execution failed: ' . $insert_stmt->error]);
                     exit;
                 }
+                
+                $catalogue_id = $conn->insert_id;
+                // Handle gallery images upload
+                handleGalleryImagesUpload($conn, $catalogue_id);
+                
                 echo json_encode(['success' => true, 'message' => 'Event added to catalogue']);
                 $insert_stmt->close();
             }
@@ -416,6 +590,35 @@ try {
             echo json_encode(['success' => true, 'message' => 'Event added to catalogue']);
             $insert_stmt->close();
         } 
+        elseif ($action === 'republish') {
+            ensureCatalogueTableExists($conn);
+            $catalogue_id = intval($post_data['catalogue_id'] ?? 0);
+            
+            if (!$catalogue_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Catalogue ID required']);
+                exit;
+            }
+            
+            // Set is_published to 1 for manual events
+            $update_query = "UPDATE catalogue SET is_published = 1 WHERE catalogue_id = ? AND is_manual = 1";
+            $update_stmt = $conn->prepare($update_query);
+            if (!$update_stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            $update_stmt->bind_param('i', $catalogue_id);
+            
+            if ($update_stmt->execute()) {
+                if ($update_stmt->affected_rows > 0) {
+                    echo json_encode(['success' => true, 'message' => 'Event republished']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Event not found or not a manual event']);
+                }
+            } else {
+                throw new Exception('Failed to republish event: ' . $update_stmt->error);
+            }
+            $update_stmt->close();
+        } 
         elseif ($action === 'remove') {
             ensureCatalogueTableExists($conn);
             $catalogue_id = intval($post_data['catalogue_id'] ?? 0);
@@ -426,36 +629,20 @@ try {
                 exit;
             }
             
-            // Get image URL
-            $select_query = "SELECT image_url FROM catalogue WHERE catalogue_id = ?";
-            $select_stmt = $conn->prepare($select_query);
-            if ($select_stmt) {
-                $select_stmt->bind_param('i', $catalogue_id);
-                $select_stmt->execute();
-                $result = $select_stmt->get_result();
-                if ($result->num_rows > 0) {
-                    $row = $result->fetch_assoc();
-                    if ($row['image_url'] && file_exists('../' . $row['image_url'])) {
-                        unlink('../' . $row['image_url']);
-                    }
-                }
-                $select_stmt->close();
-            }
-            
-            // Delete from catalogue
-            $delete_query = "DELETE FROM catalogue WHERE catalogue_id = ?";
-            $delete_stmt = $conn->prepare($delete_query);
-            if (!$delete_stmt) {
+            // Update is_published to 0 instead of deleting
+            $update_query = "UPDATE catalogue SET is_published = 0 WHERE catalogue_id = ?";
+            $update_stmt = $conn->prepare($update_query);
+            if (!$update_stmt) {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
-            $delete_stmt->bind_param('i', $catalogue_id);
+            $update_stmt->bind_param('i', $catalogue_id);
             
-            if ($delete_stmt->execute()) {
+            if ($update_stmt->execute()) {
                 echo json_encode(['success' => true, 'message' => 'Event removed from catalogue']);
             } else {
-                throw new Exception('Failed to remove event: ' . $delete_stmt->error);
+                throw new Exception('Failed to remove event: ' . $update_stmt->error);
             }
-            $delete_stmt->close();
+            $update_stmt->close();
         } 
         elseif ($action === 'toggle_private') {
             ensureCatalogueTableExists($conn);
@@ -484,6 +671,155 @@ try {
             }
             $update_stmt->close();
         } 
+        elseif ($action === 'update_cover') {
+            ensureCatalogueTableExists($conn);
+            $catalogue_id = intval($post_data['catalogue_id'] ?? 0);
+            
+            if (!$catalogue_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Catalogue ID required']);
+                exit;
+            }
+            
+            // Check if file is provided
+            if (!isset($_FILES['cover_image']) || $_FILES['cover_image']['error'] !== UPLOAD_ERR_OK) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'No image provided']);
+                exit;
+            }
+            
+            $file = $_FILES['cover_image'];
+            
+            // Validate file
+            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            if (!in_array($file_ext, $allowed)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid image format. Allowed: jpg, jpeg, png, gif, webp']);
+                exit;
+            }
+            
+            // Check file size (max 5MB)
+            $max_size = 5 * 1024 * 1024; // 5MB
+            if ($file['size'] > $max_size) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'File size exceeds 5MB limit']);
+                exit;
+            }
+            
+            // Create upload directory if it doesn't exist
+            $upload_dir = '../uploads/events/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // Generate unique filename
+            $file_name = 'cover_' . time() . '_' . uniqid() . '.' . $file_ext;
+            $file_path = $upload_dir . $file_name;
+            
+            // Move uploaded file
+            if (!move_uploaded_file($file['tmp_name'], $file_path)) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
+                exit;
+            }
+            
+            // Update catalogue record with new image
+            $update_query = "UPDATE catalogue SET image_url = ? WHERE catalogue_id = ?";
+            $update_stmt = $conn->prepare($update_query);
+            if (!$update_stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+                exit;
+            }
+            
+            $update_stmt->bind_param('si', $file_name, $catalogue_id);
+            
+            if ($update_stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Event cover updated successfully', 'image_url' => $file_name]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to update cover: ' . $update_stmt->error]);
+            }
+            $update_stmt->close();
+        }
+        elseif ($action === 'add_gallery') {
+            ensureEventsImagesTableExists($conn);
+            $catalogue_id = intval($post_data['catalogue_id'] ?? 0);
+            
+            if (!$catalogue_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Catalogue ID required']);
+                exit;
+            }
+            
+            // Handle gallery images upload
+            handleGalleryImagesUpload($conn, $catalogue_id);
+            
+            echo json_encode(['success' => true, 'message' => 'Gallery images added successfully']);
+        }
+        elseif ($action === 'delete_gallery_image') {
+            ensureEventsImagesTableExists($conn);
+            $image_id = intval($post_data['image_id'] ?? 0);
+            $catalogue_id = intval($post_data['catalogue_id'] ?? 0);
+            
+            if (!$image_id || !$catalogue_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Image ID and Catalogue ID required']);
+                exit;
+            }
+            
+            // Get image URL first to delete file
+            $get_query = "SELECT image_url FROM events_images WHERE image_id = ? AND catalogue_id = ?";
+            $get_stmt = $conn->prepare($get_query);
+            if (!$get_stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Query failed: ' . $conn->error]);
+                exit;
+            }
+            
+            $get_stmt->bind_param('ii', $image_id, $catalogue_id);
+            if (!$get_stmt->execute()) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Execution failed: ' . $get_stmt->error]);
+                exit;
+            }
+            
+            $result = $get_stmt->get_result();
+            $image = $result->fetch_assoc();
+            $get_stmt->close();
+            
+            if (!$image) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Image not found']);
+                exit;
+            }
+            
+            // Delete file from filesystem
+            $file_path = '../uploads/events_img/' . $image['image_url'];
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
+            
+            // Delete from database
+            $delete_query = "DELETE FROM events_images WHERE image_id = ? AND catalogue_id = ?";
+            $delete_stmt = $conn->prepare($delete_query);
+            if (!$delete_stmt) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Delete query failed: ' . $conn->error]);
+                exit;
+            }
+            
+            $delete_stmt->bind_param('ii', $image_id, $catalogue_id);
+            if (!$delete_stmt->execute()) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Delete failed: ' . $delete_stmt->error]);
+                exit;
+            }
+            
+            $delete_stmt->close();
+            echo json_encode(['success' => true, 'message' => 'Image deleted successfully']);
+        }
         else {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);

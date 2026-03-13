@@ -17,6 +17,39 @@
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=2">
   <link rel="stylesheet" href="./css/styles.css?v=3">
   <style>
+    /* Modal Styling */
+    .modal {
+      display: none !important;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex !important;
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
     /* Ultra-specific override for pages container - highest priority */
     body .main-content > div.p-8 {
       display: flex !important;
@@ -2640,7 +2673,7 @@ try {
               <p class="text-gray-600 text-sm">Events visible to the public</p>
             </div>
             <div class="flex gap-3">
-              <button class="btn btn-secondary" onclick="document.getElementById('lookupEventsModal').classList.add('active'); CatalogueManager.loadPastEvents();"><i class="bi bi-search"></i> Lookup Events</button>
+              <button class="btn btn-secondary" onclick="document.getElementById('lookupEventsModal').classList.add('active'); CatalogueManager.loadPastEvents();"><i class="bi bi-search"></i>&nbsp; Lookup Events</button>
               <button class="btn btn-primary" onclick="document.getElementById('addPastEventModal').classList.add('active')">+ Add Event</button>
             </div>
           </div>
@@ -3226,7 +3259,7 @@ try {
 
         <!-- Short Summary -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Short Summary</label>
+          <label class="block text-sm font-medium text-gray-900 mb-2">Event Description</label>
           <textarea id="pastEventSummary" placeholder="Brief description of the event"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     rows="4" style="resize: vertical;"></textarea>
@@ -3234,12 +3267,19 @@ try {
 
         <!-- Attach Image -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Attach image</label>
-          <div id="pastEventImagePreview" style="width: 100%; aspect-ratio: 16/9; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 48px; color: #999;">
-            Preview Area
+          <label class="block text-sm font-medium text-gray-900 mb-2">Event Cover Photo</label>
+          <p class="text-sm text-gray-600 mb-4">Upload a cover image for this event.</p>
+          
+          <!-- Image Preview (Clickable - Drag & Drop) -->
+          <div id="pastEventImagePreview" onclick="document.getElementById('pastEventImage').click()" style="width: 100%; height: 16rem; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';">
+            <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span>Click to upload or drag & drop</span>
           </div>
-          <input type="file" id="pastEventImage" accept="image/*" onchange="previewPastEventImage(event)"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900">
+          
+          <!-- Hidden File Input -->
+          <input type="file" id="pastEventImage" accept="image/*" onchange="previewPastEventImage(event)" style="display: none;">
         </div>
 
         <!-- Submit Button -->
@@ -3254,8 +3294,9 @@ try {
 
   <!-- Lookup Events Modal -->
   <div id="lookupEventsModal" class="modal">
-    <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto;">
-      <div class="flex justify-between items-start mb-6">
+    <div class="modal-content" style="max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+      <!-- Header -->
+      <div class="flex justify-between items-start mb-6" style="padding: 24px; padding-bottom: 0; flex-shrink: 0;">
         <div>
           <h2 class="text-2xl font-bold text-gray-900 mb-2">Lookup Events</h2>
           <p class="text-sm text-gray-600">Search past events and add them to the catalogue.</p>
@@ -3264,7 +3305,7 @@ try {
       </div>
       
       <!-- Search Bar -->
-      <div class="mb-6">
+      <div style="padding: 0 24px 12px 24px; flex-shrink: 0;">
         <input 
           type="text" 
           id="eventSearchInput" 
@@ -3273,11 +3314,63 @@ try {
           onkeyup="CatalogueManager.filterPastEvents()"
         >
       </div>
+      
+      <!-- Add Many Button -->
+      <div style="padding: 0 24px 12px 24px; flex-shrink: 0; display: flex; justify-content: flex-end;">
+        <a 
+          id="addManyToggleLink"
+          onclick="CatalogueManager.toggleAddMany()" 
+          style="color: #1E73BB; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; transition: all 0.2s; flex-shrink: 0;"
+          onmouseover="this.style.opacity='0.7'"
+          onmouseout="this.style.opacity='1'"
+          title="Add Multiple Events"
+        >
+          
+          <span style="font-size: 14px; font-weight: 600;">Add Many</span><i class="bi bi-plus-square" style="font-size: 20px;"></i>
+        </a>
+      </div>
 
-      <!-- Events List -->
-      <div id="lookupEventsContainer" class="space-y-3">
+      <!-- Events List (Scrollable) -->
+      <div id="lookupEventsContainer" class="space-y-3 flex-1 overflow-y-auto" style="padding: 12px 24px;">
         <!-- Past events will be populated here -->
         <p class="text-center text-gray-500 py-8">Loading past events...</p>
+      </div>
+      
+      <!-- Fixed Footer with Counter and Buttons -->
+      <div id="addManyFooterDiv" style="border-top: 1px solid #e5e7eb; padding: 16px 24px; flex-shrink: 0; background: white; display: flex; align-items: center; justify-content: space-between;">
+        <!-- Counter (shown only in Add Many mode) -->
+        <div id="selectedCountDiv" style="display: none; font-weight: 600; color: #1E73BB;">
+          <span id="selectedCount">0</span>&nbsp;event(s) selected
+        </div>
+        
+        <!-- Buttons (hidden by default, shown only in Add Many mode) -->
+        <div id="addManyButtonsDiv" style="display: none; gap: 12px; margin-left: auto;">
+          
+          
+          <button 
+            id="cancelAddManyBtn"
+            onclick="CatalogueManager.cancelAddMany()" 
+            disabled
+            class="px-3 py-2 rounded-lg border border-slate-200 text-sm"
+            style="background: white; color: #374151; cursor: pointer; transition: all 0.2s; opacity: 0.5;"
+            onmouseover="if(!this.disabled) this.style.background='#f9fafb'"
+            onmouseout="if(!this.disabled) this.style.background='white'"
+          >
+            Cancel
+          </button>
+
+          <button 
+            id="confirmAddManyBtn"
+            onclick="CatalogueManager.confirmAddMany()" 
+            disabled
+            class="px-3 py-2 rounded-lg text-white text-sm font-semibold"
+            style="background: #1E73BB; cursor: pointer; transition: all 0.2s; opacity: 0.5; border: none;"
+            onmouseover="if(!this.disabled) this.style.background='#1560a0'"
+            onmouseout="if(!this.disabled) this.style.background='#1E73BB'"
+          >
+            Confirm Add
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -3314,59 +3407,128 @@ try {
     </div>
   </div>
 
-  <!-- Image Upload Modal for Lookup Events -->
-  <div id="lookupImageModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Add Event Image</h2>
-        <button type="button" onclick="document.getElementById('lookupImageModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+  <!-- Edit Event Cover Modal -->
+  <div id="editEventCoverModal" class="modal">
+    <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; max-height: 90vh;">
+      <!-- Header (Fixed) -->
+      <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200" style="flex-shrink: 0;">
+        <h2 class="text-2xl font-bold text-gray-900">Edit Event Cover</h2>
+        <button type="button" onclick="closeEditEventCoverModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
       </div>
       
-      <p class="text-sm text-gray-600 mb-4">Upload an image for this past event to add it to the catalogue.</p>
-      
-      <form id="lookupImageForm">
-        <!-- Hidden field to store event_id -->
-        <input type="hidden" id="lookupImageEventId" value="">
-        <input type="hidden" id="lookupImageEventName" value="">
-        
-        <!-- Image Preview -->
-        <div id="lookupImagePreview" class="mb-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-          <span class="text-4xl text-gray-400">📷</span>
-        </div>
-        
-        <!-- Image Upload Input -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Event Image (Optional)</label>
+      <!-- Scrollable Content -->
+      <div style="flex: 1; overflow-y: auto; padding-right: 8px;">
+        <form id="editEventCoverForm">
+          <!-- Hidden fields to store event info -->
+          <input type="hidden" id="editCoverCatalogueId" value="">
+          <input type="hidden" id="editCoverEventName" value="">
+          
+          
+          <p class="text-sm text-gray-600 mb-4">Upload a new cover image for this event. The image will be used as the catalogue cover.</p>
+          
+          <!-- Image Preview (Clickable - Drag & Drop) -->
+          <div id="editCoverImagePreview" onclick="document.getElementById('editCoverImageInput').click()" style="width: 100%; height: 16rem; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';">
+            <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span>Click to upload or drag & drop</span>
+          </div>
+          
+          <!-- Hidden Image Upload Input -->
           <input 
             type="file" 
-            id="lookupEventImage" 
+            id="editCoverImageInput" 
             accept="image/*" 
-            onchange="previewLookupImage(event)"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onchange="previewEditCoverImage(event)"
+            style="display: none;"
           >
-          <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF, WebP</p>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="flex gap-3 justify-end">
-          <button 
-            type="button" 
-            onclick="document.getElementById('lookupImageModal').classList.remove('active')" 
-            style="padding: 10px 20px; background: #e5e7eb; color: #111; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"
+        </form>
+      </div>
+      
+      <!-- Action Buttons (Fixed) -->
+      <div class="flex gap-3 justify-end" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid #e5e7eb; margin-top: 16px;">
+        <button 
+          type="button" 
+          onclick="closeEditEventCoverModal()" 
+          style="padding: 10px 20px; background: #e5e7eb; color: #111; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          onclick="submitEditEventCover()" 
+          style="padding: 10px 20px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" 
+          onmouseover="this.style.opacity='0.9'" 
+          onmouseout="this.style.opacity='1'"
+        >
+          Update Cover
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Event Gallery Modal -->
+  <div id="editEventGalleryModal" class="modal">
+    <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column; max-height: 90vh;">
+      <!-- Header (Fixed) -->
+      <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200" style="flex-shrink: 0;">
+        <h2 class="text-2xl font-bold text-gray-900">Edit Event Gallery</h2>
+        <button type="button" onclick="closeEditGalleryModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+      </div>
+      
+      <!-- Scrollable Content -->
+      <div style="flex: 1; overflow-y: auto; padding-right: 8px;">
+        <form id="editEventGalleryForm">
+          <!-- Hidden field to store catalogue_id -->
+          <input type="hidden" id="editGalleryCatalogueId" value="">
+          <input type="hidden" id="editGalleryEventName" value="">
+          <p class="text-sm text-gray-600 mb-4">Add up to 5 images to your event gallery.</p>
+          
+          <!-- Gallery Images Grid with Plus Box -->
+          <div id="editGalleryImagesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
+            <!-- Plus Box (Upload Button) -->
+            <div 
+              id="editGalleryPlusBox"
+              onclick="document.getElementById('editGalleryImageInput').click()" 
+              style="width: 100px; height: 100px; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; font-size: 48px; color: #94a3b8; font-weight: 300; user-select: none;" 
+              onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" 
+              onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';"
+            >
+              +
+            </div>
+          </div>
+          
+          <!-- Hidden Gallery Images Upload Input -->
+          <input 
+            type="file" 
+            id="editGalleryImageInput" 
+            accept="image/*" 
+            multiple
+            onchange="previewEditGalleryImages(event)"
+            style="display: none;"
           >
-            Cancel
-          </button>
-          <button 
-            type="button" 
-            onclick="submitLookupImageUpload()" 
-            style="padding: 10px 20px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" 
-            onmouseover="this.style.opacity='0.9'" 
-            onmouseout="this.style.opacity='1'"
-          >
-            Add to Catalogue
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
+      
+      <!-- Action Buttons (Fixed) -->
+      <div class="flex gap-3 justify-end" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid #e5e7eb; margin-top: 16px;">
+        <button 
+          type="button" 
+          onclick="closeEditGalleryModal()" 
+          style="padding: 10px 20px; background: #e5e7eb; color: #111; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          onclick="submitEditGalleryImages()" 
+          style="padding: 10px 20px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" 
+          onmouseover="this.style.opacity='0.9'" 
+          onmouseout="this.style.opacity='1'"
+        >
+          Save Gallery
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3402,6 +3564,20 @@ try {
         >
           Download
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remove Existing Gallery Image Confirmation Modal -->
+  <div id="removeExistingGalleryImageModal" class="modal" onclick="if(event.target.id === 'removeExistingGalleryImageModal') closeRemoveGalleryImageModal();" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Remove Image</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to remove this image? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="closeRemoveGalleryImageModal()" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmRemoveGalleryImage()" style="padding: 8px 16px; border-radius: 6px; background: #2563eb; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Remove</button>
       </div>
     </div>
   </div>
@@ -4063,82 +4239,104 @@ try {
       return code;
     }
 
-    // Open lookup image modal for past events
-    function openLookupImageModal(eventId, eventName) {
-      // Open modal to allow optional image upload/replacement
-      document.getElementById('lookupImageEventId').value = eventId;
-      document.getElementById('lookupImageEventName').value = eventName;
-      
-      // Reset the form
-      document.getElementById('lookupEventImage').value = '';
-      document.getElementById('lookupImagePreview').innerHTML = '<span class="text-4xl text-gray-400">📷</span>';
-      
-      // Show the modal
-      document.getElementById('lookupImageModal').classList.add('active');
-    }
+    // Preview gallery images
+    // Store gallery files in memory
+    let galleryFilesStore = [];
 
-    // Preview image for lookup event
-    function previewLookupImage(event) {
-      const file = event.target.files[0];
-      const preview = document.getElementById('lookupImagePreview');
+    function previewGalleryImages(event) {
+      const files = event.target.files;
+      const container = document.getElementById('galleryImagesContainer');
+      const plusBox = document.getElementById('galleryPlusBox');
       
-      if (file) {
+      if (!files || files.length === 0) {
+        return;
+      }
+      
+      // Count existing images (excluding plus box)
+      const existingImages = container.children.length - 1; // -1 for plus box
+      const remainingSlots = 5 - existingImages;
+      
+      if (remainingSlots <= 0) {
+        alert('Maximum 5 images allowed for the gallery.');
+        event.target.value = '';
+        return;
+      }
+      
+      // Only process up to remaining slots
+      const filesToAdd = Array.from(files).slice(0, remainingSlots);
+      
+      filesToAdd.forEach((file) => {
+        // Store the actual file object
+        galleryFilesStore.push(file);
+        
         const reader = new FileReader();
         reader.onload = function(e) {
-          preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">`;
+          const imageDiv = document.createElement('div');
+          imageDiv.style.cssText = 'position: relative; border-radius: 8px; overflow: hidden; background: #f0f0f0; aspect-ratio: 1; width: 100px; height: 100px;';
+          imageDiv.innerHTML = `
+            <img src="${e.target.result}" alt="Gallery image" style="width: 100%; height: 100%; object-fit: cover;">
+            <button type="button" onclick="removeGalleryImage(this, '${file.name}')" 
+                    style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">×</button>
+          `;
+          // Insert before the plus box
+          container.insertBefore(imageDiv, plusBox);
         };
         reader.readAsDataURL(file);
+      });
+      
+      // Check if max images reached
+      const newImageCount = existingImages + filesToAdd.length;
+      if (newImageCount >= 5) {
+        plusBox.style.display = 'none';
+      }
+      
+      // Reset the file input
+      event.target.value = '';
+    }
+
+    function removeGalleryImage(btn, fileName) {
+      btn.parentElement.remove();
+      // Remove from gallery files store
+      galleryFilesStore = galleryFilesStore.filter(f => f.name !== fileName);
+      
+      // Show plus button if we're below max
+      const container = document.getElementById('galleryImagesContainer');
+      const plusBox = document.getElementById('galleryPlusBox');
+      
+      // Count images (excluding plus box)
+      const imageCount = container.children.length - 1;
+      if (imageCount < 5) {
+        plusBox.style.display = 'flex';
       }
     }
 
-    // Submit lookup event with image
-    function submitLookupImageUpload() {
-      const eventId = document.getElementById('lookupImageEventId').value;
-      const eventName = document.getElementById('lookupImageEventName').value;
-      const imageFile = document.getElementById('lookupEventImage').files[0];
+    // Handle drag and drop for gallery images
+    function setupGalleryImageDragDrop() {
+      const plusBox = document.getElementById('galleryPlusBox');
+      if (!plusBox) return;
       
-      console.log('📋 Submitting catalogue event:', { eventId, eventName, hasImage: !!imageFile });
+      plusBox.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        plusBox.style.borderColor = '#3b82f6';
+        plusBox.style.backgroundColor = '#f0f4f8';
+      });
       
-      const formData = new FormData();
-      formData.append('action', 'add_with_image');
-      formData.append('event_id', eventId);
-      if (imageFile) {
-        formData.append('image', imageFile);
-      }
+      plusBox.addEventListener('dragleave', () => {
+        plusBox.style.borderColor = '#cbd5e1';
+        plusBox.style.backgroundColor = 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';
+      });
       
-      const headers = getUserHeaders();
-      delete headers['Content-Type'];
-      
-      console.log('📤 Sending request to catalogue API...');
-      
-      fetch(`${API_BASE}/catalogue.php`, {
-        method: 'POST',
-        headers: headers,
-        body: formData
-      })
-        .then(response => {
-          console.log('📥 API Response Status:', response.status);
-          return response.json();
-        })
-        .then(data => {
-          console.log('📋 API Response Data:', data);
-          if (data.success) {
-            showNotification('Event "' + eventName + '" added to catalogue!', 'success');
-            document.getElementById('lookupImageModal').classList.remove('active');
-            CatalogueManager.closeLookupModal();
-            console.log('🔄 Refreshing catalogue...');
-            loadCatalogue();
-          } else {
-            showNotification('Error: ' + (data.message || 'Failed to add event'), 'error');
-          }
-        })
-        .catch(error => {
-          console.error('❌ Error adding event:', error);
-          showNotification('Error adding event to catalogue: ' + error.message, 'error');
-        });
+      plusBox.addEventListener('drop', (e) => {
+        e.preventDefault();
+        plusBox.style.borderColor = '#cbd5e1';
+        plusBox.style.backgroundColor = 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          previewGalleryImages({ target: { files: files } });
+        }
+      });
     }
-
-
     // Modal close on background click
     document.addEventListener('click', function(e) {
       const modals = document.querySelectorAll('.modal');

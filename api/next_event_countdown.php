@@ -3,26 +3,26 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <!-- Countdown Card -->
-        <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 text-white">
-          <div>
-            <p class="text-xs uppercase tracking-[0.2em] text-white/70">Next Event Countdown</p>
-            <h3 id="eventName" class="text-lg font-semibold mt-1">Loading...</h3>
+        <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-2xl p-4 sm:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6 text-white">
+          <div class="min-w-0">
+            <p class="text-xs uppercase tracking-[0.2em] text-white/70 whitespace-nowrap">Next Event Countdown</p>
+            <h3 id="eventName" class="text-base sm:text-lg font-semibold mt-1 truncate">Loading...</h3>
           </div>
-          <div class="flex items-center gap-3 text-center font-mono">
-            <div class="bg-blue-800/60 rounded-xl px-4 py-3 min-w-[80px] shadow-inner">
-              <div id="days" class="text-2xl font-semibold">01</div>
+          <div class="grid grid-cols-4 sm:flex sm:items-center sm:gap-3 gap-2 sm:gap-3 font-mono justify-self-end w-full sm:w-auto">
+            <div class="bg-blue-800/60 rounded-lg sm:rounded-xl px-1.5 sm:px-4 py-1.5 sm:py-3 text-center shadow-inner">
+              <div id="days" class="text-sm sm:text-2xl font-semibold">00</div>
               <div class="text-xs text-white/70">Days</div>
             </div>
-            <div class="bg-blue-800/60 rounded-xl px-4 py-3 min-w-[80px] shadow-inner">
-              <div id="hours" class="text-2xl font-semibold">12</div>
+            <div class="bg-blue-800/60 rounded-lg sm:rounded-xl px-1.5 sm:px-4 py-1.5 sm:py-3 text-center shadow-inner">
+              <div id="hours" class="text-sm sm:text-2xl font-semibold">00</div>
               <div class="text-xs text-white/70">Hours</div>
             </div>
-            <div class="bg-blue-800/60 rounded-xl px-4 py-3 min-w-[80px] shadow-inner">
-              <div id="minutes" class="text-2xl font-semibold">40</div>
+            <div class="bg-blue-800/60 rounded-lg sm:rounded-xl px-1.5 sm:px-4 py-1.5 sm:py-3 text-center shadow-inner">
+              <div id="minutes" class="text-sm sm:text-2xl font-semibold">00</div>
               <div class="text-xs text-white/70">Minutes</div>
             </div>
-            <div class="bg-blue-800/60 rounded-xl px-4 py-3 min-w-[80px] shadow-inner animate-pulse">
-              <div id="seconds" class="text-2xl font-semibold">54</div>
+            <div class="bg-blue-800/60 rounded-lg sm:rounded-xl px-1.5 sm:px-4 py-1.5 sm:py-3 text-center shadow-inner animate-pulse">
+              <div id="seconds" class="text-sm sm:text-2xl font-semibold">00</div>
               <div class="text-xs text-white/70">Seconds</div>
             </div>
           </div>

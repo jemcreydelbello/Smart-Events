@@ -348,9 +348,14 @@ function getImageUrl(imagePath) {
         return result;
     }
     
-    // If path is just a filename (no slashes), it's in /uploads/events/
+    // If path is just a filename (no slashes)
     if (!imagePath.includes('/')) {
-        result = '../uploads/events/' + imagePath;
+        // Gallery images start with "gallery_" and go in events_img folder
+        if (imagePath.startsWith('gallery_')) {
+            result = '../uploads/events_img/' + imagePath;
+        } else {
+            result = '../uploads/events/' + imagePath;
+        }
         console.log('🖼️ getImageUrl: Filename detected, converting from:', imagePath, 'to:', result);
         return result;
     }

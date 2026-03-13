@@ -44,8 +44,13 @@ function getImageUrl(imagePath) {
     if (imagePath.startsWith('http')) {
         return imagePath;
     }
-    // If path is just a filename (no slashes), it's in /uploads/events/
+    // If path is just a filename (no slashes)
     if (!imagePath.includes('/')) {
+        // Gallery images start with "gallery_" and go in events_img folder
+        if (imagePath.startsWith('gallery_')) {
+            return '../uploads/events_img/' + imagePath;
+        }
+        // Regular event images go in events folder
         return '../uploads/events/' + imagePath;
     }
     // If path is relative to webroot (uploads/...), prepend ../ for admin nested folder
