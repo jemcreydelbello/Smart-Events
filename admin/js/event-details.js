@@ -4357,7 +4357,7 @@ function searchAttendees(query) {
 // Register searchAttendees as a global function for admin.js
 window.searchAttendeesImpl = searchAttendees;
 
-// Export attendees
+// Export attendees to PDF
 function exportAttendees() {
     const allAttendees = [...attendeesData.initial, ...attendeesData.actual];
     
@@ -4366,31 +4366,72 @@ function exportAttendees() {
         return;
     }
     
-    // Create CSV content
-    let csv = 'NO.,FULL NAME,COMPANY,JOB TITLE,EMAIL,PHONE,STATUS\n';
-    
-    allAttendees.forEach((attendee, idx) => {
-        const fullName = (attendee.full_name || '-').replace(/"/g, '""');
-        const company = (attendee.company || '-').replace(/"/g, '""');
-        const jobTitle = (attendee.job_title || '-').replace(/"/g, '""');
-        const email = (attendee.email || '-').replace(/"/g, '""');
-        const phone = (attendee.phone || '-').replace(/"/g, '""');
-        const status = attendeesData.actual.includes(attendee) ? 'ATTENDED' : 'INITIAL';
+    try {
+        if (typeof window.jspdf === 'undefined') {
+            alert('PDF library not available. Please try again.');
+            return;
+        }
         
-        csv += `${idx + 1},"${fullName}","${company}","${jobTitle}","${email}","${phone}","${status}"\n`;
-    });
-    
-    // Create a blob and trigger download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `attendees-export-${new Date().getTime()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get event name
+        const eventName = window.currentEventData?.title || window.selectedEventTitle || 'Event Attendees';
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Event Attendees Report', 14, 20);
+        
+        // Event info
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Event: ${eventName}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+        doc.text(`Total Attendees: ${allAttendees.length}`, 14, 46);
+        
+        // Create table
+        const columns = ['No.', 'Full Name', 'Company', 'Job Title', 'Email', 'Phone', 'Status'];
+        const rows = allAttendees.map((attendee, idx) => [
+            idx + 1,
+            attendee.full_name || '-',
+            attendee.company || '-',
+            attendee.job_title || '-',
+            attendee.email || '-',
+            attendee.phone || '-',
+            attendeesData.actual.includes(attendee) ? 'ATTENDED' : 'INITIAL'
+        ]);
+        
+        // Apply table styling
+        doc.autoTable({
+            startY: 55,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [85, 156, 218], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 12 },
+                6: { halign: 'center' }
+            }
+        });
+        
+        // Footer with page numbers
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(10);
+            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
+        }
+        
+        // Download
+        const filename = `attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+    } catch (error) {
+        console.error('Error exporting to PDF:', error);
+        alert('Error exporting to PDF. Please try again.');
+    }
 }
 
 function markAttendeeAsAttended(registrationCode, index) {

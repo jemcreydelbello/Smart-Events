@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       IFNULL(u.job_title, '') as job_title, 
                       IFNULL(u.contact_number, '') as phone,
                       '' as employee_code,
-                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
+                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
                       FROM registrations r
                       JOIN users u ON r.user_id = u.user_id
                       JOIN events e ON r.event_id = e.event_id
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       IFNULL(u.job_title, '') as job_title, 
                       IFNULL(u.contact_number, '') as phone,
                       '' as employee_code,
-                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
+                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
                       FROM users u
                       LEFT JOIN departments d ON u.department_id = d.department_id
                       LEFT JOIN registrations r ON u.user_id = r.user_id
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $department_id = isset($_GET['department_id']) ? intval($_GET['department_id']) : null; // department filter
         
         $query = "SELECT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email, u.department_id, d.department_name,
-                  e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
+                  e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
                   FROM users u
                   LEFT JOIN departments d ON u.department_id = d.department_id
                   LEFT JOIN registrations r ON u.user_id = r.user_id
@@ -383,6 +383,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $employee_code = trim($data['employee_code'] ?? '');
         $participant_phone = trim($data['participant_phone'] ?? '');
         $status = $data['status'] ?? 'REGISTERED';
+        $is_walkIn = isset($data['is_walkIn']) ? intval($data['is_walkIn']) : 0; // 1 for walk-in, 0 for registered
         
         // Create full name from three components for email and display
         $participant_name = trim($first_name . ' ' . $middle_name . ' ' . $last_name);
@@ -484,15 +485,16 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $registration_code = 'REG-' . strtoupper($random_suffix);
         
         error_log('Generated registration code: ' . $registration_code);
+        error_log('Walk-in flag: ' . $is_walkIn);
         
-        $insert_registration = "INSERT INTO registrations (user_id, event_id, registration_code, status, registered_at) 
-                               VALUES (?, ?, ?, ?, NOW())";
+        $insert_registration = "INSERT INTO registrations (user_id, event_id, registration_code, status, is_walkIn, registered_at) 
+                               VALUES (?, ?, ?, ?, ?, NOW())";
         $stmt = $conn->prepare($insert_registration);
         if (!$stmt) {
             throw new Exception('Prepare registration insert failed: ' . $conn->error);
         }
         
-        $stmt->bind_param('iiss', $user_id, $event_id, $registration_code, $status);
+        $stmt->bind_param('iissi', $user_id, $event_id, $registration_code, $status, $is_walkIn);
         
         if (!$stmt->execute()) {
             throw new Exception('Failed to create registration: ' . $stmt->error);
@@ -501,7 +503,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log('Registration saved successfully with code: ' . $registration_code);
         
         // Fetch event details for email
-        $event_query = "SELECT event_name, event_date, start_time, end_time, location, is_private 
+        $event_query = "SELECT event_name, start_event, end_event, location, is_private 
                        FROM events WHERE event_id = ?";
         $event_stmt = $conn->prepare($event_query);
         $event_stmt->bind_param('i', $event_id);
@@ -511,13 +513,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Prepare event date/time for email
         $event_date_str = '';
-        if ($event_data['event_date']) {
-            $date = new DateTime($event_data['event_date']);
+        if ($event_data['start_event']) {
+            $date = new DateTime($event_data['start_event']);
             $event_date_str = $date->format('F j, Y');
-            
-            if ($event_data['start_time']) {
-                $event_date_str .= ' at ' . date('g:i A', strtotime($event_data['start_time']));
-            }
+            $event_date_str .= ' at ' . $date->format('g:i A');
         }
         
         // Send registration confirmation email with QR code
