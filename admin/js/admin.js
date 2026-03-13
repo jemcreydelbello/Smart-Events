@@ -524,16 +524,6 @@ function setupNavigation() {
         }
     }
     
-    // Add click handlers to set active state
-    navLinks.forEach(link => {
-        link.addEventListener('click', function() {
-            // Remove active class from all links
-            navLinks.forEach(l => l.classList.remove('active'));
-            // Add active class to clicked link
-            this.classList.add('active');
-        });
-    });
-    
     if (userInfo && userInfo.email) {
         const adminNameEl = document.getElementById('adminName');
         if (adminNameEl && userInfo.full_name) {
@@ -593,6 +583,12 @@ function setupNavigation() {
     });
 }
 
+// Navigate function called from sidebar links
+function navigateTo(event, page) {
+    event.preventDefault();
+    navigateToPage(page);
+}
+
 function navigateToPage(page) {
     console.log('🔄 Navigating to page:', page);
     
@@ -616,7 +612,7 @@ function navigateToPage(page) {
     });
     
     // Ensure main container is visible
-    const pagesContainer = document.querySelector('.main-content > div.p-8');
+    const pagesContainer = document.querySelector('.main-content > div[style*="flex-direction"]');
     if (pagesContainer) {
         pagesContainer.style.display = 'flex';
         pagesContainer.style.flexDirection = 'column';
@@ -676,7 +672,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, 100);
     
     // CRITICAL FIX: Move all misplaced pages to the correct container
-    const pagesContainer = document.querySelector('.main-content > div.p-8');
+    const pagesContainer = document.querySelector('.main-content > div[style*="flex-direction"]');
     if (pagesContainer) {
         const eventDetailsPage = document.getElementById('event-details');
         if (eventDetailsPage) {
@@ -786,7 +782,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // CRITICAL: Global monitor to ensure pages container never hides
     setInterval(() => {
-        const pageContainer = document.querySelector('.main-content > div.p-8');
+        const pageContainer = document.querySelector('.main-content > div[style*="flex-direction"]');
         if (pageContainer) {
             const display = window.getComputedStyle(pageContainer).display;
             const overflow = window.getComputedStyle(pageContainer).overflow;
@@ -1189,7 +1185,7 @@ function loadEvents() {
         return;
     }
     
-    container.innerHTML = '<div class="spinner" style="padding: 50px; text-align: center;">Loading events...</div>';
+    container.innerHTML = '';
     
     const admin = JSON.parse(localStorage.getItem('admin') || '{}');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1328,13 +1324,37 @@ function renderEvents(events) {
         return;
     }
     
-    console.log('Rendering', events.length, 'events');
-    
     // Rich event cards with images
     const html = events.map((event, index) => {
         const imageUrl = event.image_url ? getImageUrl(event.image_url) : null;
         const eventDate = new Date(event.event_date);
         const formattedDate = eventDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        
+        // Format 24-hour time to 12-hour AM/PM format
+        const formatTime = (timeStr) => {
+            if (!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            let h = parseInt(hours);
+            const m = minutes;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${h}:${m} ${ampm}`;
+        };
+        
+        // Build start date/time display
+        const startTime = event.start_time ? formatTime(event.start_time) : '';
+        const startDisplay = startTime ? `${formattedDate} ${startTime}` : formattedDate;
+        
+        // Build end date/time display if available
+        let dateTimeDisplay = startDisplay;
+        if (event.end_date) {
+            const endDate = new Date(event.end_date);
+            const formattedEndDate = endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const endTime = event.end_time ? formatTime(event.end_time) : '';
+            const endDisplay = endTime ? `${formattedEndDate} ${endTime}` : formattedEndDate;
+            dateTimeDisplay = `${startDisplay} - ${endDisplay}`;
+        }
         
         return `
             <div onclick="navigateToEventDetailsPage(${event.event_id})" style="
@@ -1342,18 +1362,17 @@ function renderEvents(events) {
                 flex-direction: column !important;
                 background: white !important;
                 border: 1px solid #e5e7eb !important;
-                border-radius: 8px !important;
+                border-radius: 12px !important;
                 overflow: hidden !important;
                 cursor: pointer !important;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-                transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, border-color 0.4s ease !important;
-                width: 280px !important;
-                height: 240px !important;
+                height: 260px !important;
                 padding: 0 !important;
-            " onmouseover="this.style.transform='translateY(-8px) scale(1.02) !important'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.15) !important'; this.style.borderColor='#3b82f6 !important';" onmouseout="this.style.transform='translateY(0) scale(1) !important'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1) !important'; this.style.borderColor='#e5e7eb !important';">
+                width: 100% !important;
+            ">
                 <!-- Image -->
                 <div style="
-                    height: 120px !important;
+                    height: 100px !important;
                     width: 100% !important;
                     background-color: #f0f0f0 !important;
                     background-size: cover !important;
@@ -1386,6 +1405,7 @@ function renderEvents(events) {
                     padding: 12px !important;
                     gap: 6px !important;
                     overflow: hidden !important;
+                    justify-content: flex-start !important;
                 ">
                     <h3 style="
                         margin: 0 !important;
@@ -1406,7 +1426,7 @@ function renderEvents(events) {
                         display: flex !important;
                         align-items: center !important;
                         gap: 6px !important;
-                    "><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#6b7280" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> ${formattedDate}${event.start_time ? ' · ' + event.start_time.substring(0, 5) : ''}</div>
+                    "><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#6b7280" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> ${dateTimeDisplay}</div>
                     
                     ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div style="
                         font-size: 12px !important;
@@ -1419,6 +1439,32 @@ function renderEvents(events) {
                         gap: 6px !important;
                     "><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="#6b7280" d="M16 10c0-2.21-1.79-4-4-4s-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4m-6 0c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2"/><path fill="#6b7280" d="M11.42 21.81c.17.12.38.19.58.19s.41-.06.58-.19c.3-.22 7.45-5.37 7.42-11.82c0-4.41-3.59-8-8-8s-8 3.59-8 8c-.03 6.44 7.12 11.6 7.42 11.82M12 4c3.31 0 6 2.69 6 6c.02 4.44-4.39 8.43-6 9.74c-1.61-1.31-6.02-5.29-6-9.74c0-3.31 2.69-6 6-6"/></svg> ${event.location}</div>` : ''}
                 </div>
+                
+                <!-- Footer Guide -->
+                <div style="
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: space-between !important;
+                    padding: 12px !important;
+                    border-top: 1px solid #f3f4f6 !important;
+                    background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,1) 100%) !important;
+                    flex-shrink: 0 !important;
+                    gap: 8px !important;
+                    transition: all 0.3s ease !important;
+                ">
+                    <span style="
+                        font-size: 13px !important;
+                        font-weight: 600 !important;
+                        color: #1E73BB !important;
+                    ">View Details</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="
+                        flex-shrink: 0 !important;
+                        color: #1E73BB !important;
+                        transition: transform 0.3s ease !important;
+                    ">
+                        <path fill="currentColor" d="M8.59 16.59L10 18l8-8-8-8-1.41 1.41L14.17 9H6v2h8.17z"/>
+                    </svg>
+                </div>
             </div>
         `;
     }).join('');
@@ -1426,20 +1472,6 @@ function renderEvents(events) {
     console.log('Generated HTML, length:', html.length);
     container.innerHTML = html;
     console.log('✓ HTML set in container');
-    console.log('📊 Container children count:', container.children.length);
-    
-    // Force absolute visibility
-    container.style.cssText = `
-        display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-        gap: 20px !important;
-        width: 100% !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        max-height: none !important;
-        height: auto !important;
-    `;
     
     console.log('Container computed style after:', {
         display: window.getComputedStyle(container).display,
@@ -6104,7 +6136,7 @@ function loadCatalogue() {
         return;
     }
     
-    container.innerHTML = '<div class="spinner" style="padding: 50px; text-align: center; grid-column: 1/-1;">Loading catalogue...</div>';
+    container.innerHTML = '';
     
     console.log('📡 Fetching from:', `${API_BASE}/catalogue.php?action=list`);
     

@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
         
         if ($hasCoordinators) {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
                       SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       GROUP BY e.event_id
                       ORDER BY e.start_event DESC";
         } else {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
                       SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $userInfo = getUserInfo();
         
         // Simple query for calendar - just get the essential event data
-        $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, 
+        $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, 
                          e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id
                   FROM events e
                   WHERE e.archived = 0
@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         // Filter by coordinator if user is a coordinator
         if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, 
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, 
                              e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id
                       FROM events e
                       WHERE e.archived = 0 AND e.coordinator_id = " . intval($userInfo['coordinator_id']) . "
@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
         
         if ($hasCoordinators) {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
                       MAX(eac.access_code) as access_code,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
@@ -268,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       WHERE e.event_id = ?
                       GROUP BY e.event_id";
         } else {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
                       MAX(eac.access_code) as access_code,
                       COUNT(DISTINCT r.registration_id) as total_registrations,

@@ -3,11 +3,11 @@
 console.log('📄 event-details.js loaded - STARTING');
 console.log('🔍 window object available:', typeof window !== 'undefined');
 
-// API_BASE is defined in admin.js, but we need it here too
-const API_BASE = window.API_BASE || '../api';
+// API_BASE is defined in admin.js, use it or set default
+var API_BASE = window.API_BASE || '../api';
 
-// Declare currentEventId as module-level variable
-let currentEventId = null;
+// Declare currentEventId as module-level variable (admin.js also declares this)
+var currentEventId = null;
 
 // attendeesData is also already declared in admin.js
 // Do not redeclare it here - use window.attendeesData instead
