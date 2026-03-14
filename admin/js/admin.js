@@ -430,12 +430,27 @@ function logActivity(actionType, actionDescription) {
         logData.user_id = user.user_id;
     }
     
+    console.log('[Activity Log] Logging:', actionType, '-', actionDescription);
+    
     fetch(`${API_BASE}/audit_logs.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
         body: JSON.stringify(logData)
     })
-    .catch(error => console.log('Activity logged:', actionType));
+    .then(response => {
+        console.log('[Activity Log] Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('[Activity Log] ✓ Activity logged successfully');
+        } else {
+            console.warn('[Activity Log] ⚠ API error:', data.message);
+        }
+    })
+    .catch(error => {
+        console.warn('[Activity Log] ⚠ Failed to log activity:', error.message);
+    });
 }
 
 // ================================================================================
@@ -906,7 +921,8 @@ function setupFormHandlers() {
     if (editForm) {
         console.log('Found editEventForm, adding submit handler');
         editForm.addEventListener('submit', function(e) {
-            updateEvent(e);
+            e.preventDefault();
+            submitEditEventForm();
         });
     }
     
@@ -943,7 +959,7 @@ function setupFormHandlers() {
     const editPrivateCheckbox = document.getElementById('editEventPrivate');
     if (editPrivateCheckbox) {
         editPrivateCheckbox.addEventListener('change', function() {
-            toggleEditPrivateCode();
+            handleEditPrivateEventToggle();
         });
     }
 }
@@ -1729,17 +1745,6 @@ function toggleCreatePrivateCode() {
     }
 }
 
-function toggleEditPrivateCode() {
-    const isPrivate = document.getElementById('editEventPrivate').checked;
-    const codeDisplay = document.getElementById('editPrivateCodeDisplay');
-    
-    if (isPrivate) {
-        codeDisplay.style.display = 'block';
-    } else {
-        codeDisplay.style.display = 'none';
-    }
-}
-
 function copyCreateCode() {
     const codeInput = document.getElementById('createEventPrivateCode');
     codeInput.select();
@@ -1771,25 +1776,36 @@ function openEventDetailsModal(eventId) {
     // Try multiple sources for event data
     let event = null;
     
-    // Try window.allEventsData first
-    if (window.allEventsData && Array.isArray(window.allEventsData)) {
-        event = window.allEventsData.find(e => e.event_id === eventId);
+    // First, check window.currentEventDetails (freshly loaded event)
+    // Use loose comparison (==) to handle string vs number mismatch
+    if (window.currentEventDetails && (window.currentEventDetails.event_id == eventId)) {
+        event = window.currentEventDetails;
+        console.log('[Events] Event found in currentEventDetails (ID match:', window.currentEventDetails.event_id, '==', eventId, ')');
+    }
+    
+    // Try window.allEventsData
+    if (!event && window.allEventsData && Array.isArray(window.allEventsData)) {
+        event = window.allEventsData.find(e => e.event_id == eventId);
+        if (event) console.log('[Events] Event found in allEventsData');
     }
     
     // Try local allEventsData
     if (!event && typeof allEventsData !== 'undefined' && Array.isArray(allEventsData)) {
-        event = allEventsData.find(e => e.event_id === eventId);
+        event = allEventsData.find(e => e.event_id == eventId);
+        if (event) console.log('[Events] Event found in local allEventsData');
     }
     
     // Try allEventsForCalendar (in case clicked from calendar)
     if (!event && typeof allEventsForCalendar !== 'undefined' && Array.isArray(allEventsForCalendar)) {
-        event = allEventsForCalendar.find(e => e.event_id === eventId);
+        event = allEventsForCalendar.find(e => e.event_id == eventId);
+        if (event) console.log('[Events] Event found in allEventsForCalendar');
     }
     
     console.log('[Events] Event found:', event);
     
     if (!event) {
         console.error('[Events] Event not found in any cache. Available caches:');
+        console.error('  currentEventDetails:', window.currentEventDetails ? 'ID ' + window.currentEventDetails.event_id : 'undefined');
         console.error('  allEventsData:', typeof allEventsData, allEventsData ? allEventsData.length + ' events' : 'undefined');
         console.error('  allEventsForCalendar:', typeof allEventsForCalendar, allEventsForCalendar ? allEventsForCalendar.length + ' events' : 'undefined');
         showNotification('Event not found', 'error');
@@ -4744,9 +4760,7 @@ function submitCreateEventForm(e) {
 function openEditEventModal(eventId) {
     console.log('=== OPEN EDIT EVENT MODAL ===');
     
-    loadCoordinatorsDropdown('editEventCoordinator');
-    
-    fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`)
+    fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`, { headers: getUserHeaders() })
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -4757,16 +4771,70 @@ function openEditEventModal(eventId) {
             if (data.success) {
                 const event = data.data;
                 
+                // Populate hidden field
                 document.getElementById('editEventId').value = event.event_id;
-                document.getElementById('editEventName').value = event.event_name;
-                document.getElementById('editEventCapacity').value = event.capacity;
-                document.getElementById('editEventDate').value = event.event_date;
-                document.getElementById('editEventStartTime').value = event.start_time || '';
-                document.getElementById('editEventEndTime').value = event.end_time || '';
+                
+                // Basic info
+                document.getElementById('editEventName').value = event.event_name || '';
+                document.getElementById('editEventCapacity').value = event.capacity || '';
                 document.getElementById('editEventLocation').value = (event.location && event.location !== 'undefined' && event.location !== 'null') ? event.location : '';
-                document.getElementById('editEventDepartment').value = event.department || '';
-                document.getElementById('editEventCoordinator').value = event.coordinator_id || '';
+                
+                // Convert date/time from database format to datetime-local format
+                let startDateTime = '';
+                let endDateTime = '';
+                
+                if (event.event_date && event.start_time) {
+                    startDateTime = `${event.event_date}T${event.start_time}`;
+                } else if (event.event_date) {
+                    startDateTime = `${event.event_date}T00:00`;
+                }
+                
+                if (event.end_date && event.end_time) {
+                    endDateTime = `${event.end_date}T${event.end_time}`;
+                } else if (event.event_date && event.start_time) {
+                    // Default end to 1 hour after start
+                    const [dateStr, timeStr] = startDateTime.split('T');
+                    const [hours, minutes] = timeStr.split(':');
+                    let endHours = Math.min(23, parseInt(hours) + 1);
+                    endDateTime = `${dateStr}T${String(endHours).padStart(2, '0')}:${minutes}`;
+                } else if (event.event_date) {
+                    endDateTime = `${event.event_date}T23:59`;
+                }
+                
+                document.getElementById('editStartEvent').value = startDateTime;
+                document.getElementById('editEndEvent').value = endDateTime;
+                
+                // Registration period
+                let regStartDateTime = '';
+                let regEndDateTime = '';
+                
+                // Convert registration start/end from database format (YYYY-MM-DD HH:MM:SS) to datetime-local format (YYYY-MM-DDTHH:MM)
+                if (event.registration_start && event.registration_start !== 'null' && event.registration_start !== '') {
+                    regStartDateTime = event.registration_start.replace(' ', 'T').substring(0, 16);
+                }
+                if (event.registration_end && event.registration_end !== 'null' && event.registration_end !== '') {
+                    regEndDateTime = event.registration_end.replace(' ', 'T').substring(0, 16);
+                }
+                
+                // Default: registration opens at event start, closes at event end
+                if (!regStartDateTime && startDateTime) {
+                    regStartDateTime = startDateTime;
+                }
+                if (!regEndDateTime && endDateTime) {
+                    regEndDateTime = endDateTime;
+                }
+                
+                document.getElementById('editRegistrationStart').value = regStartDateTime;
+                document.getElementById('editRegistrationEnd').value = regEndDateTime;
+                
+                console.log('✓ Registration dates set - Start:', regStartDateTime, 'End:', regEndDateTime);
+                
+                // Links and description
+                document.getElementById('editEventRegistrationLink').value = event.registration_link || '';
+                document.getElementById('editEventWebsiteLink').value = event.website || '';
                 document.getElementById('editEventDescription').value = event.description || '';
+                
+                // Private settings
                 document.getElementById('editEventPrivate').checked = event.is_private == 1;
                 
                 if (event.is_private == 1 && event.access_code) {
@@ -4777,22 +4845,33 @@ function openEditEventModal(eventId) {
                     document.getElementById('editPrivateCodeDisplay').style.display = 'none';
                 }
                 
+                // Reset file input
                 document.getElementById('editEventImage').value = '';
                 
+                // Display current image
                 const currentImageDiv = document.getElementById('editCurrentImage');
-                const currentImageUrl = getImageUrl(event.image_url);
+                const currentImageUrl = event.image_url ? getImageUrl(event.image_url) : null;
                 if (currentImageUrl) {
-                    currentImageDiv.innerHTML = `
-                        <div style="padding: 10px; background: #f0f0f0; border-radius: 4px;">
-                            <p style="margin: 0 0 8px 0; font-weight: bold;">Current Image:</p>
-                            <img src="${currentImageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
-                        </div>
-                    `;
+                    currentImageDiv.innerHTML = `<img src="${currentImageUrl}" alt="${event.event_name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
                 } else {
-                    currentImageDiv.innerHTML = '<p style="color: #999; font-size: 12px;">No image selected</p>';
+                    currentImageDiv.innerHTML = '<p style="color: #999; font-size: 13px;">No image currently set</p>';
                 }
                 
-                document.getElementById('editEventModal').style.display = 'block';
+                // Reset image preview
+                const previewDiv = document.getElementById('editEventImagePreview');
+                previewDiv.innerHTML = `
+                    <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Click to upload or drag & drop</span>
+                `;
+                
+                // Open modal
+                const modal = document.getElementById('editEventModal');
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                
+                console.log('✓ Edit modal opened successfully');
             } else {
                 showNotification('Failed to load event details', 'error');
             }
@@ -4804,56 +4883,203 @@ function openEditEventModal(eventId) {
 }
 
 function closeEditEventModal() {
-    document.getElementById('editEventModal').style.display = 'none';
+    const modal = document.getElementById('editEventModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    document.getElementById('editEventForm').reset();
+    document.getElementById('editCurrentImage').innerHTML = '';
+    document.getElementById('editEventImagePreview').innerHTML = `
+        <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <span>Click to upload or drag & drop</span>
+    `;
 }
 
-function updateEvent(e) {
-    console.log('=== UPDATE EVENT CALLED ===');
-    
-    if (e && typeof e.preventDefault === 'function') {
-        e.preventDefault();
+// Preview image for edit modal
+function previewEditEventImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewDiv = document.getElementById('editEventImagePreview');
+            previewDiv.style.backgroundImage = `url('${e.target.result}')`;
+            previewDiv.style.backgroundSize = 'cover';
+            previewDiv.style.backgroundPosition = 'center';
+            previewDiv.innerHTML = '';
+        };
+        reader.readAsDataURL(file);
     }
+}
+
+// Handle private event toggle for edit modal
+function handleEditPrivateEventToggle() {
+    const checkbox = document.getElementById('editEventPrivate');
+    const codeDisplay = document.getElementById('editPrivateCodeDisplay');
+    const codeInput = document.getElementById('editEventPrivateCode');
+    
+    if (checkbox.checked) {
+        codeDisplay.style.display = 'block';
+        if (!codeInput.value) {
+            codeInput.value = generateAccessCode();
+        }
+    } else {
+        codeDisplay.style.display = 'none';
+        codeInput.value = '';
+    }
+}
+
+// Submit edit event form
+function submitEditEventForm() {
+    console.log('=== SUBMIT EDIT EVENT FORM ===');
     
     const eventId = document.getElementById('editEventId').value;
     const eventName = document.getElementById('editEventName').value;
     const capacity = document.getElementById('editEventCapacity').value;
-    const eventDate = document.getElementById('editEventDate').value;
+    const location = document.getElementById('editEventLocation').value;
+    const startEvent = document.getElementById('editStartEvent').value;
+    const endEvent = document.getElementById('editEndEvent').value;
+    const regStart = document.getElementById('editRegistrationStart').value;
+    const regEnd = document.getElementById('editRegistrationEnd').value;
     
-    if (!eventName || !capacity || !eventDate) {
+    // Debug logging
+    console.log('Form values:');
+    console.log('  eventId:', eventId, '(empty: ' + !eventId + ')');
+    console.log('  eventName:', eventName);
+    console.log('  capacity:', capacity);
+    console.log('  location:', location);
+    console.log('  startEvent:', startEvent);
+    console.log('  endEvent:', endEvent);
+    console.log('  regStart:', regStart);
+    console.log('  regEnd:', regEnd);
+    
+    // Validate required fields
+    if (!eventName || !capacity || !location || !startEvent || !endEvent || !regStart || !regEnd) {
+        console.warn('✗ Validation failed - missing required fields');
         showNotification('Please fill in all required fields', 'error');
         return false;
     }
     
+    // Validate event ID
+    if (!eventId) {
+        console.error('✗ Event ID is missing!');
+        showNotification('Event ID is missing. Please close and reopen the modal to try again.', 'error');
+        return false;
+    }
+    
+    // Parse datetime-local to separate date and time
+    const [startDate, startTime] = startEvent.split('T');
+    const [endDate, endTime] = endEvent.split('T');
+    
     const formData = new FormData();
+    formData.append('action', 'update');
     formData.append('event_id', eventId);
     formData.append('event_name', eventName);
     formData.append('capacity', capacity);
-    formData.append('event_date', eventDate);
-    formData.append('start_time', document.getElementById('editEventStartTime').value || '');
-    formData.append('end_time', document.getElementById('editEventEndTime').value || '');
-    formData.append('location', document.getElementById('editEventLocation').value || '');
-    formData.append('department', document.getElementById('editEventDepartment').value || '');
-    formData.append('coordinator_id', document.getElementById('editEventCoordinator').value || '');
+    formData.append('event_date', startDate);
+    formData.append('start_time', startTime);
+    formData.append('end_date', endDate);
+    formData.append('end_time', endTime);
+    formData.append('location', location);
+    formData.append('registration_start', regStart);
+    formData.append('registration_end', regEnd);
     formData.append('description', document.getElementById('editEventDescription').value || '');
+    formData.append('registration_link', document.getElementById('editEventRegistrationLink').value || '');
+    formData.append('website_link', document.getElementById('editEventWebsiteLink').value || '');
+    
     const isPrivate = document.getElementById('editEventPrivate').checked ? 1 : 0;
     formData.append('is_private', isPrivate);
+    
+    if (isPrivate) {
+        formData.append('access_code', document.getElementById('editEventPrivateCode').value);
+    }
     
     const imageFile = document.getElementById('editEventImage').files[0];
     if (imageFile) {
         formData.append('image', imageFile);
     }
     
+    // Log all FormData entries being sent
+    console.log('✓ FormData entries:');
+    for (let [key, value] of formData.entries()) {
+        if (key === 'image') {
+            console.log(`  ${key}: <File: ${value.name || 'unknown'}>`);
+        } else {
+            console.log(`  ${key}: ${value}`);
+        }
+    }
+    
+    console.log('✓ Submitting form with event ID:', eventId);
+    console.log('✓ API endpoint:', `${API_BASE}/events.php`);
+    console.log('✓ Request method: PUT');
+    
+    // Prepare headers - DO NOT include Content-Type for FormData!
+    // The browser will automatically set it to multipart/form-data with boundary
+    const headers = getUserHeaders();
+    delete headers['Content-Type']; // Remove the default JSON content-type
+    
+    console.log('✓ Headers being sent:', headers);
+    
     fetch(`${API_BASE}/events.php`, {
         method: 'PUT',
+        headers: headers,
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('✓ Response status:', response.status);
+        console.log('✓ Response OK:', response.ok);
+        return response.json();
+    })
     .then(data => {
+        console.log('✓ API response:', data);
         if (data.success) {
+            showNotification('✓ Event updated successfully', 'success');
             logActivity('UPDATE', `Updated event: ${eventName}`);
             closeEditEventModal();
-            loadEvents();
+            
+            // Reload the event from API to get fresh data
+            console.log('✓ Fetching fresh event data for ID:', eventId);
+            fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`, { headers: getUserHeaders() })
+                .then(response => {
+                    console.log('✓ Fresh event fetch response status:', response.status);
+                    return response.json();
+                })
+                .then(eventData => {
+                    console.log('✓ Fresh event data received:', eventData);
+                    if (eventData.success && eventData.data) {
+                        console.log('✓ Event data valid, storing in currentEventDetails');
+                        // Store the fresh event data
+                        window.currentEventDetails = eventData.data;
+                        currentEventId = eventData.data.event_id;
+                        window.currentEventId = eventData.data.event_id;
+                        
+                        // Navigate to event details page and it will auto-refresh
+                        console.log('✓ Navigating to event details page (auto-refresh)');
+                        DashboardManager.switchPage('event-details');
+                        
+                        // Trigger refresh of the event details view
+                        setTimeout(() => {
+                            console.log('✓ Triggering event details refresh');
+                            if (typeof loadEventDetails === 'function') {
+                                loadEventDetails();
+                            }
+                        }, 300);
+                    } else {
+                        console.error('✗ Event data missing or error:', eventData.message);
+                        showNotification('Error loading event details', 'error');
+                        DashboardManager.switchPage('events');
+                        loadEvents();
+                    }
+                })
+                .catch(error => {
+                    console.error('✗ Error reloading event:', error);
+                    // Fallback: just switch to events page
+                    showNotification('Error loading event details. Returning to events.', 'error');
+                    DashboardManager.switchPage('events');
+                    loadEvents();
+                });
         } else {
+            console.error('✗ API error:', data.message);
             showNotification(data.message || 'Error updating event', 'error');
         }
     })
@@ -4864,6 +5090,34 @@ function updateEvent(e) {
     
     return false;
 }
+
+// Toggle private code display in edit modal
+function toggleEditPrivateCode() {
+    const checkbox = document.getElementById('editEventPrivate');
+    const display = document.getElementById('editPrivateCodeDisplay');
+    const codeInput = document.getElementById('editEventPrivateCode');
+    
+    if (checkbox.checked) {
+        display.style.display = 'block';
+        if (!codeInput.value) {
+            codeInput.value = generateAccessCode();
+        }
+    } else {
+        display.style.display = 'none';
+        codeInput.value = '';
+    }
+}
+
+// Set up edit form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const editForm = document.getElementById('editEventForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitEditEventForm();
+        });
+    }
+});
 
 function deleteEvent(eventId, eventName) {
     if (!eventId) {
@@ -9584,22 +9838,95 @@ function displayEventDetailsData(event) {
     const descValue = event.description && event.description.trim() && event.description !== 'undefined' && event.description !== 'null' ? event.description : '-';
     document.getElementById('detailsEventDescription').value = descValue;
     
-    // Event Image
-    const imageContainer = document.getElementById('detailsEventImage');
+    // Event Image - Set for both private and public layouts
+    const eventImageDisplay = document.getElementById('eventImageDisplay');
+    const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+    const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+    const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+    
     if (event.image_url) {
         const imageUrl = getImageUrl(event.image_url);
-        imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        // Set image for public layout
+        if (eventImageDisplay && eventImagePlaceholder) {
+            eventImageDisplay.src = imageUrl;
+            eventImageDisplay.style.display = 'block';
+            eventImagePlaceholder.style.display = 'none';
+        }
+        // Set image for private layout
+        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+            eventImageDisplayPrivate.src = imageUrl;
+            eventImageDisplayPrivate.style.display = 'block';
+            eventImagePlaceholderPrivate.style.display = 'none';
+        }
     } else {
-        imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        // Hide images for public layout
+        if (eventImageDisplay && eventImagePlaceholder) {
+            eventImageDisplay.style.display = 'none';
+            eventImagePlaceholder.style.display = 'flex';
+        }
+        // Hide images for private layout
+        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+            eventImageDisplayPrivate.style.display = 'none';
+            eventImagePlaceholderPrivate.style.display = 'flex';
+        }
     }
     
     // ============ REGISTRATION & WEB LINKS ============
     document.getElementById('detailsRegistrationLink').value = event.registration_link || '-';
     document.getElementById('detailsWebsite').value = event.website || '-';
+    // Also populate the private event version
+    document.getElementById('detailsRegistrationLinkPrivate').value = event.registration_link || '-';
+    document.getElementById('detailsWebsitePrivate').value = event.website || '-';
     
     // ============ PRIVACY ACCESS ============
     const privateCheckbox = document.getElementById('detailsPrivateEvent');
     privateCheckbox.checked = event.is_private == 1;
+    
+    // Toggle layout based on event privacy status
+    const privateEventLayout = document.getElementById('privateEventLayout');
+    const publicEventLayout = document.getElementById('publicEventLayout');
+    const privateEventRegistrationSection = document.getElementById('privateEventRegistrationSection');
+    
+    if (event.is_private == 1) {
+        // Show private event layout (Private Code + Event Image)
+        if (privateEventLayout) privateEventLayout.style.display = 'grid';
+        if (publicEventLayout) publicEventLayout.style.display = 'none';
+        if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'block';
+    } else {
+        // Show public event layout (Registration & Web Links + Event Image)
+        if (privateEventLayout) privateEventLayout.style.display = 'none';
+        if (publicEventLayout) publicEventLayout.style.display = 'grid';
+        if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'none';
+    }
+    
+    // Show private code in basic information container if event is private
+    const privateCodeSection = document.getElementById('basicInfoPrivateCodeSection');
+    const privateCodeInput = document.getElementById('basicInfoPrivateCode');
+    const createdDateEl = document.getElementById('accessCodeCreatedDate');
+    const expirationDateEl = document.getElementById('accessCodeExpirationDate');
+    
+    if (event.is_private == 1 && event.access_code) {
+        privateCodeInput.value = event.access_code;
+        
+        // Display access code metadata
+        const createdDate = event.access_code_created_at ? new Date(event.access_code_created_at).toLocaleDateString() : new Date().toLocaleDateString();
+        const expirationDate = event.registration_end ? new Date(event.registration_end).toLocaleDateString() : '—';
+        
+        if (createdDateEl) {
+            createdDateEl.textContent = createdDate;
+        }
+        
+        if (expirationDateEl) {
+            expirationDateEl.textContent = expirationDate;
+        }
+        
+        // Generate QR code for the access code
+        generateAccessCodeQR(event.access_code);
+    } else {
+        privateCodeInput.value = '';
+        if (createdDateEl) createdDateEl.textContent = '—';
+        if (expirationDateEl) expirationDateEl.textContent = '—';
+    }
 }
 
 
@@ -9737,23 +10064,67 @@ function displayEventDetailsForTab(event) {
     const descValue = event.description && event.description.trim() && event.description !== 'undefined' && event.description !== 'null' ? event.description : '-';
     document.getElementById('detailsEventDescription').value = descValue;
     
-    // Event Image
-    const imageContainer = document.getElementById('detailsEventImage');
+    // Event Image - Set for both private and public layouts
+    const eventImageDisplay = document.getElementById('eventImageDisplay');
+    const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+    const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+    const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+    
     if (event.image_url) {
         const imageUrl = getImageUrl(event.image_url);
-        imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        // Set image for public layout
+        if (eventImageDisplay && eventImagePlaceholder) {
+            eventImageDisplay.src = imageUrl;
+            eventImageDisplay.style.display = 'block';
+            eventImagePlaceholder.style.display = 'none';
+        }
+        // Set image for private layout
+        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+            eventImageDisplayPrivate.src = imageUrl;
+            eventImageDisplayPrivate.style.display = 'block';
+            eventImagePlaceholderPrivate.style.display = 'none';
+        }
     } else {
-        imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        // Hide images for public layout
+        if (eventImageDisplay && eventImagePlaceholder) {
+            eventImageDisplay.style.display = 'none';
+            eventImagePlaceholder.style.display = 'flex';
+        }
+        // Hide images for private layout
+        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+            eventImageDisplayPrivate.style.display = 'none';
+            eventImagePlaceholderPrivate.style.display = 'flex';
+        }
     }
     
     // ============ REGISTRATION & WEB LINKS ============
     document.getElementById('detailsRegistrationLink').value = event.registration_link || '-';
     document.getElementById('detailsWebsite').value = event.website || '-';
+    // Also populate the private event version
+    document.getElementById('detailsRegistrationLinkPrivate').value = event.registration_link || '-';
+    document.getElementById('detailsWebsitePrivate').value = event.website || '-';
     
     // ============ PRIVACY ACCESS ============
     const privateCheckbox = document.getElementById('detailsPrivateEvent');
     if (privateCheckbox) {
         privateCheckbox.checked = event.is_private == 1;
+    }
+    
+    // Toggle layout based on event privacy status
+    const privateEventLayout = document.getElementById('privateEventLayout');
+    const publicEventLayout = document.getElementById('publicEventLayout');
+    const privateEventRegistrationSection = document.getElementById('privateEventRegistrationSection');
+    
+    if (event.is_private == 1) {
+        // Show private event layout (Private Code + Event Image)
+        if (privateEventLayout) privateEventLayout.style.display = 'grid';
+        if (publicEventLayout) publicEventLayout.style.display = 'none';
+        if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'block';
+    } else {
+        // Show public event layout (Registration & Web Links + Event Image)
+        if (privateEventLayout) privateEventLayout.style.display = 'none';
+        if (publicEventLayout) publicEventLayout.style.display = 'grid';
+        if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'none';
     }
     
     // Log all event fields for debugging
@@ -10049,6 +10420,32 @@ function copyAccessCode() {
     }
 }
 
+function copyAccessCodeFromBasicInfo() {
+    const codeField = document.getElementById('basicInfoPrivateCode');
+    if (codeField && codeField.value && codeField.value !== '—') {
+        navigator.clipboard.writeText(codeField.value).then(() => {
+            showNotification('Access code copied to clipboard!', 'success');
+        }).catch(() => {
+            alert('Failed to copy access code');
+        });
+    }
+}
+
+// Generate QR code for private access code
+function generateAccessCodeQR(accessCode) {
+    if (!accessCode) return;
+    
+    const qrCodeImg = document.getElementById('basicInfoQRCodeImg');
+    if (!qrCodeImg) return;
+    
+    // Use QRServer API to generate QR code
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(accessCode)}&format=png`;
+    qrCodeImg.src = qrUrl;
+    qrCodeImg.style.width = '100%';
+    qrCodeImg.style.height = '100%';
+    qrCodeImg.style.objectFit = 'contain';
+}
+
 // Filter coordinators list
 function filterCoordinatorsList() {
     const searchValue = document.getElementById('coordinatorSearchInput').value.toLowerCase();
@@ -10256,7 +10653,7 @@ function saveEventDetails() {
 // ================================================================================
 
 function openLookupCoordinatorModal() {
-    console.log('🔍 Opening Lookup Coordinator modal');
+    console.log('🔍 Opening Lookup Coordinator modal for event:', currentEventId);
     
     const modal = document.getElementById('lookupCoordinatorModal');
     if (!modal) {
@@ -10267,66 +10664,99 @@ function openLookupCoordinatorModal() {
     // Show modal
     modal.classList.remove('hidden');
     
-    // Fetch and populate available coordinators
-    fetch(`${API_BASE}/coordinators.php?action=list`, {
+    // First, fetch already assigned coordinators for this event
+    let assignedCoordinatorIds = [];
+    
+    const alreadyAssignedPromise = fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
         headers: getUserHeaders()
     })
-    .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch coordinators');
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        const list = document.getElementById('coordinatorsLookupList');
-        if (!list) return;
-        
         if (data.success && Array.isArray(data.data)) {
-            list.innerHTML = data.data.map(coordinator => {
-                const profileImage = coordinator.profile_image || coordinator.coordinator_image;
+            assignedCoordinatorIds = data.data.map(c => String(c.coordinator_id));
+            console.log('✓ Already assigned coordinators:', assignedCoordinatorIds);
+            console.log('📌 Sample assigned ID:', assignedCoordinatorIds[0], 'type:', typeof assignedCoordinatorIds[0]);
+        }
+    })
+    .catch(error => console.warn('⚠ Could not fetch assigned coordinators:', error));
+    
+    // Fetch all available coordinators
+    Promise.all([alreadyAssignedPromise]).then(() => {
+        fetch(`${API_BASE}/coordinators.php?action=list`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch coordinators');
+            return response.json();
+        })
+        .then(data => {
+            const list = document.getElementById('coordinatorsLookupList');
+            if (!list) return;
+            
+            if (data.success && Array.isArray(data.data)) {
+                // Filter out already assigned coordinators - compare as strings to handle type mismatches
+                const availableCoordinators = data.data.filter(coord => {
+                    const coordIdStr = String(coord.coordinator_id || coord.id);
+                    const isAssigned = assignedCoordinatorIds.includes(coordIdStr);
+                    console.log(`📍 Coordinator ${coord.coordinator_name} (ID: ${coordIdStr}) - Assigned: ${isAssigned}`);
+                    return !isAssigned;
+                });
                 
-                let profileImageHtml;
-                if (profileImage) {
-                    let imgSrc = profileImage;
-                    if (!profileImage.includes('/')) {
-                        imgSrc = `../uploads/coordinators/${profileImage}`;
-                    }
-                    profileImageHtml = `
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
-                        </div>
-                    `;
-                } else {
-                    const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    profileImageHtml = `
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0;">
-                            ${initials}
-                        </div>
-                    `;
+                console.log(`📋 Total: ${data.data.length}, Available: ${availableCoordinators.length}, Assigned: ${assignedCoordinatorIds.length}`);
+                
+                if (availableCoordinators.length === 0) {
+                    list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af; font-size: 15px;">All coordinators are already assigned to this event</div>';
+                    return;
                 }
                 
-                return `
-                    <div class="coordinator-item" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s; cursor: pointer;" onclick="toggleCoordinatorCheckbox(this, ${coordinator.coordinator_id})" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                        <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1E73BB;" onclick="event.stopPropagation()">
-                        ${profileImageHtml}
-                        <div style="flex: 1; min-width: 0;">
-                            <h4 style="margin: 0; font-weight: 600; color: #1f2937; font-size: 15px;">${coordinator.coordinator_name || '-'}</h4>
-                            <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${coordinator.email || '-'}</p>
-                            <p style="margin: 2px 0 0 0; font-size: 13px; color: #6b7280;">${coordinator.company || 'No company'}</p>
+                list.innerHTML = availableCoordinators.map(coordinator => {
+                    const profileImage = coordinator.profile_image || coordinator.coordinator_image;
+                    
+                    let profileImageHtml;
+                    if (profileImage) {
+                        let imgSrc = profileImage;
+                        if (!profileImage.includes('/')) {
+                            imgSrc = `../uploads/coordinators/${profileImage}`;
+                        }
+                        profileImageHtml = `
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
+                            </div>
+                        `;
+                    } else {
+                        const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                        profileImageHtml = `
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0;">
+                                ${initials}
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                        <div class="coordinator-item" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s; cursor: pointer;" onclick="toggleCoordinatorCheckbox(this, ${coordinator.coordinator_id})" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                            <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1E73BB;" onclick="event.stopPropagation()">
+                            ${profileImageHtml}
+                            <div style="flex: 1; min-width: 0;">
+                                <h4 style="margin: 0; font-weight: 600; color: #1f2937; font-size: 15px;">${coordinator.coordinator_name || '-'}</h4>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${coordinator.email || '-'}</p>
+                                <p style="margin: 2px 0 0 0; font-size: 13px; color: #6b7280;">${coordinator.company || 'No company'}</p>
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
-            console.log('✓ Coordinators loaded:', data.data.length);
-        } else {
-            list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af;">No coordinators found</div>';
-            console.warn('⚠ No coordinators found or invalid response');
-        }
-    })
-    .catch(error => {
-        console.error('✗ Error fetching coordinators:', error);
-        const list = document.getElementById('coordinatorsLookupList');
-        if (list) {
-            list.innerHTML = '<div style="padding: 32px; text-align: center; color: #ef4444;">Error loading coordinators</div>';
-        }
-        showNotification('Error loading coordinators', 'error');
+                    `;
+                }).join('');
+                console.log('✓ Available coordinators loaded:', availableCoordinators.length);
+            } else {
+                list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af;">No coordinators found</div>';
+                console.warn('⚠ No coordinators found or invalid response');
+            }
+        })
+        .catch(error => {
+            console.error('✗ Error fetching coordinators:', error);
+            const list = document.getElementById('coordinatorsLookupList');
+            if (list) {
+                list.innerHTML = '<div style="padding: 32px; text-align: center; color: #ef4444;">Error loading coordinators</div>';
+            }
+            showNotification('Error loading coordinators', 'error');
+        });
     });
 }
 
@@ -10396,15 +10826,179 @@ function assignMultipleCoordinators() {
     })
     .then(data => {
         if (data.success) {
-            console.log(`✓ ${coordinatorIds.length} coordinator(s) assigned successfully`);
-            showNotification(`${coordinatorIds.length} coordinator(s) assigned successfully!`, 'success');
+            const newCount = data.new_assignments || coordinatorIds.length;
+            console.log(`✓ ${newCount} new coordinator(s) added successfully`);
+            
+            const message = newCount > 0 
+                ? `${newCount} coordinator(s) added successfully!`
+                : 'Selected coordinators were already assigned';
+            showNotification(message, 'success');
             
             // Close modal
             closeLookupCoordinatorModal();
             
-            // Reload the coordinators list
+            // Fetch and append only the newly assigned coordinators to the table
             setTimeout(() => {
-                loadEventCoordinators();
+                fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
+                    headers: getUserHeaders()
+                })
+                .then(response => response.json())
+                .then(response => {
+                    if (response.success && response.data && Array.isArray(response.data)) {
+                        const coordinatorsList = document.getElementById('eventCoordinatorsList');
+                        if (!coordinatorsList) return;
+                        
+                        // Get currently displayed coordinator IDs to find which ones are new
+                        const currentRows = Array.from(coordinatorsList.querySelectorAll('tr'));
+                        const displayedIds = new Set();
+                        currentRows.forEach(row => {
+                            const btn = row.querySelector('.action-btn');
+                            if (btn) {
+                                const onclickAttr = btn.getAttribute('onclick');
+                                if (onclickAttr) {
+                                    const match = onclickAttr.match(/removeCoordinatorFromEvent\((\d+)\)/);
+                                    if (match) {
+                                        displayedIds.add(String(match[1]));
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Find new coordinators that aren't in the table yet
+                        const newCoordinators = response.data.filter(coord => 
+                            !displayedIds.has(String(coord.coordinator_id))
+                        );
+                        
+                        if (newCoordinators.length > 0) {
+                            // Build HTML for only the new rows
+                            const newRows = newCoordinators.map(coordinator => {
+                                const profileImage = coordinator.coordinator_image;
+                                
+                                let profileImageHtml;
+                                if (profileImage) {
+                                    let imgSrc = profileImage;
+                                    if (!profileImage.includes('/')) {
+                                        imgSrc = `../uploads/coordinators/${profileImage}`;
+                                    }
+                                    profileImageHtml = `<td style="padding: 12px 16px; text-align: center;">
+                                        <div style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6;">
+                                        </div>
+                                    </td>`;
+                                } else {
+                                    const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                                    profileImageHtml = `<td style="padding: 12px 16px; text-align: center;">
+                                        <div style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: white;">
+                                            ${initials}
+                                        </div>
+                                    </td>`;
+                                }
+                                
+                                return `
+                                    <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;">
+                                        ${profileImageHtml}
+                                        <td style="padding: 10px 12px; color: #1f2937; font-weight: 500; font-size: 13px;">${coordinator.coordinator_name || '-'}</td>
+                                        <td style="padding: 10px 12px; color: #6b7280; font-size: 13px;">${coordinator.email || '-'}</td>
+                                        <td style="padding: 10px 12px; color: #6b7280; font-size: 13px;">${coordinator.company || '-'}</td>
+                                        <td style="padding: 10px 12px; color: #6b7280; font-size: 13px;">${coordinator.contact_number || '-'}</td>
+                                        <td style="padding: 10px 12px; text-align: center;">
+                                            <button class="action-btn" onclick="removeCoordinatorFromEvent(${coordinator.coordinator_id})" title="Remove Coordinator" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"/></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('');
+                            
+                            // Append only new rows to the table - existing ones stay in place
+                            coordinatorsList.innerHTML += newRows;
+                            console.log(`✓ Added ${newCoordinators.length} new coordinator(s) to table without moving existing ones`);
+                            
+                            // Add hover effects to the new remove buttons
+                            const buttons = coordinatorsList.querySelectorAll('.action-btn');
+                            buttons.forEach(btn => {
+                                btn.removeEventListener('mouseover', null);
+                                btn.removeEventListener('mouseout', null);
+                                
+                                btn.addEventListener('mouseover', function() {
+                                    this.style.transform = 'scale(1.15)';
+                                    this.style.backgroundColor = '#fef2f2';
+                                    this.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)';
+                                });
+                                btn.addEventListener('mouseout', function() {
+                                    this.style.transform = 'scale(1)';
+                                    this.style.backgroundColor = 'white';
+                                    this.style.boxShadow = 'none';
+                                });
+                            });
+                        }
+                        
+                        // Refresh the modal to hide newly assigned coordinators
+                        const modal = document.getElementById('lookupCoordinatorModal');
+                        if (modal && !modal.classList.contains('hidden')) {
+                            console.log('🔄 Refreshing modal to filter newly assigned coordinators...');
+                            let updatedAssignedIds = [];
+                            fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
+                                headers: getUserHeaders()
+                            })
+                            .then(resp => resp.json())
+                            .then(data => {
+                                if (data.success && Array.isArray(data.data)) {
+                                    updatedAssignedIds = data.data.map(c => String(c.coordinator_id));
+                                }
+                            })
+                            .then(() => {
+                                fetch(`${API_BASE}/coordinators.php?action=list`, {
+                                    headers: getUserHeaders()
+                                })
+                                .then(resp => resp.json())
+                                .then(data => {
+                                    const list = document.getElementById('coordinatorsLookupList');
+                                    if (!list) return;
+                                    
+                                    if (data.success && Array.isArray(data.data)) {
+                                        const availableCoordinators = data.data.filter(coord => {
+                                            const coordIdStr = String(coord.coordinator_id || coord.id);
+                                            return !updatedAssignedIds.includes(coordIdStr);
+                                        });
+                                        
+                                        if (availableCoordinators.length === 0) {
+                                            list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af; font-size: 15px;">All coordinators are already assigned to this event</div>';
+                                            return;
+                                        }
+                                        
+                                        list.innerHTML = availableCoordinators.map(coordinator => {
+                                            const profileImage = coordinator.profile_image || coordinator.coordinator_image;
+                                            let profileImageHtml;
+                                            if (profileImage) {
+                                                let imgSrc = profileImage;
+                                                if (!profileImage.includes('/')) {
+                                                    imgSrc = `../uploads/coordinators/${profileImage}`;
+                                                }
+                                                profileImageHtml = `<div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;"></div>`;
+                                            } else {
+                                                const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                                                profileImageHtml = `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0;">${initials}</div>`;
+                                            }
+                                            
+                                            return `
+                                                <div class="coordinator-item" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s; cursor: pointer;" onclick="toggleCoordinatorCheckbox(this, ${coordinator.coordinator_id})" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                                                    <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1E73BB;" onclick="event.stopPropagation()">
+                                                    ${profileImageHtml}
+                                                    <div style="flex: 1; min-width: 0;">
+                                                        <h4 style="margin: 0; font-weight: 600; color: #1f2937; font-size: 15px;">${coordinator.coordinator_name || '-'}</h4>
+                                                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">${coordinator.email || '-'}</p>
+                                                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #9ca3af;">${coordinator.contact_number || '-'}</p>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('');
+                                        console.log(`✓ Modal updated: ${availableCoordinators.length} available coordinators`);
+                                    }
+                                });
+                            });
+                        }
+                    }
+                });
             }, 300);
         } else {
             throw new Error(data.message || 'Failed to assign coordinators');
@@ -10446,6 +11040,94 @@ function removeCoordinatorFromEvent(coordinatorId) {
         // Fallback if modal cannot be created
         showNotification('Modal not available', 'error');
     }
+}
+
+// Confirm remove coordinator
+function confirmRemoveCoordinator() {
+    const coordinatorId = window.pendingRemoveCoordinatorId;
+    const eventId = window.pendingRemoveEventId || currentEventId;
+    
+    if (!coordinatorId || !eventId) {
+        showNotification('Missing coordinator or event ID', 'error');
+        document.getElementById('removeCoordinatorModal').classList.remove('active');
+        return;
+    }
+    
+    console.log(`🗑️ Removing coordinator ${coordinatorId} from event ${eventId}`);
+    
+    fetch(`${API_BASE}/events.php`, {
+        method: 'PUT',
+        headers: {
+            ...getUserHeaders(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            event_id: eventId,
+            coordinator_id: coordinatorId,
+            action: 'remove_coordinator'
+        })
+    })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('removeCoordinatorModal').classList.remove('active');
+            
+            if (data.success) {
+                showNotification('✓ Coordinator removed successfully!', 'success');
+                // Refresh the coordinator list
+                if (typeof loadEventCoordinators === 'function') {
+                    loadEventCoordinators();
+                } else if (typeof loadCoordinators === 'function') {
+                    loadCoordinators(eventId);
+                }
+            } else {
+                showNotification(data.message || 'Failed to remove coordinator', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('✗ Error removing coordinator:', error);
+            showNotification('Error removing coordinator: ' + error.message, 'error');
+            document.getElementById('removeCoordinatorModal').classList.remove('active');
+        });
+}
+
+// Confirm delete other information
+function confirmDeleteOtherInformation() {
+    const metadataId = window.pendingDeleteMetadataId;
+    const eventId = currentEventId;
+    
+    console.log('🔍 confirmDeleteOtherInformation called:', { metadataId, eventId });
+    
+    fetch(`${API_BASE}/metadata.php`, {
+        method: 'POST',
+        headers: { ...getUserHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'delete',
+            metadata_id: metadataId
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('deleteOtherInformationModal').classList.remove('active');
+            if (data.success) {
+                console.log('✅ Deletion successful, refreshing data');
+                showNotification('Other Information deleted successfully!', 'success');
+                if (typeof loadOtherInfo === 'function') {
+                    loadOtherInfo(eventId);
+                } else if (typeof loadEventOtherInfo === 'function') {
+                    loadEventOtherInfo();
+                }
+            } else {
+                showNotification('Error: ' + (data.message || 'Failed to delete'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error deleting other information', 'error');
+            document.getElementById('deleteOtherInformationModal').classList.remove('active');
+        });
 }
 
 // ============ PROGRAM MANAGEMENT ============

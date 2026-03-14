@@ -9,8 +9,6 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 });
 
 require_once '../config/db.php';
-require_once '../config/email_config.php';
-require_once '../includes/SimpleMailer.php';
 
 // Helper function to check if coordinator has access to an event
 function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
@@ -90,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       IFNULL(u.job_title, '') as job_title, 
                       IFNULL(u.contact_number, '') as phone,
                       '' as employee_code,
-                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
+                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM registrations r
                       JOIN users u ON r.user_id = u.user_id
                       JOIN events e ON r.event_id = e.event_id
@@ -112,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       IFNULL(u.job_title, '') as job_title, 
                       IFNULL(u.contact_number, '') as phone,
                       '' as employee_code,
-                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
+                      e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                       FROM users u
                       LEFT JOIN departments d ON u.department_id = d.department_id
                       LEFT JOIN registrations r ON u.user_id = r.user_id
@@ -197,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $department_id = isset($_GET['department_id']) ? intval($_GET['department_id']) : null; // department filter
         
         $query = "SELECT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.email, u.department_id, d.department_name,
-                  e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.is_walkIn, r.registered_at
+                  e.event_id, e.event_name, e.is_private, r.registration_id, r.registration_code, r.status, r.registered_at
                   FROM users u
                   LEFT JOIN departments d ON u.department_id = d.department_id
                   LEFT JOIN registrations r ON u.user_id = r.user_id
