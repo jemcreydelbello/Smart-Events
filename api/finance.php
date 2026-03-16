@@ -1,5 +1,9 @@
 <?php
 // Finance API for expenses tracking
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 header('Content-Type: application/json');
 
 require_once '../config/db.php';
@@ -67,40 +71,152 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
     
     if ($action === 'list') {
-        $query = "SELECT * FROM event_expenses WHERE event_id = ? ORDER BY created_at DESC";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('i', $event_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $items = [];
-        $total = 0;
-        
-        while ($row = $result->fetch_assoc()) {
-            $items[] = $row;
-            $total += floatval($row['total']);
+        try {
+            // Get event name and budget for this event
+            $budget_query = "SELECT event_name, budget FROM events WHERE event_id = ?";
+            $budget_stmt = $conn->prepare($budget_query);
+            
+            if (!$budget_stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $budget_stmt->bind_param('i', $event_id);
+            $budget_stmt->execute();
+            $budget_result = $budget_stmt->get_result();
+            $budget_row = $budget_result->fetch_assoc();
+            $event_name = $budget_row['event_name'] ?? 'Event ' . $event_id;
+            $budget = floatval($budget_row['budget'] ?? 0);
+            $budget_stmt->close();
+            
+            // Get expenses
+            $query = "SELECT * FROM event_expenses WHERE event_id = ? ORDER BY created_at DESC";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $stmt->bind_param('i', $event_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $items = [];
+            $total = 0;
+            
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+                $total += floatval($row['total']);
+            }
+            $stmt->close();
+            
+            $balance = $budget - $total;
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $items,
+                'grand_total' => $total,
+                'budget' => $budget,
+                'balance' => $balance,
+                'event_name' => $event_name
+            ]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+            exit;
         }
-        
-        echo json_encode([
-            'success' => true,
-            'data' => $items,
-            'grand_total' => $total
-        ]);
-        exit;
+    } else if ($action === 'get_budget') {
+        try {
+            $query = "SELECT budget FROM events WHERE event_id = ?";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $stmt->bind_param('i', $event_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $event_row = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($event_row) {
+                // Also get total expenses
+                $total_query = "SELECT COALESCE(SUM(quantity * unit_price), 0) as total_expenses FROM event_expenses WHERE event_id = ?";
+                $total_stmt = $conn->prepare($total_query);
+                
+                if (!$total_stmt) {
+                    throw new Exception('Prepare failed: ' . $conn->error);
+                }
+                
+                $total_stmt->bind_param('i', $event_id);
+                $total_stmt->execute();
+                $total_result = $total_stmt->get_result();
+                $total_row = $total_result->fetch_assoc();
+                $total_stmt->close();
+                
+                $total_expenses = floatval($total_row['total_expenses'] ?? 0);
+                $budget = floatval($event_row['budget'] ?? 0);
+                
+                echo json_encode([
+                    'success' => true,
+                    'budget' => $budget,
+                    'total_expenses' => $total_expenses,
+                    'balance' => $budget - $total_expenses
+                ]);
+            } else {
+                // Event not found
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Event not found'
+                ]);
+            }
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+            exit;
+        }
     } else if ($action === 'get') {
-        $expense_id = intval($_GET['expense_id'] ?? 0);
-        $query = "SELECT * FROM event_expenses WHERE expense_id = ? AND event_id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('ii', $expense_id, $event_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $item = $result->fetch_assoc();
-        
-        if ($item) {
-            echo json_encode(['success' => true, 'data' => $item]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Expense not found']);
+        try {
+            $expense_id = intval($_GET['expense_id'] ?? 0);
+            
+            if (!$expense_id) {
+                throw new Exception('Expense ID is required');
+            }
+            
+            $query = "SELECT * FROM event_expenses WHERE expense_id = ? AND event_id = ?";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $stmt->bind_param('ii', $expense_id, $event_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $item = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($item) {
+                echo json_encode(['success' => true, 'data' => $item]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Expense not found']);
+            }
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+            exit;
         }
-        exit;
     }
 }
 
@@ -151,6 +267,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Error creating expense: ' . $stmt->error]);
         }
         exit;
+    } else if ($action === 'set_budget') {
+        try {
+            $budget = floatval($data['budget'] ?? 0);
+            
+            if ($budget < 0) {
+                echo json_encode(['success' => false, 'message' => 'Budget cannot be negative']);
+                exit;
+            }
+            
+            // Update budget in events table
+            $query = "UPDATE events SET budget = ? WHERE event_id = ?";
+            $stmt = $conn->prepare($query);
+            
+            if (!$stmt) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+            
+            $stmt->bind_param('di', $budget, $event_id);
+            
+            if ($stmt->execute()) {
+                $stmt->close();
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Budget updated',
+                    'budget' => $budget
+                ]);
+            } else {
+                throw new Exception('Error updating budget: ' . $stmt->error);
+            }
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+            exit;
+        }
     } else if ($action === 'update') {
         $expense_id = intval($data['expense_id'] ?? 0);
         

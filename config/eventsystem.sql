@@ -588,7 +588,9 @@ INSERT INTO `event_tasks` (`task_id`, `event_id`, `task_name`, `description`, `d
 CREATE TABLE `event_timeline` (
   `timeline_id` int(11) NOT NULL,
   `event_id` int(11) NOT NULL,
+  `entry_type` varchar(50) DEFAULT 'timeline',
   `week_number` int(11) DEFAULT NULL,
+  `month` varchar(50) DEFAULT NULL,
   `title` varchar(255) DEFAULT NULL,
   `description` longtext DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),

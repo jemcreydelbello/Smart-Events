@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coordinator Image Debug</title>
+</head>
+<body>
+    <h2>Coordinator Image Debug</h2>
+    <p>Check browser console for coordinator data...</p>
+    
+    <script>
+        // Get event ID from URL or default
+        const params = new URLSearchParams(window.location.search);
+        const eventId = params.get('event_id') || 1;
+        
+        console.log('Testing API for event_id:', eventId);
+        
+        fetch(`../api/events.php?action=get_event_coordinators&event_id=${eventId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('🔍 API Response:', data);
+                if (data.success && data.data) {
+                    data.data.forEach(coord => {
+                        console.log(`  Coordinator: ${coord.coordinator_name}`);
+                        console.log(`    - coordinator_image value: "${coord.coordinator_image}"`);
+                        console.log(`    - Type: ${typeof coord.coordinator_image}`);
+                    });
+                }
+            })
+            .catch(err => console.error('Error:', err));
+    </script>
+</body>
+</html>

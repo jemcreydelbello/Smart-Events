@@ -38,7 +38,9 @@ function checkEventAccess($conn, $event_id, $userInfo) {
 $create_timeline_table = "CREATE TABLE IF NOT EXISTS event_timeline (
     timeline_id INT PRIMARY KEY AUTO_INCREMENT,
     event_id INT NOT NULL,
+    entry_type VARCHAR(50),
     week_number INT,
+    month VARCHAR(50),
     title VARCHAR(255),
     description LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -64,6 +66,17 @@ $create_program_flow_table = "CREATE TABLE IF NOT EXISTS event_program_flow (
 
 $conn->query($create_timeline_table);
 $conn->query($create_program_flow_table);
+
+// Ensure new columns exist in event_timeline table (for existing databases)
+$result = $conn->query("SHOW COLUMNS FROM event_timeline LIKE 'entry_type'");
+if ($result && $result->num_rows == 0) {
+    $conn->query("ALTER TABLE event_timeline ADD COLUMN entry_type VARCHAR(50) DEFAULT 'timeline' AFTER event_id");
+}
+
+$result = $conn->query("SHOW COLUMNS FROM event_timeline LIKE 'month'");
+if ($result && $result->num_rows == 0) {
+    $conn->query("ALTER TABLE event_timeline ADD COLUMN month VARCHAR(50) AFTER entry_type");
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
@@ -145,7 +158,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action === 'create-timeline') {
+        $entry_type = $data['entry_type'] ?? 'timeline';
         $week_number = intval($data['week_number'] ?? 0);
+        $month = $data['month'] ?? '';
         $title = $data['title'] ?? '';
         $description = $data['description'] ?? '';
         
@@ -154,9 +169,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        $query = "INSERT INTO event_timeline (event_id, week_number, title, description) VALUES (?, ?, ?, ?)";
+        $query = "INSERT INTO event_timeline (event_id, entry_type, week_number, month, title, description) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('iiss', $event_id, $week_number, $title, $description);
+        $stmt->bind_param('isisss', $event_id, $entry_type, $week_number, $month, $title, $description);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Timeline item created', 'timeline_id' => $conn->insert_id]);
@@ -190,7 +205,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     elseif ($action === 'update-timeline') {
         $timeline_id = intval($data['timeline_id'] ?? 0);
+        $entry_type = $data['entry_type'] ?? 'timeline';
         $week_number = intval($data['week_number'] ?? 0);
+        $month = $data['month'] ?? '';
         $title = $data['title'] ?? '';
         $description = $data['description'] ?? '';
         
@@ -199,9 +216,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        $query = "UPDATE event_timeline SET week_number = ?, title = ?, description = ? WHERE timeline_id = ? AND event_id = ?";
+        $query = "UPDATE event_timeline SET entry_type = ?, week_number = ?, month = ?, title = ?, description = ? WHERE timeline_id = ? AND event_id = ?";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('issii', $week_number, $title, $description, $timeline_id, $event_id);
+        $stmt->bind_param('sisssii', $entry_type, $week_number, $month, $title, $description, $timeline_id, $event_id);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Timeline item updated']);

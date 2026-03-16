@@ -14,8 +14,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <link rel="icon" type="image/png" href="../assets/logo2.png">
-  <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=2">
-  <link rel="stylesheet" href="./css/styles.css?v=3">
+  <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=3">
+  <link rel="stylesheet" href="./css/styles.css?v=4">
   <style>
     /* Modal Styling */
     .modal {
@@ -618,8 +618,8 @@
   </script>
   
   
-  <script src="./js/admin.js?v=29"></script>
-  <script src="./js/event-details.js?v=36"></script>
+  <script src="./js/admin.js?v=95"></script>
+  <script src="./js/event-details.js?v=51"></script>
   <script src="./js/catalogue-lookup.js?v=11"></script>
   
   <!-- Define helper function for inline scripts -->
@@ -1348,10 +1348,10 @@
                 <!-- Controls Row -->
                 <div class="flex items-center justify-end gap-3">
                   <!-- View Mode Buttons -->
-                  <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors" onclick="switchTasksView('list')">
+                  <button id="taskListViewBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors" onclick="switchTasksView('list')">
                     List
                   </button>
-                  <button class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors" onclick="switchTasksView('calendar')">
+                  <button id="taskMonthViewBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors" onclick="switchTasksView('calendar')">
                     Calendar
                   </button>
                   
@@ -1364,7 +1364,15 @@
 
               <!-- List View -->
               <div id="tasksListView" class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                <table class="w-full">
+                <table class="w-full" style="table-layout: fixed;">
+                  <colgroup>
+                    <col style="width: 16.67%;">
+                    <col style="width: 16.67%;">
+                    <col style="width: 16.67%;">
+                    <col style="width: 16.67%;">
+                    <col style="width: 16.67%;">
+                    <col style="width: 16.66%;">
+                  </colgroup>
                   <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">DATE OF COMPLETION / DUE DATE</th>
@@ -1375,7 +1383,7 @@
                       <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">ACTIONS</th>
                     </tr>
                   </thead>
-                  <tbody id="eventTasksTableBody" class="divide-y divide-gray-200">
+                  <tbody id="eventTasksTableBody">
                     <tr>
                       <td colspan="6" class="px-4 py-8 text-center text-gray-500">No tasks yet</td>
                     </tr>
@@ -1405,9 +1413,9 @@
                       </div>
 
                       <!-- Right: View Toggle Buttons -->
-                      <div class="flex gap-2">
-                        <button onclick="switchTasksCalendarView('month')" id="tasksMonthViewBtn" style="padding: 4px 16px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">month</button>
-                        <button onclick="switchTasksCalendarView('list')" id="tasksListViewBtn" class="px-4 py-1 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded">list</button>
+                      <div class="flex gap-3">
+                        <button onclick="switchTasksCalendarView('month')" id="tasksMonthViewBtn" style="padding: 8px 20px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">Month</button>
+                        <button onclick="switchTasksCalendarView('list')" id="tasksListViewBtn" style="padding: 8px 20px; background: #f3f4f6; color: #4b5563; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">List</button>
                       </div>
                     </div>
 
@@ -1430,8 +1438,8 @@
                     </div>
 
                     <!-- List View (Tasks List) -->
-                    <div id="tasksListViewContainer" class="hidden" style="display: none; flex-direction: column; flex: 1; overflow-y: auto;">
-                      <div id="tasksEventsList" class="space-y-3">
+                    <div id="tasksListViewContainer" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; width: 100%; height: 100%; min-height: 0;">
+                      <div id="tasksEventsList" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; width: 100%; min-height: fit-content;">
                         <!-- Tasks will be populated here -->
                       </div>
                     </div>
@@ -1723,6 +1731,12 @@ try {
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Week Number</label>
                   <input type="number" id="programWeek" placeholder="1, 2, 3..." min="1"
+                         style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827; background-color: white;">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                  <input type="month" id="programDate" 
                          style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827; background-color: white;">
                 </div>
 
@@ -2082,6 +2096,20 @@ try {
             </div>
 
             <form id="addExpenseForm" style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Budget Info Display -->
+              <div style="background: white; padding: 12px 16px; border-radius: 6px; border: 1px solid #ddd;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-size: 12px; color: #666; font-weight: 500; text-transform: uppercase; margin-bottom: 4px;">Event Budget</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #333;" id="modalBudgetDisplay">₱0.00</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 12px; color: #666; font-weight: 500; text-transform: uppercase; margin-bottom: 4px;">Remaining</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #333;" id="modalBalanceDisplay">₱0.00</div>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Description</label>
                 <input type="text" id="expenseDescription" placeholder="E.g., Hall Rental, Lunch Pack, Badge Printing" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
@@ -2109,6 +2137,66 @@ try {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Budget Overflow Confirmation Modal -->
+        <div id="budgetOverflowModal" class="hidden flex items-center justify-center" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+          <div style="background: white; border-radius: 12px; padding: 32px; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <!-- Warning Icon -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background-color: #fef3c7;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g class="warning-outline"><g fill="#f59e0b" class="Vector"><path fill-rule="evenodd" d="M12 13.8a1 1 0 0 1-1-1v-5a1 1 0 0 1 2 0v5a1 1 0 0 1-1 1" clip-rule="evenodd"/><path d="M10.947 15.958a1.053 1.053 0 1 1 2.106 0a1.053 1.053 0 0 1-2.106 0"/><path fill-rule="evenodd" d="m15.607 4.642l5.876 10.72c1.512 2.759-.473 6.138-3.607 6.138H6.124c-3.134 0-5.12-3.38-3.607-6.139l5.876-10.72c1.566-2.855 5.648-2.855 7.214 0Zm-1.804 1c-.782-1.429-2.824-1.429-3.606 0L4.32 16.36c-.757 1.38.236 3.069 1.803 3.069h11.752c1.567 0 2.56-1.69 1.803-3.07z" clip-rule="evenodd"/></g></g></svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h3 style="text-align: center; font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Budget Alert</h3>
+
+            <!-- Message -->
+            <p id="budgetOverflowMessage" style="text-align: center; font-size: 14px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.5;"></p>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeBudgetOverflowModal()" 
+                      style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                Cancel
+              </button>
+              <button type="button" onclick="confirmBudgetOverflow()" 
+                      style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                Add Expense
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteConfirmModal" class="hidden flex items-center justify-center" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+          <div style="background: white; border-radius: 12px; padding: 32px; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <!-- Delete Icon -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background-color: #fee2e2;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 1.4 14a2 2 0 0 0 2 1.6h12.2a2 2 0 0 0 2-1.6L21 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6H5M10 11v6M14 11v6"/></svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h3 style="text-align: center; font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Delete Expense</h3>
+
+            <!-- Message -->
+            <p id="deleteConfirmMessage" style="text-align: center; font-size: 14px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.5;">Are you sure you want to delete this expense? This action cannot be undone.</p>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeDeleteConfirmModal()" 
+                      style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                Cancel
+              </button>
+              <button type="button" onclick="confirmDeleteExpense()" 
+                      style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                Delete
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2162,11 +2250,52 @@ try {
         </div>
 
         <div id="finance" class="event-tab-content hidden space-y-6" style="display: none;">
+          <!-- Budget Warning Alert -->
+          <div id="budgetWarning" style="display: none; padding: 12px 16px; border-radius: 6px; border-left: 4px solid; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div>
+                <div id="warningTitle" style="font-weight: 600; font-size: 14px;"></div>
+                <div id="warningMessage" style="font-size: 13px; margin-top: 2px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget KPI Cards -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Budget</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="budgetAmount">₱0.00</div>
+              <div class="text-xs text-gray-600">Event budget allocation</div>
+            </div>
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Total Expenses</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="grandTotalDisplay">₱0.00</div>
+              <div class="text-xs text-gray-600">Sum of all expenses</div>
+            </div>
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Balance</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="balanceAmount">₱0.00</div>
+              <div class="text-xs text-gray-600" id="balanceStatus">Remaining</div>
+            </div>
+          </div>
+
+          <!-- Budget Setting Section -->
+          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div class="flex items-end gap-4">
+              <div class="flex-1">
+                <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Set Event Budget</label>
+                <input type="number" id="budgetInput" placeholder="Enter budget amount for this event" min="0" step="0.01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+              </div>
+              <button onclick="saveBudget()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Save Budget</button>
+            </div>
+          </div>
+
+          <!-- Expenses Management Section -->
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div class="flex justify-between items-center mb-6">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-1">Finance</h2>
-                <p class="text-sm text-gray-600">Budget and expense tracking.</p>
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Expenses</h2>
+                <p class="text-sm text-gray-600">Track all event expenses against budget.</p>
               </div>
               <div class="flex gap-2">
                 <button onclick="openAddExpenseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Add Expense</button>
@@ -2190,14 +2319,6 @@ try {
                   <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No expenses yet</td></tr>
                 </tbody>
               </table>
-            </div>
-
-            <!-- Grand Total -->
-            <div class="flex justify-end mt-6 pt-6 border-t border-gray-200">
-              <div class="text-right">
-                <div class="text-sm text-gray-600 mb-2">Grand Total:</div>
-                <div class="text-3xl font-bold text-gray-900" id="grandTotalDisplay">₱0.00</div>
-              </div>
             </div>
           </div>
         </div>
@@ -3177,10 +3298,24 @@ try {
         <!-- Party Responsible -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Party Responsible</label>
-          <textarea id="taskResponsible" required placeholder=""
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none bg-white"
-                    rows="2"
-                    style="min-height: 60px;"></textarea>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="taskResponsible" readonly placeholder="No coordinator selected"
+                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 cursor-not-allowed">
+            <input type="hidden" id="taskResponsibleId">
+            <button type="button" onclick="openLookupCoordinatorTaskModal()" 
+                    style="padding: 0 24px; background: #1E73BB; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap; height: 38px; transition: opacity 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48"><g fill="#ffffff"><path d="M18.748 12.816c-1.74.067-3.313.688-4.154 1.53a1 1 0 1 1-1.414-1.415c1.297-1.297 3.409-2.033 5.49-2.114c2.095-.081 4.382.492 5.984 2.094a1 1 0 0 1-1.415 1.414c-1.09-1.091-2.764-1.577-4.491-1.51"/><path fill-rule="evenodd" d="M28.936 27.384A12.95 12.95 0 0 0 32 19c0-7.18-5.82-13-13-13S6 11.82 6 19s5.82 13 13 13c3.195 0 6.12-1.152 8.384-3.064L27 31.144l7.514 7.514l4.144-4.144L31.144 27zM19 29c5.523 0 10-4.477 10-10S24.523 9 19 9S9 13.477 9 19s4.477 10 10 10" clip-rule="evenodd"/><path d="m35.928 40.072l4.144-4.144l1.356 1.356c.763.763.763 2 0 2.762l-1.382 1.382c-.763.763-2 .763-2.762 0z"/></g></svg>
+              Lookup
+            </button>
+          </div>
+        </div>
+
+        <!-- Selected Coordinators Preview -->
+        <div id="selectedCoordinatorsPreview" style="display: none; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background: #f9fafb;">
+          <p style="font-weight: 600; color: #1f2937; margin: 0 0 12px 0; font-size: 13px;">✓ Selected Coordinators:</p>
+          <div id="selectedCoordinatorsPreviewContent" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Selected coordinators will be displayed here -->
+          </div>
         </div>
 
         <!-- Status -->
@@ -6312,6 +6447,60 @@ try {
       <!-- Footer -->
       <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; text-align: right; background: #fafafa;">
         <button onclick="closeQRParticipantsModal()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lookup Coordinator for Task Modal -->
+  <div id="lookupCoordinatorTaskModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 16px;">
+    <div style="background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+      <!-- Header -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 32px 24px; border-radius: 16px 16px 0 0; flex-shrink: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Select Coordinators</h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Choose one or more coordinators assigned to this event</p>
+          </div>
+          <button onclick="closeLookupCoordinatorTaskModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 28px; cursor: pointer; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.3s; flex-shrink: 0;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">✕</button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;">
+        <input type="text" id="coordinatorTaskSearchInput" placeholder="Search by name, email, or company..." style="width: 100%; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #1f2937; box-sizing: border-box;" onkeyup="filterCoordinatorsTaskList()">
+      </div>
+
+      <!-- Coordinators List -->
+      <div id="coordinatorsTaskList" style="flex: 1; overflow-y: auto; padding: 16px 24px; min-height: 0;">
+        <!-- Coordinators will be loaded here -->
+        <p style="text-align: center; color: #9ca3af; padding: 20px;">Loading coordinators...</p>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 20px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 16px 16px; display: flex; gap: 12px; justify-content: flex-end; flex-shrink: 0;">
+        <button onclick="closeLookupCoordinatorTaskModal()" style="padding: 12px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button id="confirmCoordinatorSelectionBtn" onclick="confirmCoordinatorSelection()" style="padding: 12px 24px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; opacity: 0.5; pointer-events: none;" onmouseover="if(this.style.opacity!='0.5')this.style.background='#1a5fa0'" onmouseout="if(this.style.opacity!='0.5')this.style.background='#1E73BB'">Confirm Selection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Status Remarks Modal -->
+  <div id="taskStatusRemarksModal" class="modal" onclick="if(event.target.id === 'taskStatusRemarksModal') closeTaskStatusRemarksModal();">
+    <div class="modal-content">
+      <div style="margin: -30px -30px 0 -30px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border-radius: 8px 8px 0 0;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: white; padding: 16px 24px;">Add Remarks for Status Change</h2>
+        <button onclick="closeTaskStatusRemarksModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: white; padding: 16px 24px;">&times;</button>
+      </div>
+      
+      <div style="padding: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">New Status: <span id="modalStatusDisplay" style="color: #1E73BB;"></span></label>
+        <textarea id="taskRemarksInput" placeholder="Enter remarks for this status change..." style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical; min-height: 120px; box-sizing: border-box;"></textarea>
+        <p style="margin-top: 8px; font-size: 12px; color: #6b7280;">This will help track why the status was changed.</p>
+      </div>
+      
+      <div style="padding: 16px 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button onclick="closeTaskStatusRemarksModal()" style="padding: 10px 20px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button onclick="submitTaskStatusRemarksModal()" style="padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#1a5fa0'" onmouseout="this.style.background='#1E73BB'">Update Status</button>
       </div>
     </div>
   </div>
