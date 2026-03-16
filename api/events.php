@@ -317,29 +317,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
         
         if ($hasCoordinators) {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.start_event, e.end_event, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
-                      MAX(eac.access_code) as access_code, MAX(eac.is_active) as access_code_is_active, MAX(eac.created_at) as access_code_created_at,
+                      MAX(eac.access_code) as access_code,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
                       SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
                       (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
                       FROM events e
                       LEFT JOIN users u ON e.created_by = u.user_id
                       LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
-                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id
+                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id AND eac.is_active = 1
                       LEFT JOIN registrations r ON e.event_id = r.event_id
                       WHERE e.event_id = ?
                       GROUP BY e.event_id";
         } else {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.start_event, e.end_event, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
-                      MAX(eac.access_code) as access_code, MAX(eac.is_active) as access_code_is_active, MAX(eac.created_at) as access_code_created_at,
+                      MAX(eac.access_code) as access_code,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
                       SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
                       (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
                       FROM events e
                       LEFT JOIN users u ON e.created_by = u.user_id
-                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id
+                      LEFT JOIN event_access_codes eac ON e.event_id = eac.event_id AND eac.is_active = 1
                       LEFT JOIN registrations r ON e.event_id = r.event_id
                       WHERE e.event_id = ?
                       GROUP BY e.event_id";
@@ -533,48 +533,23 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $event_id = intval($_POST['event_id'] ?? 0);
         $event_name = isset($_POST['event_name']) ? trim($_POST['event_name']) : '';
         $location = isset($_POST['location']) ? trim($_POST['location']) : '';
+        $event_date = isset($_POST['event_date']) ? trim($_POST['event_date']) : '';
+        $start_time = isset($_POST['start_time']) ? trim($_POST['start_time']) : '00:00:00';
+        $end_time = isset($_POST['end_time']) ? trim($_POST['end_time']) : '23:59:59';
         $capacity = intval($_POST['capacity'] ?? 0);
         $registration_link = isset($_POST['registration_link']) ? trim($_POST['registration_link']) : '';
         $website_link = isset($_POST['website_link']) ? trim($_POST['website_link']) : '';
         $description = isset($_POST['description']) ? trim($_POST['description']) : '';
         
-        // Handle new datetime-local format (YYYY-MM-DDTHH:mm) or legacy separate date/time
-        $start_event = '';
-        $end_event = '';
-        
-        if (isset($_POST['start_event']) && !empty($_POST['start_event'])) {
-            // New format: datetime-local (YYYY-MM-DDTHH:mm)
-            $start_event = str_replace('T', ' ', trim($_POST['start_event'])) . ':00';
-        } elseif (isset($_POST['event_date']) && !empty($_POST['event_date'])) {
-            // Legacy format: separate date and time
-            $event_date = trim($_POST['event_date']);
-            $start_time = isset($_POST['start_time']) ? trim($_POST['start_time']) : '00:00:00';
-            $start_event = $event_date . ' ' . $start_time;
-        }
-        
-        if (isset($_POST['end_event']) && !empty($_POST['end_event'])) {
-            // New format: datetime-local (YYYY-MM-DDTHH:mm)
-            $end_event = str_replace('T', ' ', trim($_POST['end_event'])) . ':00';
-        } elseif (isset($_POST['event_date']) && !empty($_POST['event_date'])) {
-            // Legacy format: separate date and time
-            $event_date = trim($_POST['event_date']);
-            $end_time = isset($_POST['end_time']) ? trim($_POST['end_time']) : '23:59:59';
-            $end_event = $event_date . ' ' . $end_time;
-        }
-        
-        // Handle registration dates
-        $registration_start = isset($_POST['registration_start']) && !empty($_POST['registration_start']) 
-            ? str_replace('T', ' ', trim($_POST['registration_start'])) . ':00'
-            : null;
-        $registration_end = isset($_POST['registration_end']) && !empty($_POST['registration_end'])
-            ? str_replace('T', ' ', trim($_POST['registration_end'])) . ':00'
-            : null;
-        
-        if (!$event_id || !$event_name || !$location || !$start_event || !$end_event || !$capacity) {
+        if (!$event_id || !$event_name || !$location || !$event_date || !$capacity) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Missing required fields']);
             exit;
         }
+        
+        // Construct datetime fields from date and time
+        $start_event = $event_date . ' ' . $start_time;
+        $end_event = $event_date . ' ' . $end_time;
         
         // Handle image upload if provided
         $image_url = null;
@@ -634,9 +609,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Update event details
-        $query = "UPDATE events SET event_name = ?, location = ?, start_event = ?, end_event = ?, capacity = ?, registration_link = ?, website_link = ?, description = ?, registration_start = ?, registration_end = ?";
-        $params = [$event_name, $location, $start_event, $end_event, $capacity, $registration_link, $website_link, $description, $registration_start, $registration_end];
-        $types = 'ssssisssss';
+        $query = "UPDATE events SET event_name = ?, location = ?, start_event = ?, end_event = ?, capacity = ?, registration_link = ?, website_link = ?, description = ?";
+        $params = [$event_name, $location, $start_event, $end_event, $capacity, $registration_link, $website_link, $description];
+        $types = 'ssssisss';
         
         // Add image update if image was provided
         if ($image_url) {
@@ -727,20 +702,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$start_event && isset($_POST['event_date']) && isset($_POST['start_time'])) {
             $event_date = $_POST['event_date'] ?? '';
             $start_time = $_POST['start_time'] ?? '';
-            // Ensure time has seconds for MySQL DATETIME format
-            if ($start_time && strpos($start_time, ':') !== false && substr_count($start_time, ':') === 1) {
-                $start_time = $start_time . ':00';
-            }
             $start_event = $event_date . ' ' . $start_time;
         }
         
         if (!$end_event && isset($_POST['event_date']) && isset($_POST['end_time'])) {
             $event_date = $_POST['event_date'] ?? '';
             $end_time = $_POST['end_time'] ?? '';
-            // Ensure time has seconds for MySQL DATETIME format
-            if ($end_time && strpos($end_time, ':') !== false && substr_count($end_time, ':') === 1) {
-                $end_time = $end_time . ':00';
-            }
             $end_event = $event_date . ' ' . $end_time;
         }
         
@@ -899,20 +866,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$start_event && isset($data['event_date']) && isset($data['start_time'])) {
             $event_date = $data['event_date'] ?? '';
             $start_time = $data['start_time'] ?? '';
-            // Ensure time has seconds for MySQL DATETIME format
-            if ($start_time && strpos($start_time, ':') !== false && substr_count($start_time, ':') === 1) {
-                $start_time = $start_time . ':00';
-            }
             $start_event = $event_date . ' ' . $start_time;
         }
         
         if (!$end_event && isset($data['event_date']) && isset($data['end_time'])) {
             $event_date = $data['event_date'] ?? '';
             $end_time = $data['end_time'] ?? '';
-            // Ensure time has seconds for MySQL DATETIME format
-            if ($end_time && strpos($end_time, ':') !== false && substr_count($end_time, ':') === 1) {
-                $end_time = $end_time . ':00';
-            }
             $end_event = $event_date . ' ' . $end_time;
         }
         
@@ -993,19 +952,13 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     // Check content type to determine how to parse
     $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
     
-    error_log('=== PUT Request Started ===');
-    error_log('Content-Type: ' . $content_type);
-    error_log('Input length: ' . strlen($input) . ' bytes');
-    
     if (strpos($content_type, 'multipart/form-data') !== false) {
-        error_log('Parsing as multipart/form-data');
         // FormData with file upload
         // For PUT requests, we need to manually parse multipart data
         // PHP doesn't auto-populate $_POST/$_FILES for PUT
         
         // Try to use $_POST and $_FILES if available (some servers support it)
         if (!empty($_POST)) {
-            error_log('Using $_POST and $_FILES (server supports auto-population)');
             $data = $_POST;
             $files = $_FILES;
         } else {
@@ -1013,14 +966,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             $boundary = '';
             if (preg_match('/boundary=([^;]+)/', $content_type, $matches)) {
                 $boundary = trim($matches[1], "\"\t ");
-                error_log('Boundary detected: ' . $boundary);
             }
             
             if ($boundary) {
                 // Parse multipart data
                 $parts = explode('--' . $boundary, $input);
-                error_log('Found ' . count($parts) . ' parts');
-                foreach ($parts as $idx => $part) {
+                foreach ($parts as $part) {
                     if (empty(trim($part)) || $part === '--') continue;
                     
                     // Separate headers from content
@@ -1054,12 +1005,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                                         'error' => 0,
                                         'size' => strlen($content)
                                     ];
-                                    error_log("File parsed: $name ($filename)");
                                 }
                             } else {
                                 // Regular form field
                                 $data[$name] = $content;
-                                error_log("Field parsed: $name = $content");
                             }
                         }
                     }
@@ -1067,33 +1016,18 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             }
         }
     } else if (strpos($content_type, 'application/json') !== false) {
-        error_log('Parsing as application/json');
         // JSON request
         $data = json_decode($input, true) ?? [];
     } else if (!empty($input)) {
-        error_log('Parsing as form data via parse_str');
         // Fallback: try to parse as form data
         parse_str($input, $data);
     }
     
-    error_log('Data keys after parsing: ' . implode(', ', array_keys($data)));
-    error_log('Files after parsing: ' . implode(', ', array_keys($files)));
-    error_log('Full $data dump: ' . json_encode($data));
-    
     $event_id = intval($data['event_id'] ?? 0);
     $action = $data['action'] ?? 'update';
     
-    // Log the incoming data for debugging
-    error_log('=== PUT Event Update Request ===');
-    error_log('Raw event_id: ' . var_export($data['event_id'] ?? 'NOT SET', true));
-    error_log('Parsed event_id: ' . $event_id);
-    error_log('Action: ' . $action);
-    
     if (!$event_id) {
-        error_log('ERROR: Event ID is missing or zero');
-        error_log('Data array contents: ' . print_r($data, true));
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Event ID required. Debug: Data keys = ' . implode(', ', array_keys($data))]);
+        echo json_encode(['success' => false, 'message' => 'Event ID required']);
         exit;
     }
     
@@ -1168,23 +1102,19 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         $conn->begin_transaction();
         
         try {
-            // Get already assigned coordinators for this event
-            $existingQuery = "SELECT coordinator_id FROM event_coordinators WHERE event_id = ?";
-            $existingStmt = $conn->prepare($existingQuery);
-            if (!$existingStmt) {
-                throw new Exception('Failed to prepare existing query: ' . $conn->error);
+            // Delete existing assignments for this event
+            $deleteQuery = "DELETE FROM event_coordinators WHERE event_id = ?";
+            $deleteStmt = $conn->prepare($deleteQuery);
+            if (!$deleteStmt) {
+                throw new Exception('Failed to prepare delete statement: ' . $conn->error);
             }
-            $existingStmt->bind_param('i', $event_id);
-            $existingStmt->execute();
-            $existingResult = $existingStmt->get_result();
-            
-            $existingIds = [];
-            while ($row = $existingResult->fetch_assoc()) {
-                $existingIds[] = intval($row['coordinator_id']);
+            $deleteStmt->bind_param('i', $event_id);
+            if (!$deleteStmt->execute()) {
+                throw new Exception('Failed to delete existing assignments: ' . $deleteStmt->error);
             }
-            $existingStmt->close();
+            $deleteStmt->close();
             
-            // Only insert coordinators that are NOT already assigned (additive, not replacement)
+            // Insert new assignments
             $insertQuery = "INSERT INTO event_coordinators (event_id, coordinator_id, assigned_date, assigned_by) VALUES (?, ?, NOW(), ?)";
             $insertStmt = $conn->prepare($insertQuery);
             if (!$insertStmt) {
@@ -1194,20 +1124,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             $userInfo = getUserInfo();
             $assigned_by = $userInfo['user_id'] ?? 0;
             
-            $newAssignments = 0;
             foreach ($coordinator_ids as $coordinator_id) {
                 $coordinator_id = intval($coordinator_id);
-                
-                // Skip if already assigned to avoid duplicate key error
-                if (in_array($coordinator_id, $existingIds)) {
-                    continue;
-                }
-                
                 $insertStmt->bind_param('iii', $event_id, $coordinator_id, $assigned_by);
                 if (!$insertStmt->execute()) {
                     throw new Exception('Failed to assign coordinator ' . $coordinator_id . ': ' . $insertStmt->error);
                 }
-                $newAssignments++;
                 
                 // Also activate the coordinator account
                 $activateQuery = "UPDATE coordinators SET is_active = 1 WHERE coordinator_id = ?";
@@ -1221,12 +1143,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             // Commit transaction
             $conn->commit();
             
-            $message = $newAssignments > 0 
-                ? $newAssignments . ' new coordinator(s) added successfully'
-                : 'All selected coordinators were already assigned';
-            
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => $message, 'new_assignments' => $newAssignments]);
+            echo json_encode(['success' => true, 'message' => count($coordinator_ids) . ' coordinator(s) assigned successfully']);
         } catch (Exception $e) {
             // Rollback on error
             $conn->rollback();
@@ -1309,18 +1227,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $department = isset($data['department']) ? $data['department'] : NULL;
     $coordinator_id = isset($data['coordinator_id']) && $data['coordinator_id'] ? intval($data['coordinator_id']) : NULL;
     
-    // Handle registration dates (can come as 'registration_open'/'registration_close' or 'registration_start'/'registration_end')
-    $registration_start = $data['registration_start'] ?? $data['registration_open'] ?? '';
-    $registration_end = $data['registration_end'] ?? $data['registration_close'] ?? '';
-    
-    // Convert datetime-local format (YYYY-MM-DDTHH:MM) to MySQL datetime format (YYYY-MM-DD HH:MM:SS)
-    if ($registration_start) {
-        $registration_start = str_replace('T', ' ', $registration_start) . ':00';
-    }
-    if ($registration_end) {
-        $registration_end = str_replace('T', ' ', $registration_end) . ':00';
-    }
-    
     $image_url = $existing['image_url']; // Keep existing by default
     
     // Handle file upload if provided
@@ -1392,27 +1298,11 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     // Build start_event and end_event from event_date and time fields
     $start_event = null;
     $end_event = null;
-    
-    // Log the original values
-    error_log("PUT update - event_date: '$event_date', start_time: '$start_time', end_time: '$end_time'");
-    
-    // Ensure times have seconds (MySQL DATETIME format requires HH:MM:SS)
-    if ($start_time && strpos($start_time, ':') !== false && substr_count($start_time, ':') === 1) {
-        $start_time = $start_time . ':00'; // Add seconds if not present
-        error_log("PUT update - Added seconds to start_time: '$start_time'");
-    }
-    if ($end_time && strpos($end_time, ':') !== false && substr_count($end_time, ':') === 1) {
-        $end_time = $end_time . ':00'; // Add seconds if not present
-        error_log("PUT update - Added seconds to end_time: '$end_time'");
-    }
-    
     if ($event_date && $start_time) {
         $start_event = $event_date . ' ' . $start_time;
-        error_log("PUT update - Built start_event: '$start_event'");
     }
     if ($event_date && $end_time) {
         $end_event = $event_date . ' ' . $end_time;
-        error_log("PUT update - Built end_event: '$end_event'");
     }
     
     // Check if coordinator_id column exists
@@ -1431,8 +1321,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                   is_private = ?,
                   registration_link = ?,
                   website = ?,
-                  registration_start = ?,
-                  registration_end = ?,
                   coordinator_id = ?
                   WHERE event_id = ?";
         
@@ -1442,7 +1330,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             echo json_encode(['success' => false, 'message' => 'Database error (prepare with coordinator): ' . $conn->error]);
             exit;
         }
-        $bind_result = $stmt->bind_param('ssssssiissssii', $event_name, $description, $start_event, $end_event, $location, $image_url, $capacity, $is_private, $registration_link, $website_link, $registration_start, $registration_end, $coordinator_id, $event_id);
+        $bind_result = $stmt->bind_param('ssssssiiisii', $event_name, $description, $start_event, $end_event, $location, $image_url, $capacity, $is_private, $registration_link, $website_link, $coordinator_id, $event_id);
         if (!$bind_result) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Bind param error (with coordinator): ' . $stmt->error]);
@@ -1459,9 +1347,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                   capacity = ?, 
                   is_private = ?,
                   registration_link = ?,
-                  website = ?,
-                  registration_start = ?,
-                  registration_end = ?
+                  website = ?
                   WHERE event_id = ?";
         
         $stmt = $conn->prepare($query);
@@ -1470,7 +1356,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             echo json_encode(['success' => false, 'message' => 'Database error (prepare without coordinator): ' . $conn->error]);
             exit;
         }
-        $bind_result = $stmt->bind_param('ssssssiissssi', $event_name, $description, $start_event, $end_event, $location, $image_url, $capacity, $is_private, $registration_link, $website_link, $registration_start, $registration_end, $event_id);
+        $bind_result = $stmt->bind_param('ssssssiissi', $event_name, $description, $start_event, $end_event, $location, $image_url, $capacity, $is_private, $registration_link, $website_link, $event_id);
         if (!$bind_result) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Bind param error (without coordinator): ' . $stmt->error]);

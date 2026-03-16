@@ -82,20 +82,16 @@ window.cancelEventDetailsEdit = function() {
     // Reload event details to revert changes
     if (window.currentEventId) {
         loadEventDetails(window.currentEventId);
-        
-        // After reload completes, make all inputs readonly again
-        // Use a small delay to ensure DOM updates are complete
-        setTimeout(() => {
-            inputs.forEach(input => {
-                input.setAttribute('readonly', 'readonly');
-                input.classList.remove('cursor-text');
-                input.classList.add('cursor-not-allowed');
-                input.style.backgroundColor = 'white';
-                input.style.cursor = 'not-allowed';
-            });
-            console.log('✓ Made fields readonly after reload');
-        }, 600);
     }
+    
+    // Make all inputs readonly again
+    inputs.forEach(input => {
+        input.setAttribute('readonly', 'readonly');
+        input.classList.remove('cursor-text');
+        input.classList.add('cursor-not-allowed');
+        input.style.backgroundColor = 'white';
+        input.style.cursor = 'not-allowed';
+    });
     
     // Make event image non-clickable
     const imageContainer = document.getElementById('detailsEventImage');
@@ -146,24 +142,11 @@ window.handleEditEventImage = function(event) {
     // Preview the image
     const reader = new FileReader();
     reader.onload = function(e) {
-        const eventImageDisplay = document.getElementById('eventImageDisplay');
-        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
-        const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
-        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
-        
-        // Update public layout
-        if (eventImageDisplay && eventImagePlaceholder) {
-            eventImageDisplay.src = e.target.result;
-            eventImageDisplay.style.display = 'block';
-            eventImagePlaceholder.style.display = 'none';
+        const imageContainer = document.getElementById('detailsEventImage');
+        if (imageContainer) {
+            imageContainer.innerHTML = `<img src="${e.target.result}" alt="Event" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+            console.log('✓ Image preview displayed');
         }
-        // Update private layout
-        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
-            eventImageDisplayPrivate.src = e.target.result;
-            eventImageDisplayPrivate.style.display = 'block';
-            eventImagePlaceholderPrivate.style.display = 'none';
-        }
-        console.log('✓ Image preview displayed');
     };
     reader.readAsDataURL(file);
     
@@ -185,28 +168,19 @@ window.saveEventDetails = function() {
         return;
     }
     
-    const eventTitle = document.getElementById('editEventName')?.value || '';
-    const location = document.getElementById('eventLocation')?.value || '';
-    const capacity = document.getElementById('eventCapacity')?.value || '';
-    const registrationLink = document.getElementById('eventRegistrationLink')?.value || '';
-    const websiteLink = document.getElementById('eventWebsiteLink')?.value || '';
-    const description = document.getElementById('eventDescription')?.value || '';
-    const startEvent = document.getElementById('editStartEvent')?.value || '';
-    const endEvent = document.getElementById('editEndEvent')?.value || '';
-    const registrationStart = document.getElementById('editRegistrationStart')?.value || '';
-    const registrationEnd = document.getElementById('editRegistrationEnd')?.value || '';
+    const eventTitle = document.getElementById('detailsEventTitle')?.value || '';
+    const location = document.getElementById('detailsEventLocation')?.value || '';
+    const eventDate = document.getElementById('detailsEventDate')?.value || '';
+    const capacity = document.getElementById('detailsEventCapacity')?.value || '';
+    const registrationLink = document.getElementById('detailsRegistrationLink')?.value || '';
+    const websiteLink = document.getElementById('detailsWebsite')?.value || '';
+    const description = document.getElementById('detailsEventDescription')?.value || '';
     
-    console.log('Form values:', { eventTitle, location, capacity, startEvent, endEvent });
+    console.log('Form values:', { eventTitle, location, eventDate, capacity });
     
     // Validate required fields
-    if (!eventTitle.trim() || !location.trim() || !capacity || !startEvent || !endEvent) {
-        showNotification('Please fill in all required fields (Title, Location, Capacity, Start Event, End Event)', 'error');
-        return;
-    }
-    
-    // Validate end event is after start event
-    if (new Date(endEvent) <= new Date(startEvent)) {
-        showNotification('End Event must be after Start Event', 'error');
+    if (!eventTitle.trim() || !location.trim() || !eventDate || !capacity) {
+        showNotification('Please fill in all required fields', 'error');
         return;
     }
     
@@ -216,11 +190,8 @@ window.saveEventDetails = function() {
     formData.append('event_id', eventId);
     formData.append('event_name', eventTitle);
     formData.append('location', location);
-    formData.append('start_event', startEvent);
-    formData.append('end_event', endEvent);
+    formData.append('event_date', eventDate);
     formData.append('capacity', capacity);
-    formData.append('registration_start', registrationStart);
-    formData.append('registration_end', registrationEnd);
     formData.append('registration_link', registrationLink);
     formData.append('website_link', websiteLink);
     formData.append('description', description);
@@ -246,9 +217,13 @@ window.saveEventDetails = function() {
             const fileInput = document.getElementById('editEventImage');
             if (fileInput) fileInput.value = '';
             
-            // Exit edit mode - this will also reload event details
-            // Don't call loadEventDetails again as cancelEventDetailsEdit already does it
+            // Exit edit mode
             window.cancelEventDetailsEdit();
+            
+            // Reload event details to show updated data
+            if (window.currentEventId) {
+                setTimeout(() => loadEventDetails(window.currentEventId), 500);
+            }
         } else {
             showNotification('Error saving event details: ' + (data.message || 'Unknown error'), 'error');
             console.error('❌ Error saving:', data);
@@ -696,38 +671,6 @@ function displayEventDetails(event) {
     
     // Details tab - populate all fields with error checking
     try {
-        // Convert full datetime strings to datetime-local format (YYYY-MM-DDTHH:mm)
-        let startEventValue = '';
-        let endEventValue = '';
-        let registrationStartValue = '';
-        let registrationEndValue = '';
-        
-        // Helper function to convert datetime string to datetime-local format
-        const convertToDatetimeLocal = (dateStr) => {
-            if (!dateStr) return '';
-            try {
-                // Handle format: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
-                const cleaned = String(dateStr).replace('T', ' ').trim();
-                // Extract just YYYY-MM-DD HH:mm part (16 characters)
-                if (cleaned.length >= 16) {
-                    const yearMonth = cleaned.substring(0, 10); // YYYY-MM-DD
-                    const time = cleaned.substring(11, 16); // HH:mm
-                    return yearMonth + 'T' + time; // YYYY-MM-DDTHH:mm
-                }
-                return '';
-            } catch (e) {
-                console.warn('Failed to convert datetime:', dateStr, e);
-                return '';
-            }
-        };
-        
-        startEventValue = convertToDatetimeLocal(event.start_event);
-        endEventValue = convertToDatetimeLocal(event.end_event);
-        registrationStartValue = convertToDatetimeLocal(event.registration_start);
-        registrationEndValue = convertToDatetimeLocal(event.registration_end);
-        
-        console.log('Converted datetime values:', { startEventValue, endEventValue, registrationStartValue, registrationEndValue });
-        
         const fields = [
             { id: 'detailsEventTitle', value: event.event_name || '-', label: 'Event Title' },
             { id: 'detailsEventLocation', value: event.location || '-', label: 'Location' },
@@ -737,44 +680,18 @@ function displayEventDetails(event) {
             { id: 'detailsEventDescription', value: event.description || '-', label: 'Description' },
             { id: 'detailsRegistrationLink', value: event.registration_link || '-', label: 'Registration Link' },
             { id: 'detailsEventCapacity', value: capacity || '-', label: 'Capacity' },
-            { id: 'detailsEventTypeField', value: (event.is_private == 1 ? 'Private' : 'Public'), label: 'Event Type' },
-            { id: 'startEvent', value: startEventValue, label: 'Start Event Datetime', isDatetime: true },
-            { id: 'endEvent', value: endEventValue, label: 'End Event Datetime', isDatetime: true },
-            { id: 'registrationStart', value: registrationStartValue, label: 'Registration Start', isDatetime: true },
-            { id: 'registrationEnd', value: registrationEndValue, label: 'Registration End', isDatetime: true },
-            { id: 'editStartEvent', value: startEventValue, label: 'Edit Start Event Datetime', isDatetime: true },
-            { id: 'editEndEvent', value: endEventValue, label: 'Edit End Event Datetime', isDatetime: true },
-            { id: 'editRegistrationStart', value: registrationStartValue, label: 'Edit Registration Start', isDatetime: true },
-            { id: 'editRegistrationEnd', value: registrationEndValue, label: 'Edit Registration End', isDatetime: true }
+            { id: 'detailsEventTypeField', value: (event.is_private == 1 ? 'Private' : 'Public'), label: 'Event Type' }
         ];
         
         fields.forEach(field => {
             const el = document.getElementById(field.id);
             if (el) {
-                try {
-                    if (el.tagName === 'TEXTAREA') {
-                        el.textContent = field.value;
-                    } else if (field.isDatetime) {
-                        // For datetime-local fields, remove readonly temporarily if it exists
-                        const wasReadonly = el.hasAttribute('readonly');
-                        if (wasReadonly) {
-                            el.removeAttribute('readonly');
-                        }
-                        // Force set the value
-                        el.value = field.value;
-                        el.setAttribute('value', field.value);
-                        // Restore readonly if it was there
-                        if (wasReadonly) {
-                            el.setAttribute('readonly', 'readonly');
-                        }
-                        console.log(`✓ Set ${field.label}: "${field.value}" (readonly was: ${wasReadonly})`);
-                    } else {
-                        el.value = field.value;
-                        console.log(`✓ Set ${field.label}:`, field.value);
-                    }
-                } catch (fieldError) {
-                    console.warn(`⚠ Error setting field ${field.id}:`, fieldError);
+                if (el.tagName === 'TEXTAREA') {
+                    el.textContent = field.value;
+                } else {
+                    el.value = field.value;
                 }
+                console.log(`✓ Set ${field.label}:`, field.value);
             } else {
                 console.warn(`⚠ Field not found: #${field.id}`);
             }
@@ -785,61 +702,18 @@ function displayEventDetails(event) {
     
     // Event Image - Display visually
     try {
-        const eventImageDisplay = document.getElementById('eventImageDisplay');
-        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
-        const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
-        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
-        
-        if (event.image_url || event.image) {
-            const imageUrl = getImageUrl(event.image_url || event.image);
-            // Set image for public layout
-            if (eventImageDisplay && eventImagePlaceholder) {
-                eventImageDisplay.src = imageUrl;
-                eventImageDisplay.style.display = 'block';
-                eventImagePlaceholder.style.display = 'none';
+        const imageContainer = document.getElementById('detailsEventImage');
+        if (imageContainer) {
+            if (event.image_url || event.image) {
+                const imageUrl = getImageUrl(event.image_url || event.image);
+                imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+            } else {
+                imageContainer.innerHTML = '<span class="text-gray-400" style="font-size: 48px; display: flex; flex-direction: column; align-items: center; gap: 8px;"><span style="font-size: 24px; line-height: 1;">📷 No image</span></span>';
             }
-            // Set image for private layout
-            if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
-                eventImageDisplayPrivate.src = imageUrl;
-                eventImageDisplayPrivate.style.display = 'block';
-                eventImagePlaceholderPrivate.style.display = 'none';
-            }
-        } else {
-            // Hide images for public layout
-            if (eventImageDisplay && eventImagePlaceholder) {
-                eventImageDisplay.style.display = 'none';
-                eventImagePlaceholder.style.display = 'flex';
-            }
-            // Hide images for private layout
-            if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
-                eventImageDisplayPrivate.style.display = 'none';
-                eventImagePlaceholderPrivate.style.display = 'flex';
-            }
+            console.log('✓ Set event image');
         }
-        console.log('✓ Set event image');
     } catch (e) {
         console.error('Error setting image:', e);
-    }
-    
-    // Toggle layout based on event privacy status
-    try {
-        const privateEventLayout = document.getElementById('privateEventLayout');
-        const publicEventLayout = document.getElementById('publicEventLayout');
-        const privateEventRegistrationSection = document.getElementById('privateEventRegistrationSection');
-        
-        if (event.is_private == 1) {
-            // Show private event layout (Private Code + Event Image)
-            if (privateEventLayout) privateEventLayout.style.display = 'grid';
-            if (publicEventLayout) publicEventLayout.style.display = 'none';
-            if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'block';
-        } else {
-            // Show public event layout (Registration & Web Links + Event Image)
-            if (privateEventLayout) privateEventLayout.style.display = 'none';
-            if (publicEventLayout) publicEventLayout.style.display = 'grid';
-            if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'none';
-        }
-    } catch (e) {
-        console.error('Error toggling layout:', e);
     }
     
     // Handle Privacy Access section visibility
@@ -5158,23 +5032,6 @@ function closeLookupCoordinatorEventModal() {
 
 async function loadPendingCoordinatorsEvent() {
     try {
-        // First, fetch already assigned coordinators for this event
-        let assignedCoordinatorIds = [];
-        const assignedResponse = await fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
-            method: 'GET',
-            headers: getUserHeaders()
-        });
-        
-        if (assignedResponse.ok) {
-            const assignedData = await assignedResponse.json();
-            if (assignedData.success && Array.isArray(assignedData.data)) {
-                assignedCoordinatorIds = assignedData.data.map(c => String(c.coordinator_id));
-                console.log('✓ Already assigned coordinators:', assignedCoordinatorIds);
-                console.log('📌 Sample assigned ID:', assignedCoordinatorIds[0], 'type:', typeof assignedCoordinatorIds[0]);
-            }
-        }
-        
-        // Now fetch all coordinators
         const response = await fetch(`${API_BASE}/coordinators.php?action=list`, {
             method: 'GET',
             headers: getUserHeaders()
@@ -5183,16 +5040,7 @@ async function loadPendingCoordinatorsEvent() {
         const data = await response.json();
         
         if (data.success) {
-            // Filter out already assigned coordinators - compare as strings to handle type mismatches
-            const availableCoordinators = (data.data || []).filter(coord => {
-                const coordIdStr = String(coord.coordinator_id || coord.id);
-                const isAssigned = assignedCoordinatorIds.includes(coordIdStr);
-                console.log(`📍 Coordinator ${coord.coordinator_name} (ID: ${coordIdStr}) - Assigned: ${isAssigned}`);
-                return !isAssigned;
-            });
-            
-            console.log(`📋 Total: ${data.data.length}, Available: ${availableCoordinators.length}, Assigned: ${assignedCoordinatorIds.length}`);
-            displayCoordinatorsEventList(availableCoordinators);
+            displayCoordinatorsEventList(data.data || []);
         } else {
             document.getElementById('coordinatorsEventList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading coordinators: ' + (data.message || 'Unknown error') + '</p>';
         }
@@ -5206,7 +5054,7 @@ function displayCoordinatorsEventList(coordinators) {
     const listContainer = document.getElementById('coordinatorsEventList');
     
     if (!coordinators || coordinators.length === 0) {
-        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">All coordinators are already assigned to this event</p>';
+        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">No coordinators available</p>';
         return;
     }
     
@@ -5284,43 +5132,7 @@ async function assignCoordinatorToEventFromLookup(coordinatorId, coordinatorName
         if (activateData.success) {
             alert(`✓ Coordinator "${coordinatorName}" assigned to event and account activated!`);
             closeLookupCoordinatorEventModal();
-            
-            // Append the new coordinator to the table instead of reloading
-            const table = document.getElementById('coordinatorsTable');
-            if (table) {
-                // Check if there's a "no coordinators" message and clear it
-                const noCoordMsg = table.querySelector('tr td[colspan="4"]');
-                if (noCoordMsg && noCoordMsg.textContent.includes('No coordinators assigned')) {
-                    table.innerHTML = ''; // Clear the empty message
-                }
-                
-                // Create a new row for the assigned coordinator
-                const newRow = `
-                    <tr>
-                        <td class="px-4 py-3">${escapeHtml(coordinatorName)}</td>
-                        <td class="px-4 py-3">—</td>
-                        <td class="px-4 py-3">—</td>
-                        <td class="px-4 py-3 flex gap-2">
-                            <button class="action-btn" onclick="removeCoordinatorFromEvent(${coordinatorId}, ${currentEventId})" title="Remove Coordinator" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                
-                // Append the new row to the table (don't reload - keep existing rows in place)
-                table.innerHTML += newRow;
-                console.log(`✓ Appended coordinator "${coordinatorName}" to table`);
-            }
-            
-            // Refresh the modal to hide the newly assigned coordinator
-            setTimeout(() => {
-                const modal = document.getElementById('lookupCoordinatorEventModal');
-                if (modal && !modal.classList.contains('hidden')) {
-                    console.log('🔄 Refreshing event modal to filter newly assigned coordinator...');
-                    loadPendingCoordinatorsEvent();
-                }
-            }, 100);
+            loadCoordinators(currentEventId); // Refresh the coordinator list
         } else {
             alert('Coordinator assigned to event, but error activating account: ' + (activateData.message || 'Unknown error'));
             loadCoordinators(currentEventId);
