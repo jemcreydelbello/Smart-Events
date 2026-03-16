@@ -802,7 +802,7 @@
           <!-- Page Title and Description -->
           <div class="mb-8">
             <h1 style="font-size: 32px; font-weight: 700; color: #000000; margin-bottom: 8px; margin-top: 0;">Calendar</h1>
-            <p class="text-gray-600">Interactive calendar with event markers and mock deadlines.</p>
+            <p class="text-gray-600">Interactive calendar with event markers and mock deadlines. Click any date to view details.</p>
           </div>
 
           <!-- Main Calendar Layout with Fixed Widths -->
@@ -853,9 +853,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Click instruction -->
-              <p class="text-gray-600 text-sm">Click any calendar date or deadline to view details.</p>
             </div>
 
             <!-- Right: Deadline Details Panel (Fixed Width) -->
@@ -863,7 +860,7 @@
               <div class="bg-white rounded-lg p-6 border border-gray-200 sticky" style="top: 32px;">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Deadline Details</h3>
                 
-                <div id="deadlineStats" class="text-sm text-gray-600 mb-6">
+                <div id="deadlineStats" class="text-sm text-gray-600 mb-6 pb-4 border-b border-gray-300">
                   <p id="deadlineCount">No events or mock deadlines on this date.</p>
                 </div>
 
@@ -3659,7 +3656,7 @@ try {
     <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; max-height: 90vh;">
       <!-- Header (Fixed) -->
       <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200" style="flex-shrink: 0;">
-        <h2 class="text-2xl font-bold text-gray-900">Edit Event Cover</h2>
+        <h2 class="text-2xl font-bold text-gray-900">Change Event Cover</h2>
         <button type="button" onclick="closeEditEventCoverModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
       </div>
       
@@ -3671,7 +3668,7 @@ try {
           <input type="hidden" id="editCoverEventName" value="">
           
           
-          <p class="text-sm text-gray-600 mb-4">Upload a new cover image for this event. The image will be used as the catalogue cover.</p>
+          <p class="text-sm text-gray-600 mb-4">Upload a new cover image for this event in the "Past Events Catalogue".</p>
           
           <!-- Image Preview (Clickable - Drag & Drop) -->
           <div id="editCoverImagePreview" onclick="document.getElementById('editCoverImageInput').click()" style="width: 100%; height: 16rem; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';">
