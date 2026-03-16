@@ -9,8 +9,8 @@ var API_BASE = window.API_BASE || '../api';
 // Declare currentEventId as module-level variable (admin.js also declares this)
 var currentEventId = null;
 
-// attendeesData is also already declared in admin.js
-// Do not redeclare it here - use window.attendeesData instead
+// Declare attendeesData globally for use across both files
+var attendeesData = { initial: [], walkIn: [], actual: [] };
 
 // ========================================
 // IMMEDIATE FUNCTION DEFINITIONS
@@ -3339,12 +3339,15 @@ function loadKPIData(eventId) {
         const participants = participantsData.data;
         console.log('KPI: Fetched', participants.length, 'total participants');
         
-        // Update attendeesData with fresh data - use EXACT same logic as Attendees section
-        // Filter by status field only (no 'attended' field in API response)
-        attendeesData.initial = participants.filter(a => a.status !== 'ATTENDED');
-        attendeesData.actual = participants.filter(a => a.status === 'ATTENDED');
+        // Update attendeesData with proper filtering - MATCH ATTENDEES TAB LOGIC
+        // Initial Attendees = Not yet attended (status = 'registered')
+        // Walk-in Attendees = Those with is_walkIn = 1
+        // Actual Attendees = All who attended (status = 'attended')
+        attendeesData.initial = participants.filter(a => a.status === 'registered');  // Not yet attended
+        attendeesData.walkIn = participants.filter(a => a.is_walkIn == 1);            // Actual walk-ins
+        attendeesData.actual = participants.filter(a => a.status === 'attended');     // Attended/checked-in
         
-        console.log('KPI: Initial count:', attendeesData.initial.length, '| Actual count:', attendeesData.actual.length);
+        console.log('KPI: Registered (Initial):', attendeesData.initial.length, '| Walk-in:', attendeesData.walkIn.length, '| Actual (Attended):', attendeesData.actual.length);
         
         // Now fetch event data for capacity
         return fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`, { headers })
@@ -3368,21 +3371,19 @@ function loadKPIData(eventId) {
             document.getElementById('kpiTargetAttendees').value = targetAttendees;
         }
         
-        let projectedWalkIn = parseInt(document.getElementById('kpiProjectedWalkIn').value) || 0;
-        
-        // Calculate attendee counts using attendeesData that was just updated
-        const initialAttendees = attendeesData.initial.length;
-        const walkInAttendees = projectedWalkIn;
-        const totalAttendees = initialAttendees + walkInAttendees;
-        const actualAttendees = attendeesData.actual.length;
+        // Calculate attendee counts using filtered data
+        const initialAttendees = attendeesData.initial.length;        // Registered (is_walkIn = 0)
+        const actualWalkInCount = attendeesData.walkIn.length;         // Actual walk-ins (is_walkIn = 1)
+        const totalAttendees = initialAttendees + actualWalkInCount;
+        const actualAttendees = attendeesData.actual.length;           // Attended/checked-in
         const remaining = Math.max(0, targetAttendees - totalAttendees);
         const progressPercent = targetAttendees > 0 ? Math.round((actualAttendees / targetAttendees) * 100) : 0;
         
-        console.log('KPI Calculations:', { targetAttendees, projectedWalkIn, initialAttendees, actualAttendees, remaining, progressPercent });
+        console.log('KPI Calculations:', { targetAttendees, initialAttendees, actualWalkInCount, actualAttendees, remaining, progressPercent });
         
         // Update UI
         document.getElementById('kpiInitialAttendees').textContent = initialAttendees;
-        document.getElementById('kpiWalkInAttendees').textContent = walkInAttendees;
+        document.getElementById('kpiWalkInAttendees').textContent = actualWalkInCount;
         document.getElementById('kpiTargetDisplay').textContent = targetAttendees;
         document.getElementById('kpiRemaining').textContent = remaining;
         document.getElementById('kpiActualAttendeesCount').textContent = actualAttendees;
@@ -3398,13 +3399,13 @@ function loadKPIData(eventId) {
         messageContainer.classList.add('bg-blue-50', 'border-blue-200');
         
         if (remaining > 0) {
-            messageEl.textContent = `${remaining} more attendees needed to meet the target. Total registered attendees: ${totalAttendees}.`;
+            messageEl.textContent = `Target: ${targetAttendees} | Registered: ${initialAttendees} + Walk-ins: ${actualWalkInCount} + Attended: ${actualAttendees} | Remaining: ${remaining}`;
         } else if (actualAttendees >= targetAttendees) {
-            messageEl.textContent = `Target met! ${actualAttendees} attendees checked in out of ${targetAttendees} target.`;
+            messageEl.textContent = `Target met! ${actualAttendees} attendees checked in out of ${targetAttendees} target. (Registered: ${initialAttendees}, Walk-in: ${actualWalkInCount})`;
             messageContainer.classList.remove('bg-blue-50', 'border-blue-200');
             messageContainer.classList.add('bg-green-50', 'border-green-200');
         } else {
-            messageEl.textContent = `${actualAttendees} attendees checked in. ${remaining} more needed.`;
+            messageEl.textContent = `${actualAttendees} attended. (Registered: ${initialAttendees}, Walk-in: ${actualWalkInCount}) Need ${remaining} more.`;
         }
     })
     .catch(error => {
@@ -3420,7 +3421,6 @@ console.log('[DEBUG] Assigned window.loadKPIData immediately after function defi
 // Update KPI data when input values change
 function initializeKPIInputListeners() {
     const targetInput = document.getElementById('kpiTargetAttendees');
-    const walkInInput = document.getElementById('kpiProjectedWalkIn');
     
     // Use both 'change' and 'input' events for real-time updates
     const updateKPI = () => {
@@ -3432,11 +3432,6 @@ function initializeKPIInputListeners() {
     if (targetInput) {
         targetInput.addEventListener('change', updateKPI);
         targetInput.addEventListener('input', updateKPI);
-    }
-    
-    if (walkInInput) {
-        walkInInput.addEventListener('change', updateKPI);
-        walkInInput.addEventListener('input', updateKPI);
     }
 }
 
@@ -4446,9 +4441,9 @@ function loadAttendees() {
         if (data.success && Array.isArray(data.data)) {
             console.log('✓ Loaded', data.data.length, 'total attendees');
             
-            // Separate attendees by status - use status field as the authoritative source
-            attendeesData.initial = data.data.filter(a => a.status !== 'ATTENDED');
-            attendeesData.actual = data.data.filter(a => a.status === 'ATTENDED');
+            // Separate attendees by status - use lowercase status values ('registered', 'attended')
+            attendeesData.initial = data.data.filter(a => a.status === 'registered');
+            attendeesData.actual = data.data.filter(a => a.status === 'attended');
             
             // Sync to window object
             window.attendeesData = attendeesData;

@@ -4,9 +4,8 @@
 // Includes: main.js, event-details.js, dashboard-api.js, coordinators.js, catalogue.js
 // ================================================================================
 
-// Set API_BASE on both window and local scope for maximum compatibility
-window.API_BASE = '../api';
-const API_BASE = window.API_BASE;
+// API_BASE is already defined in event-details.js (loads first)
+// No need to redeclare it here - use window.API_BASE or global API_BASE
 
 // ================================================================================
 // SECTION 1: UTILITY FUNCTIONS & HELPERS
@@ -4316,6 +4315,87 @@ function closeEventDetailsModal() {
     window.history.pushState({}, '', url);
 }
 
+// KPI Save wrapper function - ensures it's always available
+function saveKPIDetails() {
+    console.log('[saveKPIDetails WRAPPER] Called in admin.js');
+    
+    if (!currentEventId) {
+        alert('No event selected');
+        return;
+    }
+    
+    const targetAttendees = document.getElementById('kpiTargetAttendees');
+    const projectedWalkIn = document.getElementById('kpiProjectedWalkIn');
+    
+    if (!targetAttendees || !projectedWalkIn) {
+        alert('KPI input fields not found');
+        return;
+    }
+    
+    const targetValue = targetAttendees.value;
+    const projectedValue = projectedWalkIn.value;
+    
+    console.log('Form values:', { targetValue, projectedValue, currentEventId });
+    
+    // Validate inputs
+    if (!targetValue || parseInt(targetValue) <= 0) {
+        alert('Please enter a valid target number of attendees');
+        return;
+    }
+    
+    if (!projectedValue || parseInt(projectedValue) < 0) {
+        alert('Please enter a valid projected walk-in attendees count');
+        return;
+    }
+    
+    console.log('Validation passed, preparing to save...');
+    
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    
+    // Save to database via API
+    fetch(`${API_BASE}/kpi.php?action=save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-User-Role': headers['X-User-Role'] || '',
+            'X-User-Id': headers['X-User-Id'] || '',
+            'X-Coordinator-Id': headers['X-Coordinator-Id'] || ''
+        },
+        body: JSON.stringify({
+            action: 'save',
+            event_id: currentEventId,
+            target_attendees: parseInt(targetValue),
+            projected_walk_in: parseInt(projectedValue)
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('API Result:', result);
+        
+        if (result.success) {
+            console.log('✓ KPI saved to database:', result.data);
+            
+            // Show success notification
+            showNotification('KPI details saved successfully!', 'success');
+            
+            // Refresh KPI display if the function exists in event-details.js
+            if (typeof loadKPIData === 'function') {
+                loadKPIData(currentEventId);
+            }
+        } else {
+            showNotification('Error: ' + result.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving KPI:', error);
+        showNotification('Error saving KPI details', 'error');
+    });
+}
+
+// Make it globally accessible
+window.saveKPIDetails = saveKPIDetails;
+console.log('[ADMIN] ✓ saveKPIDetails function exposed to window object');
+
 function renderEventTasksTab(event) {
     console.log('═══════════════════════════════════════════');
     console.log('[Tasks] RENDERING TASKS TAB');
@@ -7271,11 +7351,9 @@ function loadCatalogue() {
         });
 }
 
-let currentEventId = null;
+// currentEventId is already declared in event-details.js (loads first)
 let currentEventData = null;
-let attendeesData = { initial: [], actual: [] };
-
-let allTasks = [];
+// attendeesData and allTasks are also already declared in event-details.js
 
 function searchUsers(query) { console.log('Searching users...'); }
 
@@ -10146,6 +10224,41 @@ function switchTab(tabName) {
             // Automatically generate the postmortem report when viewing this tab
             if (typeof generateAutomatedReport === 'function') {
                 generateAutomatedReport();
+            }
+        }
+    } else if (tabName === 'kpi') {
+        console.log('🎯 KPI TAB CLICKED - Loading KPI data for event:', currentEventId);
+        
+        if (currentEventId) {
+            window.currentEventId = currentEventId;
+            
+            // Call KPI loading functions
+            try {
+                console.log('📌 Step 1: Calling loadSavedKPIData()');
+                if (typeof loadSavedKPIData === 'function') {
+                    loadSavedKPIData();
+                    console.log('✅ loadSavedKPIData() executed');
+                } else {
+                    console.warn('⚠️ loadSavedKPIData not available');
+                }
+                
+                console.log('📌 Step 2: Calling initializeKPIInputListeners()');
+                if (typeof initializeKPIInputListeners === 'function') {
+                    initializeKPIInputListeners();
+                    console.log('✅ initializeKPIInputListeners() executed');
+                } else {
+                    console.warn('⚠️ initializeKPIInputListeners not available');
+                }
+                
+                console.log('📌 Step 3: Calling loadKPIData(' + currentEventId + ')');
+                if (typeof loadKPIData === 'function') {
+                    loadKPIData(currentEventId);
+                    console.log('✅ loadKPIData() executed');
+                } else {
+                    console.error('❌ loadKPIData NOT available');
+                }
+            } catch(e) {
+                console.error('❌ Error loading KPI:', e);
             }
         }
     }
