@@ -620,6 +620,7 @@
   
   <script src="./js/admin.js?v=95"></script>
   <script src="./js/event-details.js?v=51"></script>
+  <script src="./js/edit-event-modal.js?v=1"></script>
   <script src="./js/catalogue-lookup.js?v=11"></script>
   
   <!-- Define helper function for inline scripts -->
@@ -1056,7 +1057,7 @@
                   <p class="text-sm text-gray-600 mt-1">Event information</p>
                 </div>
                 <div class="flex gap-3" id="eventDetailsButtonsContainer">
-                  <button id="editEventDetailsBtn" onclick="enableEventDetailsEdit()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors" style="background-color: #1E73BB;">Edit</button>
+                  <button id="editEventDetailsBtn" onclick="openEditEventModal(currentEventId)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors" style="background-color: #1E73BB;">Edit Event</button>
                   <button id="saveEventDetailsBtn" onclick="saveEventDetails()" class="px-4 py-2 text-white rounded-md text-sm font-medium transition-colors" style="background-color: #1E73BB; display: none;">Save Event Details</button>
                   <button id="cancelEventDetailsBtn" onclick="cancelEventDetailsEdit()" class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-md text-sm font-medium transition-colors" style="display: none;">Cancel</button>
                 </div>
@@ -3239,6 +3240,198 @@ try {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
           <button type="button" onclick="submitCreateEventForm()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b';" onmouseout="this.style.background='#1E73BB';">Create Event</button>
           <button type="button" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onclick="closeCreateEventModal()">Cancel</button>
+        </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Event Modal -->
+  <div id="editEventModal" class="modal">
+    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Edit Event</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Update your event information and details.</p>
+      </div>
+      
+      <form id="editEventForm" class="space-y-0" style="display: grid; grid-template-columns: 1fr;">
+        <!-- Form Content with padding -->
+        <div class="space-y-6" style="padding: 24px;">
+        <input type="hidden" id="editEventId" value="">
+
+        <!-- Event Title -->
+        <div>
+          <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event Title <span style="color: #e74c3c;">*</span></label>
+          <input type="text" id="editEventName" name="event_name" required 
+                 style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #000; background-color: #fff; transition: border-color 0.2s;"
+                 placeholder="Executive Client Briefing"
+                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+        </div>
+
+        <!-- Event Schedule Section -->
+        <div>
+          <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 12px;">Event Schedule <span style="color: #e74c3c;">*</span></label>
+          
+          <!-- Grid for Start Event and End Event datetime -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;">Start Event <span style="color: #e74c3c;">*</span></label>
+              <input type="datetime-local" id="editStartEvent" name="start_event" required
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;">End Event <span style="color: #e74c3c;">*</span></label>
+              <input type="datetime-local" id="editEndEvent" name="end_event" required
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            </div>
+          </div>
+          
+          <!-- Schedule Preview -->
+          <div id="editSchedulePreviewContainer" style="padding: 12px; background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f8 100%); border-radius: 8px; border-left: 4px solid #1968c4; display: none; box-shadow: 0 2px 4px rgba(25, 104, 196, 0.1);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#1968c4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg>
+              <p id="editSchedulePreviewText" style="color: #1968c4; font-size: 13px; font-weight: 500; margin: 0;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Registration Period Section -->
+        <div>
+          <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 12px;">Registration Period</label>
+          <p style="font-size: 12px; color: #999; margin: 0 0 12px 0;">Participants can only register during this period.</p>
+          
+          <!-- Grid for Registration Start and End datetime -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;">Registration Opens <span style="color: #e74c3c;">*</span></label>
+              <input type="datetime-local" id="editRegistrationStart" name="registration_start" required
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;">Registration Closes <span style="color: #e74c3c;">*</span></label>
+              <input type="datetime-local" id="editRegistrationEnd" name="registration_end" required
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            </div>
+          </div>
+          
+          <!-- Registration Preview -->
+          <div id="editRegistrationPreviewContainer" style="padding: 12px; background: linear-gradient(135deg, #f0f8f5 0%, #e8f5f0 100%); border-radius: 8px; border-left: 4px solid #10b981; display: none; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" style="flex-shrink: 0;"><g fill="#10b981"><path d="M36.99 29.003c-3.67-.038-5.717.332-9.612 1.923l-.756-1.852c4.127-1.685 6.438-2.112 10.388-2.071zm-9.612-2.077c3.895-1.59 5.943-1.961 9.612-1.923l.02-2c-3.95-.041-6.26.386-10.388 2.071zm9.612-5.923c-3.67-.038-5.717.332-9.612 1.923l-.756-1.852c4.127-1.685 6.438-2.112 10.388-2.071zM34.5 16v-3h2v3zM31 14v3h2v-3zm-3.5 4v-3h2v3zM11.01 29.003c3.67-.038 5.717.332 9.612 1.923l.756-1.852c-4.127-1.685-6.438-2.112-10.388-2.071zm9.612-2.077c-3.895-1.59-5.942-1.961-9.612-1.923l-.02-2c3.95-.041 6.26.386 10.388 2.071zm-9.612-5.923c3.67-.038 5.717.332 9.612 1.923l.756-1.852c-4.127-1.685-6.438-2.112-10.388-2.071zM13.5 16v-3h-2v3zm3.5-2v3h-2v-3zm3.5 4v-3h-2v3z"/><path fill-rule="evenodd" d="M42 10.984q.609.134 1.243.287a.99.99 0 0 1 .757.965v25.539c0 .633-.583 1.105-1.204.987c-6.213-1.185-10.4-1.268-16.122-.4a3 3 0 0 1-5.348 0c-5.721-.868-9.91-.785-16.122.4A1.01 1.01 0 0 1 4 37.775V12.237a.99.99 0 0 1 .757-.966q.634-.153 1.243-.287v-.46c0-.885.589-1.694 1.484-1.92c6.15-1.546 10.628.092 15.757 2.477q.375.077.759.16q.384-.083.76-.16c5.128-2.385 9.606-4.023 15.756-2.476A1.97 1.97 0 0 1 42 10.524zm-2 22.984V10.537c-5.658-1.415-9.683.135-15 2.64v23.242l.003.002l.002.001l.009.003h.003l.006-.002c4.909-2.222 9.191-3.483 14.923-2.437a.06.06 0 0 0 .047-.011zm-17.003 2.453l.003-.002V13.177c-5.317-2.504-9.342-4.055-15-2.64v23.431l.007.007a.06.06 0 0 0 .048.012c5.73-1.047 10.013.214 14.922 2.435l.008.003h.001z" clip-rule="evenodd"/></g></svg>
+              <p id="editRegistrationPreviewText" style="color: #10b981; font-size: 13px; font-weight: 500; margin: 0;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Capacity and Location -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Capacity <span style="color: #e74c3c;">*</span></label>
+            <input type="number" id="editEventCapacity" name="capacity" required min="1"
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s, background-color 0.2s;"
+                   placeholder="0"
+                   oninput="this.dataset.hasValue = this.value ? '1' : '0'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';"
+                   onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                   onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';">
+          </div>
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Location <span style="color: #e74c3c;">*</span></label>
+            <input type="text" id="editEventLocation" name="location" required
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s, background-color 0.2s;"
+                   placeholder="Charlotte Campus Auditorium"
+                   oninput="this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';"
+                   onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                   onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';">
+          </div>
+        </div>
+
+        <!-- Registration Link and Website Link -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Registration Link</label>
+            <input type="url" id="editEventRegistrationLink" name="registration_link"
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                   placeholder="https://example.com/register"
+                   onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                   onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            <small style="color: #999; display: block; margin-top: 4px;">Optional - URL where participants sign up</small>
+          </div>
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Website Link</label>
+            <input type="url" id="editEventWebsiteLink" name="website_link"
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s;"
+                   placeholder="https://example.com"
+                   onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                   onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+            <small style="color: #999; display: block; margin-top: 4px;">Optional - Event website or details page</small>
+          </div>
+        </div>
+
+        <!-- Private Access -->
+        <div style="padding: 12px; background: #f9f9f9; border-radius: 6px;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="editEventPrivate" style="width: 16px; height: 16px; cursor: pointer;" onchange="handleEditPrivateEventToggle()">
+            <span style="font-size: 14px; font-weight: 500; color: #333; text-transform: uppercase; letter-spacing: 0.5px;">Private event access code</span>
+          </label>
+          
+          <!-- Private Code Display (hidden by default) -->
+          <div id="editPrivateCodeDisplay" style="display: none; margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #e0f2fe 0%, #cce9f9 100%); border: 1px solid #0284c7; border-radius: 8px; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.1);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="#0284c7" d="M21 16v5H3v-5h2v3h14v-3zM3 11h18v2H3zm18-3h-2V5H5v3H3V3h18z"/></svg>
+              <small style="color: #333; font-weight: 500; margin: 0;">Access Code:</small>
+            </div>
+            <input type="text" id="editEventPrivateCode" readonly value="" style="width: 100%; padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: monospace; color: #000;" />
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Description <span style="color: #e74c3c;">*</span></label>
+          <textarea id="editEventDescription" name="description" required
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 100px; color: #000; background-color: #fff; transition: border-color 0.2s;"
+                    placeholder="Describe the event..."
+                    onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                    onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"></textarea>
+        </div>
+
+        <!-- Cover Image -->
+        <div>
+          <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 12px;">Current Cover Image</label>
+          
+          <!-- Two column layout for current image and upload -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <!-- Current Image Preview -->
+            <div id="editCurrentImage" style="width: 100%; aspect-ratio: 16/9; background: #f5f7fa; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden;"></div>
+            
+            <!-- New Image Upload -->
+            <div id="editEventImagePreview" style="width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';" onclick="document.getElementById('editEventImage').click();">
+              <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span>Click to upload or drag & drop</span>
+            </div>
+          </div>
+          
+          <input type="file" id="editEventImage" name="image" accept="image/*"
+                 style="display: none;"
+                 onchange="previewEditEventImage(event)">
+          <small style="color: #999; display: block; margin-top: 8px; font-size: 12px;">Optional - Max 5MB. Formats: JPG, PNG, GIF, WebP</small>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+          <button type="button" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onclick="closeEditEventModal()">Cancel</button>
+          <button type="button" onclick="submitEditEventForm()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b';" onmouseout="this.style.background='#1E73BB';">Update Event</button>
         </div>
         </div>
       </form>
