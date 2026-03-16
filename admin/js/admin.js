@@ -10182,7 +10182,7 @@ function renderProgramTimeline(items) {
         
         return `
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div class="flex justify-between items-start gap-4">
+            <div class="flex justify-between items-center gap-4">
                 <div class="flex-1">
                     <div class="mb-2">
                         <h4 class="font-semibold text-gray-900 mb-1">${weekText}</h4>
@@ -10190,18 +10190,16 @@ function renderProgramTimeline(items) {
                     </div>
                     <p class="text-sm text-gray-600">${item.description || ''}</p>
                 </div>
-                <div class="flex gap-2 items-center">
+                <div class="flex gap-1.5 items-center">
                     <button onclick="editProgramTimeline(${item.timeline_id})" 
-                            style="background: transparent; border: none; color: #3b82f6; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" 
+                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; justify-content: center; border-radius: 4px;" 
                             title="Edit timeline item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
                     </button>
                     <button onclick="deleteProgramTimeline(${item.timeline_id})" 
-                            style="background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" 
-                            title="Delete timeline item"
-                            onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'"
-                            onmouseout="this.style.background='white'; this.style.borderColor='#ef4444'">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
+                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; justify-content: center; border-radius: 4px;" 
+                            title="Delete timeline item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
                     </button>
                 </div>
             </div>
@@ -10225,17 +10223,19 @@ function renderProgramFlow(items) {
             <td class="px-4 py-3 text-sm text-gray-900">${item.activity || '-'}</td>
             <td class="px-4 py-3 text-sm text-gray-900">${item.time_frame || '-'}</td>
             <td class="px-4 py-3 text-sm text-gray-900">${item.speaker || '-'}</td>
-            <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
-                <button onclick="editProgramFlow(${item.flow_id})" 
-                        style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Edit program flow item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
-                </button>
-                <button onclick="deleteProgramFlow(${item.flow_id})" 
-                        style="background: transparent; border: none; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Delete program flow item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
-                </button>
+            <td class="px-4 py-3 text-center text-sm">
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button onclick="editProgramFlow(${item.flow_id})" 
+                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            title="Edit program flow item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+                    </button>
+                    <button onclick="deleteProgramFlow(${item.flow_id})" 
+                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            title="Delete program flow item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -11725,6 +11725,8 @@ function loadExpenses() {
             if (data.success) {
                 renderExpensesTable(data.data);
                 updateGrandTotal(data.grand_total || 0);
+                updateBudgetDisplay(data.budget || 0, data.grand_total || 0, data.balance || 0);
+                updateModalBudgetDisplay(data.budget || 0, data.balance || 0);
             } else {
                 console.error('[Finance] Error:', data.message);
             }
@@ -11736,7 +11738,159 @@ function loadExpenses() {
                 tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Error loading expenses</td></tr>';
             }
         });
+    
+    // Also load budget into the input field
+    loadBudgetInput(eventId);
 }
+
+function updateBudgetDisplay(budget, total, balance) {
+    // Update KPI cards
+    const budgetDisplay = document.getElementById('budgetAmount');
+    const balanceDisplay = document.getElementById('balanceAmount');
+    const balanceStatus = document.getElementById('balanceStatus');
+    
+    if (budgetDisplay) {
+        const formattedBudget = parseFloat(budget).toFixed(2);
+        budgetDisplay.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    if (balanceDisplay) {
+        const isNegative = balance < 0;
+        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
+        balanceDisplay.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        balanceDisplay.style.color = isNegative ? '#ef5350' : '#22c55e';
+    }
+    
+    if (balanceStatus) {
+        balanceStatus.textContent = balance < 0 ? 'Over Budget' : 'Remaining';
+        balanceStatus.style.color = balance < 0 ? '#ef5350' : '#666';
+    }
+    
+    // Show warning notification if needed
+    const budgetWarning = document.getElementById('budgetWarning');
+    const warningTitle = document.getElementById('warningTitle');
+    const warningMessage = document.getElementById('warningMessage');
+    
+    if (budgetWarning && warningTitle && warningMessage) {
+        const budgetNum = parseFloat(budget);
+        const balanceNum = parseFloat(balance);
+        
+        if (budgetNum > 0) {
+            const percentRemaining = (balanceNum / budgetNum) * 100;
+            
+            if (balanceNum < 0) {
+                // Over budget
+                budgetWarning.style.display = 'block';
+                budgetWarning.style.backgroundColor = '#fef2f2';
+                budgetWarning.style.borderLeftColor = '#ef5350';
+                warningTitle.textContent = ' Budget Exceeded';
+                warningMessage.textContent = `You have exceeded your budget by ₱${Math.abs(balanceNum).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+            } else if (percentRemaining < 20) {
+                // Warning - less than 20% remaining
+                budgetWarning.style.display = 'block';
+                budgetWarning.style.backgroundColor = '#fffbeb';
+                budgetWarning.style.borderLeftColor = '#f59e0b';
+                warningTitle.textContent = ' Budget Low';
+                warningMessage.textContent = `You have only ${percentRemaining.toFixed(1)}% of your budget remaining. Be cautious with additional expenses.`;
+            } else {
+                // No warning needed
+                budgetWarning.style.display = 'none';
+            }
+        } else {
+            // No budget set
+            budgetWarning.style.display = 'none';
+        }
+    }
+}
+
+function updateModalBudgetDisplay(budget, balance) {
+    // Update modal budget display
+    const modalBudget = document.getElementById('modalBudgetDisplay');
+    const modalBalance = document.getElementById('modalBalanceDisplay');
+    
+    if (modalBudget) {
+        const formattedBudget = parseFloat(budget).toFixed(2);
+        modalBudget.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    if (modalBalance) {
+        const isNegative = balance < 0;
+        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
+        modalBalance.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        modalBalance.style.color = isNegative ? '#ef5350' : '#22c55e';
+    }
+}
+
+function loadBudgetInput(eventId) {
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    headers['Content-Type'] = 'application/json';
+    
+    fetch(`${API_BASE}/finance.php?action=get_budget&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const budgetInput = document.getElementById('budgetInput');
+                if (budgetInput) {
+                    budgetInput.value = data.budget || 0;
+                }
+            }
+        })
+        .catch(error => console.error('Error loading budget:', error));
+}
+
+function saveBudget() {
+    let eventId = window.currentEventId;
+    
+    if (!eventId && typeof currentEventId !== 'undefined') {
+        eventId = currentEventId;
+    }
+    
+    if (!eventId) {
+        const params = new URLSearchParams(window.location.search);
+        eventId = params.get('id') || params.get('eventId') || params.get('event_id');
+    }
+    
+    if (!eventId) {
+        showNotification('Please select an event first', 'error');
+        return;
+    }
+    
+    const budgetInput = document.getElementById('budgetInput');
+    const budget = parseFloat(budgetInput.value || 0);
+    
+    if (budget < 0) {
+        showNotification('Budget cannot be negative', 'error');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    headers['Content-Type'] = 'application/json';
+    headers['X-User-Role'] = (JSON.parse(localStorage.getItem('admin') || '{}') || {}).role || 'admin';
+    headers['X-User-Id'] = (JSON.parse(localStorage.getItem('admin') || '{}') || {}).id || 0;
+    
+    fetch(`${API_BASE}/finance.php?action=set_budget`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            event_id: eventId,
+            budget: budget
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Budget saved successfully', 'success');
+            loadExpenses(); // Reload to update all displays
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error saving budget', 'error');
+    });
+}
+
 
 function updateGrandTotal(total) {
     const totalDisplay = document.getElementById('grandTotalDisplay');
@@ -11766,17 +11920,19 @@ function renderExpensesTable(items) {
             <td class="px-4 py-3 text-sm text-gray-900">${item.quantity || 1}</td>
             <td class="px-4 py-3 text-sm text-gray-900">₱${unitPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
             <td class="px-4 py-3 text-sm text-gray-900 font-semibold">₱${total.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
-            <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
-                <button onclick="editExpense(${item.expense_id})" 
-                        style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Edit">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
-                </button>
-                <button onclick="deleteExpense(${item.expense_id})" 
-                        style="background: transparent; border: none; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Delete">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
-                </button>
+            <td class="px-4 py-3 text-center text-sm">
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button onclick="editExpense(${item.expense_id})" 
+                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
+                    </button>
+                    <button onclick="deleteExpense(${item.expense_id})" 
+                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                    </button>
+                </div>
             </td>
         </tr>
     `}).join('');
@@ -11832,8 +11988,6 @@ function editExpense(expenseId) {
 }
 
 function deleteExpense(expenseId) {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
-    
     let eventId = window.currentEventId;
     
     if (!eventId && typeof currentEventId !== 'undefined') {
@@ -11849,6 +12003,40 @@ function deleteExpense(expenseId) {
         showNotification('No event selected', 'error');
         return;
     }
+    
+    // Store the expense data for confirmation
+    window.pendingDeleteData = {
+        eventId: eventId,
+        expenseId: expenseId
+    };
+    
+    // Show the delete confirmation modal
+    showDeleteConfirmModal();
+    
+    // Show the delete confirmation modal
+    showDeleteConfirmModal();
+}
+
+function showDeleteConfirmModal() {
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeDeleteConfirmModal() {
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    window.pendingDeleteData = null;
+}
+
+function confirmDeleteExpense() {
+    if (!window.pendingDeleteData) return;
+    
+    const { eventId, expenseId } = window.pendingDeleteData;
+    closeDeleteConfirmModal();
     
     const headers = getUserHeaders ? getUserHeaders() : {};
     headers['Content-Type'] = 'application/json';
@@ -11891,35 +12079,139 @@ function exportExpenses() {
     const headers = getUserHeaders ? getUserHeaders() : {};
     headers['Content-Type'] = 'application/json';
     
+    // Fetch expenses data
     fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, { headers })
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {
                 const items = data.data;
-                let csv = 'Description,Quantity,Unit Price,Total\n';
                 
+                // Get event name from API response (now it should include this)
+                const eventName = data.event_name || `Event ${eventId}`;
+                
+                // Create PDF document - check for jsPDF availability
+                if (!window.jspdf || !window.jspdf.jsPDF) {
+                    showNotification('PDF library not loaded. Please refresh the page.', 'error');
+                    return;
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('Finance Report', 14, 22);
+                
+                // Add event info
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Event: ${eventName}`, 14, 35);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 42);
+                
+                // Calculate totals
                 let grandTotal = 0;
                 items.forEach(item => {
-                    const total = parseFloat(item.total).toFixed(2);
-                    const unitPrice = parseFloat(item.unit_price).toFixed(2);
-                    csv += `"${item.description}",${item.quantity},${unitPrice},${total}\n`;
-                    grandTotal += parseFloat(total);
+                    grandTotal += parseFloat(item.total);
                 });
                 
-                csv += `\n"Grand Total",,,"${grandTotal.toFixed(2)}"\n`;
+                // Get budget and balance
+                const budget = parseFloat(data.budget || 0);
+                const balance = parseFloat(data.balance || 0);
                 
-                // Create blob and download
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `event-${eventId}-expenses.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                // Format currency for budget summary
+                const budgetFormatted = budget.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                const totalFormatted = grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                const balanceFormatted = balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                 
-                showNotification('Expenses exported successfully', 'success');
+                // Add Budget Summary Table with blue header
+                const budgetSummaryData = [[
+                    `P ${budgetFormatted}`,
+                    `P ${totalFormatted}`,
+                    `P ${balanceFormatted}`
+                ]];
+                
+                doc.autoTable({
+                    head: [['Budget Alloted', 'Total Expenses', 'Balance']],
+                    body: budgetSummaryData,
+                    startY: 50,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [59, 130, 246],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        halign: 'center',
+                        fontSize: 11
+                    },
+                    bodyStyles: {
+                        textColor: [50, 50, 50],
+                        halign: 'center',
+                        valign: 'middle',
+                        fontSize: 10,
+                        fontStyle: 'bold'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 60 },
+                        1: { cellWidth: 61 },
+                        2: { cellWidth: 61 }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+                
+                // Get Y position after budget table
+                const budgetTableEndY = doc.lastAutoTable.finalY + 5;
+                
+                // Prepare table data with proper formatting
+                const tableData = items.map(item => {
+                    const unitPrice = parseFloat(item.unit_price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    const total = parseFloat(item.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    return [
+                        item.description,
+                        item.quantity,
+                        `P ${unitPrice}`,
+                        `P ${total}`
+                    ];
+                });
+                
+                // Add grand total row
+                const gTotal = grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                tableData.push(['', '', 'Grand Total:', `P ${gTotal}`]);
+                
+                // Add expenses table with matching widths
+                doc.autoTable({
+                    head: [['Description', 'Quantity', 'Unit Price', 'Total']],
+                    body: tableData,
+                    startY: budgetTableEndY,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [59, 130, 246],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        halign: 'left',
+                        fontSize: 10
+                    },
+                    bodyStyles: {
+                        textColor: [50, 50, 50],
+                        halign: 'left',
+                        fontSize: 9
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 80 },
+                        1: { halign: 'center', cellWidth: 20 },
+                        2: { halign: 'right', cellWidth: 41 },
+                        3: { halign: 'right', cellWidth: 41 }
+                    },
+                    alternateRowStyles: {
+                        fillColor: [245, 245, 245]
+                    },
+                    margin: { top: 75, left: 14, right: 14 }
+                });
+                
+                
+                // Save PDF with event name and "Finance" label
+                const sanitizedFileName = eventName.replace(/[/\\?%*:|"<>]/g, '');
+                doc.save(`${sanitizedFileName} - Finance.pdf`);
+                showNotification('Expenses exported as PDF successfully', 'success');
             } else {
                 showNotification('Error exporting expenses', 'error');
             }
@@ -11964,46 +12256,120 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const headers = getUserHeaders ? getUserHeaders() : {};
-            headers['Content-Type'] = 'application/json';
+            const newExpenseTotal = quantity * unit_price;
             
-            const data = {
-                event_id: eventId,
-                description: description,
-                quantity: quantity,
-                unit_price: unit_price
-            };
-            
-            if (isEditing) {
-                data.expense_id = this.dataset.editId;
+            // Check if expense would exceed budget (only for new expenses, not edits)
+            if (!isEditing) {
+                const headers = getUserHeaders ? getUserHeaders() : {};
+                headers['Content-Type'] = 'application/json';
+                
+                // Fetch current budget and balance to check if new expense would exceed
+                fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, { headers })
+                    .then(response => response.json())
+                    .then(budgetData => {
+                        const currentBudget = parseFloat(budgetData.budget || 0);
+                        const currentBalance = parseFloat(budgetData.balance || 0);
+                        const newBalance = currentBalance - newExpenseTotal;
+                        
+                        // If new expense would cause budget to be exceeded
+                        if (currentBudget > 0 && newBalance < 0) {
+                            const exceedAmount = Math.abs(newBalance).toFixed(2);
+                            showBudgetOverflowModal(eventId, isEditing, description, quantity, unit_price, exceedAmount);
+                            return;
+                        }
+                        
+                        // Proceed with creating the expense
+                        submitExpense(eventId, isEditing, description, quantity, unit_price);
+                    })
+                    .catch(error => {
+                        console.error('Error checking budget:', error);
+                        // Proceed anyway if there's an error checking budget
+                        submitExpense(eventId, isEditing, description, quantity, unit_price);
+                    });
+            } else {
+                // For editing, proceed directly
+                submitExpense(eventId, isEditing, description, quantity, unit_price);
             }
-            
-            const action = isEditing ? 'update' : 'create';
-            
-            fetch(`${API_BASE}/finance.php?action=${action}`, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const msg = isEditing ? 'Expense updated' : 'Expense created';
-                    showNotification(msg, 'success');
-                    closeAddExpenseModal();
-                    loadExpenses();
-                } else {
-                    showNotification('Error: ' + data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const errMsg = isEditing ? 'Error updating expense' : 'Error creating expense';
-                showNotification(errMsg, 'error');
-            });
         });
     }
 });
+
+function showBudgetOverflowModal(eventId, isEditing, description, quantity, unit_price, exceedAmount) {
+    const modal = document.getElementById('budgetOverflowModal');
+    const message = document.getElementById('budgetOverflowMessage');
+    
+    if (modal && message) {
+        message.textContent = `Your amount exceeds the Budget Allotted for this Event by ₱${exceedAmount}. Do you still want to Add Expense?`;
+        
+        // Store the expense data for confirmation
+        window.pendingExpenseData = {
+            eventId: eventId,
+            isEditing: isEditing,
+            description: description,
+            quantity: quantity,
+            unit_price: unit_price
+        };
+        
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeBudgetOverflowModal() {
+    const modal = document.getElementById('budgetOverflowModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    window.pendingExpenseData = null;
+}
+
+function confirmBudgetOverflow() {
+    if (window.pendingExpenseData) {
+        const data = window.pendingExpenseData;
+        submitExpense(data.eventId, data.isEditing, data.description, data.quantity, data.unit_price);
+        closeBudgetOverflowModal();
+    }
+}
+
+function submitExpense(eventId, isEditing, description, quantity, unit_price) {
+    const form = document.getElementById('addExpenseForm');
+    const headers = getUserHeaders ? getUserHeaders() : {};
+    headers['Content-Type'] = 'application/json';
+    
+    const data = {
+        event_id: eventId,
+        description: description,
+        quantity: quantity,
+        unit_price: unit_price
+    };
+    
+    if (isEditing) {
+        data.expense_id = form.dataset.editId;
+    }
+    
+    const action = isEditing ? 'update' : 'create';
+    
+    fetch(`${API_BASE}/finance.php?action=${action}`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const msg = isEditing ? 'Expense updated' : 'Expense created';
+            showNotification(msg, 'success');
+            closeAddExpenseModal();
+            loadExpenses();
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const errMsg = isEditing ? 'Error updating expense' : 'Error creating expense';
+        showNotification(errMsg, 'error');
+    });
+}
 
 // ============ IMAGE PREVIEW MODAL FUNCTIONS ============
 

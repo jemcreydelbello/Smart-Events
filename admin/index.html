@@ -2057,6 +2057,20 @@ try {
             </div>
 
             <form id="addExpenseForm" style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Budget Info Display -->
+              <div style="background: white; padding: 12px 16px; border-radius: 6px; border: 1px solid #ddd;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-size: 12px; color: #666; font-weight: 500; text-transform: uppercase; margin-bottom: 4px;">Event Budget</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #333;" id="modalBudgetDisplay">₱0.00</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 12px; color: #666; font-weight: 500; text-transform: uppercase; margin-bottom: 4px;">Remaining</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #333;" id="modalBalanceDisplay">₱0.00</div>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Description</label>
                 <input type="text" id="expenseDescription" placeholder="E.g., Hall Rental, Lunch Pack, Badge Printing" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
@@ -2084,6 +2098,66 @@ try {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Budget Overflow Confirmation Modal -->
+        <div id="budgetOverflowModal" class="hidden flex items-center justify-center" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+          <div style="background: white; border-radius: 12px; padding: 32px; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <!-- Warning Icon -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background-color: #fef3c7;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g class="warning-outline"><g fill="#f59e0b" class="Vector"><path fill-rule="evenodd" d="M12 13.8a1 1 0 0 1-1-1v-5a1 1 0 0 1 2 0v5a1 1 0 0 1-1 1" clip-rule="evenodd"/><path d="M10.947 15.958a1.053 1.053 0 1 1 2.106 0a1.053 1.053 0 0 1-2.106 0"/><path fill-rule="evenodd" d="m15.607 4.642l5.876 10.72c1.512 2.759-.473 6.138-3.607 6.138H6.124c-3.134 0-5.12-3.38-3.607-6.139l5.876-10.72c1.566-2.855 5.648-2.855 7.214 0Zm-1.804 1c-.782-1.429-2.824-1.429-3.606 0L4.32 16.36c-.757 1.38.236 3.069 1.803 3.069h11.752c1.567 0 2.56-1.69 1.803-3.07z" clip-rule="evenodd"/></g></g></svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h3 style="text-align: center; font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Budget Alert</h3>
+
+            <!-- Message -->
+            <p id="budgetOverflowMessage" style="text-align: center; font-size: 14px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.5;"></p>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeBudgetOverflowModal()" 
+                      style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                Cancel
+              </button>
+              <button type="button" onclick="confirmBudgetOverflow()" 
+                      style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                Add Expense
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteConfirmModal" class="hidden flex items-center justify-center" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+          <div style="background: white; border-radius: 12px; padding: 32px; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <!-- Delete Icon -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background-color: #fee2e2;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 1.4 14a2 2 0 0 0 2 1.6h12.2a2 2 0 0 0 2-1.6L21 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6H5M10 11v6M14 11v6"/></svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h3 style="text-align: center; font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Delete Expense</h3>
+
+            <!-- Message -->
+            <p id="deleteConfirmMessage" style="text-align: center; font-size: 14px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.5;">Are you sure you want to delete this expense? This action cannot be undone.</p>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeDeleteConfirmModal()" 
+                      style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                Cancel
+              </button>
+              <button type="button" onclick="confirmDeleteExpense()" 
+                      style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                Delete
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2137,11 +2211,52 @@ try {
         </div>
 
         <div id="finance" class="event-tab-content hidden space-y-6" style="display: none;">
+          <!-- Budget Warning Alert -->
+          <div id="budgetWarning" style="display: none; padding: 12px 16px; border-radius: 6px; border-left: 4px solid; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div>
+                <div id="warningTitle" style="font-weight: 600; font-size: 14px;"></div>
+                <div id="warningMessage" style="font-size: 13px; margin-top: 2px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget KPI Cards -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Budget</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="budgetAmount">₱0.00</div>
+              <div class="text-xs text-gray-600">Event budget allocation</div>
+            </div>
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Total Expenses</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="grandTotalDisplay">₱0.00</div>
+              <div class="text-xs text-gray-600">Sum of all expenses</div>
+            </div>
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Balance</div>
+              <div class="text-3xl font-bold text-gray-900 mb-1" id="balanceAmount">₱0.00</div>
+              <div class="text-xs text-gray-600" id="balanceStatus">Remaining</div>
+            </div>
+          </div>
+
+          <!-- Budget Setting Section -->
+          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div class="flex items-end gap-4">
+              <div class="flex-1">
+                <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Set Event Budget</label>
+                <input type="number" id="budgetInput" placeholder="Enter budget amount for this event" min="0" step="0.01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+              </div>
+              <button onclick="saveBudget()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Save Budget</button>
+            </div>
+          </div>
+
+          <!-- Expenses Management Section -->
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div class="flex justify-between items-center mb-6">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-1">Finance</h2>
-                <p class="text-sm text-gray-600">Budget and expense tracking.</p>
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Expenses</h2>
+                <p class="text-sm text-gray-600">Track all event expenses against budget.</p>
               </div>
               <div class="flex gap-2">
                 <button onclick="openAddExpenseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Add Expense</button>
@@ -2165,14 +2280,6 @@ try {
                   <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No expenses yet</td></tr>
                 </tbody>
               </table>
-            </div>
-
-            <!-- Grand Total -->
-            <div class="flex justify-end mt-6 pt-6 border-t border-gray-200">
-              <div class="text-right">
-                <div class="text-sm text-gray-600 mb-2">Grand Total:</div>
-                <div class="text-3xl font-bold text-gray-900" id="grandTotalDisplay">₱0.00</div>
-              </div>
             </div>
           </div>
         </div>

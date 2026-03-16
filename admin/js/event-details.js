@@ -2962,9 +2962,13 @@ function renderMonthTasksList() {
                     <p style="margin: 0 0 4px 0; color: #999; font-size: 12px;">${dateStr}</p>
                     <span style="display: inline-block; padding: 2px 8px; background: ${statusColor}; color: white; border-radius: 3px; font-size: 11px; font-weight: 500;">${escapeHtml(task.status)}</span>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                    <button type="button" onclick="editTask(${task.task_id})" style="background: none; border: none; color: #2196f3; cursor: pointer; font-weight: 500; font-size: 12px; padding: 4px 8px;">Edit</button>
-                    <button type="button" onclick="deleteTask(${task.task_id})" style="background: none; border: none; color: #f44336; cursor: pointer; font-weight: 500; font-size: 12px; padding: 4px 8px;">Delete</button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="editTask(${task.task_id})" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
+                    </button>
+                    <button type="button" onclick="deleteTask(${task.task_id})" style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                    </button>
                 </div>
             </div>
         `;
@@ -3943,6 +3947,8 @@ function loadExpenses() {
             if (data.success) {
                 renderExpensesTable(data.data);
                 updateGrandTotal(data.grand_total || 0);
+                updateBudgetDisplay(data.budget || 0, data.grand_total || 0, data.balance || 0);
+                updateModalBudgetDisplay(data.budget || 0, data.balance || 0);
             } else {
                 console.error('[Finance] Error:', data.message);
             }
@@ -3954,7 +3960,112 @@ function loadExpenses() {
                 tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Error loading expenses</td></tr>';
             }
         });
+    
+    // Also load budget into the input field
+    loadBudgetInput();
 }
+
+function updateBudgetDisplay(budget, total, balance) {
+    // Update KPI cards
+    const budgetDisplay = document.getElementById('budgetAmount');
+    const balanceDisplay = document.getElementById('balanceAmount');
+    const balanceStatus = document.getElementById('balanceStatus');
+    
+    if (budgetDisplay) {
+        const formattedBudget = parseFloat(budget).toFixed(2);
+        budgetDisplay.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    if (balanceDisplay) {
+        const isNegative = balance < 0;
+        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
+        balanceDisplay.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        balanceDisplay.style.color = isNegative ? '#ef5350' : '#22c55e';
+    }
+    
+    if (balanceStatus) {
+        balanceStatus.textContent = balance < 0 ? 'Over Budget' : 'Remaining';
+        balanceStatus.style.color = balance < 0 ? '#ef5350' : '#666';
+    }
+}
+
+function updateModalBudgetDisplay(budget, balance) {
+    // Update modal budget display
+    const modalBudget = document.getElementById('modalBudgetDisplay');
+    const modalBalance = document.getElementById('modalBalanceDisplay');
+    
+    if (modalBudget) {
+        const formattedBudget = parseFloat(budget).toFixed(2);
+        modalBudget.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    if (modalBalance) {
+        const isNegative = balance < 0;
+        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
+        modalBalance.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        modalBalance.style.color = isNegative ? '#ef5350' : '#22c55e';
+    }
+}
+
+function loadBudgetInput() {
+    if (!currentEventId) return;
+    
+    const headers = getUserHeaders();
+    headers['Content-Type'] = 'application/json';
+    
+    fetch(`${API_BASE}/finance.php?action=get_budget&event_id=${currentEventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const budgetInput = document.getElementById('budgetInput');
+                if (budgetInput) {
+                    budgetInput.value = data.budget || 0;
+                }
+            }
+        })
+        .catch(error => console.error('Error loading budget:', error));
+}
+
+function saveBudget() {
+    if (!currentEventId) {
+        showNotification('Please select an event first', 'error');
+        return;
+    }
+    
+    const budgetInput = document.getElementById('budgetInput');
+    const budget = parseFloat(budgetInput.value || 0);
+    
+    if (budget < 0) {
+        showNotification('Budget cannot be negative', 'error');
+        return;
+    }
+    
+    const headers = getUserHeaders();
+    headers['Content-Type'] = 'application/json';
+    
+    fetch(`${API_BASE}/finance.php?action=set_budget`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            event_id: currentEventId,
+            budget: budget
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Budget saved successfully', 'success');
+            loadExpenses(); // Reload to update all displays
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error saving budget', 'error');
+    });
+}
+
 
 function updateGrandTotal(total) {
     const totalDisplay = document.getElementById('grandTotalDisplay');
