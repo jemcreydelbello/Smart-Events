@@ -5079,7 +5079,7 @@ function renderCalendarMonth() {
     }
     
     // Add next month's days
-    const totalCells = 42 - (firstDay - 1 + daysInMonth);
+    const totalCells = 35 - (firstDay - 1 + daysInMonth);
     for (let day = 1; day <= totalCells; day++) {
         const dateStr = `${year}-${String(month + 2).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayEl = createCalendarDayElement(day, dateStr, 'next-month');
@@ -5228,6 +5228,33 @@ function getEventsForDate(dateStr) {
     return events;
 }
 
+let calendarListWeekOffset = 0; // Track which week we're viewing in list mode
+
+function getWeekDates(year, month, weekOffset = 0) {
+    // Get the first day of the current month view
+    const monthStart = new Date(year, month, 1);
+    const monthStartDay = monthStart.getDay();
+    
+    // Calculate the Sunday of the first week that contains a day in this month
+    const firstSunday = new Date(year, month, 1 - monthStartDay);
+    
+    // Add weekOffset to navigate through weeks
+    const weekStart = new Date(firstSunday);
+    weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+    
+    // Get all 7 days of the week (Sunday to Saturday)
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(date.getDate() + i);
+        // Format date as YYYY-MM-DD in local timezone (not UTC)
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        weekDates.push({ date: date, dateStr: dateStr });
+    }
+    
+    return weekDates;
+}
+
 function renderCalendarList() {
     const listContainer = document.getElementById('calendarEventsList');
     listContainer.innerHTML = '';
@@ -5237,83 +5264,141 @@ function renderCalendarList() {
         return;
     }
     
-    // Sort by date
-    const sorted = [...allEventsForCalendar].sort((a, b) => {
-        return new Date(a.event_date) - new Date(b.event_date);
+    // Get the week dates based on current calendar month/year and week offset
+    const weekDates = getWeekDates(calendarCurrentYear, calendarCurrentMonth, calendarListWeekOffset);
+    
+    // Update header with week date range
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const firstDateObj = weekDates[0].date;
+    const lastDateObj = weekDates[6].date;
+    const firstMonth = monthNames[firstDateObj.getMonth()];
+    const lastMonth = monthNames[lastDateObj.getMonth()];
+    const firstDay = firstDateObj.getDate();
+    const lastDay = lastDateObj.getDate();
+    
+    let dateRangeText = '';
+    if (firstMonth === lastMonth) {
+        // Same month: "March 15 - 21"
+        dateRangeText = `${firstMonth} ${firstDay} - ${lastDay}`;
+    } else {
+        // Different months: "March 15 - April 2"
+        dateRangeText = `${firstMonth} ${firstDay} - ${lastMonth} ${lastDay}`;
+    }
+    document.getElementById('calendarDateRange').textContent = dateRangeText;
+    
+    // Group events by date for this week
+    const eventsByDate = {};
+    allEventsForCalendar.forEach(event => {
+        const date = event.event_date;
+        if (!eventsByDate[date]) {
+            eventsByDate[date] = [];
+        }
+        eventsByDate[date].push(event);
     });
     
-    sorted.forEach(event => {
-        const eventDate = new Date(event.event_date);
-        const dateStr = eventDate.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            month: 'long', 
-            day: 'numeric', 
-            year: 'numeric'
-        });
+    // For each day of the week, create entries for all days
+    weekDates.forEach(({ date: dateObj, dateStr }) => {
+        const events = eventsByDate[dateStr] || [];
         
-        let timeStr = dateStr;
-        if (event.start_time) {
-            const endTime = event.end_time ? event.end_time.substring(0, 5) : '';
-            timeStr += ` · ${event.start_time.substring(0, 5)}${endTime ? ' - ' + endTime : ''}`;
-        }
+        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        const monthDay = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         
-        const locationValue = event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? event.location : 'TBA';
-        
-        const eventEl = document.createElement('div');
-        eventEl.style.cssText = `
-            padding: 16px;
+        // Create day header - centered, single column
+        const dayHeaderEl = document.createElement('div');
+        dayHeaderEl.style.cssText = `
+            padding: 12px 16px;
+            background: #f3f4f6;
             border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: white;
-            margin-bottom: 12px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            color: #111827;
+            font-size: 14px;
+            margin-top: 12px;
+            text-align: center;
         `;
+        dayHeaderEl.innerHTML = `${dayName} | ${monthDay}`;
+        listContainer.appendChild(dayHeaderEl);
         
-        eventEl.innerHTML = `
-            <div>
-                <div style="margin-bottom: 12px;">
-                    <h4 style="font-weight: 600; color: #111827; font-size: 15px; margin: 0 0 8px 0;">${escapeHtml(event.event_name)}</h4>
-                    <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #0284c7; border-radius: 4px; font-size: 11px; font-weight: 600;">EVENT</span>
-                </div>
-                <div style="space-y: 2px; font-size: 13px;">
-                    <p style="display: flex; align-items: center; gap: 8px; color: #666; margin: 8px 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg>
-                        <span>${timeStr}</span>
-                    </p>
-                    <p style="display: flex; align-items: center; gap: 8px; color: #666; margin: 8px 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><g fill="none"><path d="M12 2a8 8 0 0 1 8 8c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 8-8m0 5a3 3 0 1 0 0 6a3 3 0 0 0 0-6" clip-rule="evenodd"/><path stroke="currentColor" stroke-width="2" d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 1 1 16 0Z"/><path stroke="currentColor" stroke-width="2" d="M15 10a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z"/></g></svg>
-                        <span>${escapeHtml(locationValue)}</span>
-                    </p>
-                    ${event.capacity ? `<p style="display: flex; align-items: center; gap: 8px; color: #666; margin: 8px 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="currentColor" d="M16 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m4.78 3.58A6.95 6.95 0 0 0 18 7c-.67 0-1.31.1-1.92.28c.58.55.92 1.32.92 2.15V10h5v-.57c0-.81-.48-1.53-1.22-1.85M6 6c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2m1.92 1.28C7.31 7.1 6.67 7 6 7c-.99 0-1.93.21-2.78.58A2.01 2.01 0 0 0 2 9.43V10h5v-.57c0-.83.34-1.6.92-2.15M10 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 16 9.43zm-1 6c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6h-8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 21 21.43zM5 16c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H3v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 11 21.43zm1.75-9v-2h-1.5v2H9l3 3l3-3z"/></svg>
-                        <span>${event.capacity}</span>
-                    </p>` : ''}
-                    ${event.total_registrations !== undefined ? `<p style="display: flex; align-items: center; gap: 8px; color: #666; margin: 8px 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><circle cx="12" cy="6" r="2" fill="currentColor"/><circle cx="6" cy="18" r="2" fill="currentColor"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="6" r="2" fill="currentColor"/><circle cx="18" cy="6" r="2" fill="currentColor"/><path fill="currentColor" d="M11 18.07v1.43c0 .28.22.5.5.5h1.4c.13 0 .26-.05.35-.15l5.83-5.83l-2.12-2.12l-5.81 5.81c-.1.1-.15.23-.15.36M12.03 14L14 12.03V12c0-1.1-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm8.82-2.44l-1.41-1.41c-.2-.2-.51-.2-.71 0l-1.06 1.06l2.12 2.12l1.06-1.06c.2-.2.2-.51 0-.71"/></svg>
-                        <span>${event.total_registrations}/${event.capacity || '∞'}</span>
-                    </p>` : ''}
-                </div>
-            </div>
-        `;
+        if (events.length === 0) {
+            // Show "No events" message for days with no events
+            const noEventEl = document.createElement('div');
+            noEventEl.style.cssText = `
+                padding: 12px 16px;
+                border: 1px solid #e5e7eb;
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
+                background: white;
+                color: #999;
+                font-size: 13px;
+                text-align: center;
+            `;
+            noEventEl.innerHTML = 'No events on this day';
+            listContainer.appendChild(noEventEl);
+        } else {
+            // Sort events by start time
+            events.sort((a, b) => {
+                const timeA = a.start_time || '23:59';
+                const timeB = b.start_time || '23:59';
+                return timeA.localeCompare(timeB);
+            });
         
-        eventEl.addEventListener('click', () => {
-            updateDeadlineDetails([event]);
-        });
-        
-        eventEl.addEventListener('mouseover', () => {
-            eventEl.style.background = '#f0f9ff';
-            eventEl.style.borderColor = '#0284c7';
-            eventEl.style.boxShadow = '0 2px 8px rgba(2, 132, 199, 0.1)';
-        });
-        
-        eventEl.addEventListener('mouseout', () => {
-            eventEl.style.background = 'white';
-            eventEl.style.borderColor = '#e5e7eb';
-            eventEl.style.boxShadow = 'none';
-        });
-        
-        listContainer.appendChild(eventEl);
+            // Create event rows with 2 columns: time range | event name
+            events.forEach((event, index) => {
+                const formatTime = (timeStr) => {
+                    if (!timeStr) return '-';
+                    const [hours, minutes] = timeStr.split(':');
+                    let h = parseInt(hours);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    h = h ? h : 12;
+                    return `${h}:${minutes} ${ampm}`;
+                };
+                
+                const startTime = event.start_time ? formatTime(event.start_time) : '-';
+                const endTime = event.end_time ? formatTime(event.end_time) : '-';
+                const timeRange = `${startTime} - ${endTime}`;
+                
+                const eventEl = document.createElement('div');
+                eventEl.style.cssText = `
+                    display: grid;
+                    grid-template-columns: 140px 1fr;
+                    gap: 16px;
+                    padding: 12px 16px;
+                    border: 1px solid #e5e7eb;
+                    border-right: 1px solid #e5e7eb;
+                    border-left: 1px solid #e5e7eb;
+                    ${index === events.length - 1 ? 'border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-bottom: 1px solid #e5e7eb;' : 'border-bottom: none;'}
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    background: white;
+                    align-items: center;
+                `;
+                
+                eventEl.innerHTML = `
+                    <div style="font-weight: 500; color: #666; font-size: 13px; text-align: center;">${timeRange}</div>
+                    <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px;">${escapeHtml(event.event_name)}</h4>
+                `;
+                
+                eventEl.addEventListener('click', () => {
+                    updateDeadlineDetails([event], true);
+                });
+                
+                eventEl.addEventListener('mouseover', () => {
+                    eventEl.style.background = '#f0f9ff';
+                    eventEl.style.borderColor = '#0284c7';
+                    eventEl.style.boxShadow = '0 2px 8px rgba(2, 132, 199, 0.1)';
+                });
+                
+                eventEl.addEventListener('mouseout', () => {
+                    eventEl.style.background = 'white';
+                    eventEl.style.borderColor = '#e5e7eb';
+                    eventEl.style.boxShadow = 'none';
+                });
+                
+                listContainer.appendChild(eventEl);
+            });
+        }
     });
 }
 
@@ -5328,8 +5413,9 @@ function switchCalendarView(view) {
     if (view === 'month') {
         monthContainer.style.display = 'block';
         listContainer.style.display = 'none';
-        monthBtn.style.background = '#dbeafe';
-        monthBtn.style.color = '#0284c7';
+        // Restore gradient background for month button
+        monthBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
+        monthBtn.style.color = 'white';
         listBtn.style.background = '#f3f4f6';
         listBtn.style.color = '#6b7280';
         renderCalendarMonth();
@@ -5340,30 +5426,41 @@ function switchCalendarView(view) {
         monthBtn.style.color = '#6b7280';
         listBtn.style.background = '#dbeafe';
         listBtn.style.color = '#0284c7';
+        calendarListWeekOffset = 0; // Reset to current week
         renderCalendarList();
     }
 }
 
 function previousMonth() {
-    if (calendarCurrentMonth === 0) {
-        calendarCurrentMonth = 11;
-        calendarCurrentYear--;
+    if (calendarCurrentView === 'list') {
+        // In list view, navigate by weeks
+        calendarListWeekOffset--;
+        renderCalendarList();
     } else {
-        calendarCurrentMonth--;
-    }
-    if (calendarCurrentView === 'month') {
+        // In month view, navigate by months
+        if (calendarCurrentMonth === 0) {
+            calendarCurrentMonth = 11;
+            calendarCurrentYear--;
+        } else {
+            calendarCurrentMonth--;
+        }
         renderCalendarMonth();
     }
 }
 
 function nextMonth() {
-    if (calendarCurrentMonth === 11) {
-        calendarCurrentMonth = 0;
-        calendarCurrentYear++;
+    if (calendarCurrentView === 'list') {
+        // In list view, navigate by weeks
+        calendarListWeekOffset++;
+        renderCalendarList();
     } else {
-        calendarCurrentMonth++;
-    }
-    if (calendarCurrentView === 'month') {
+        // In month view, navigate by months
+        if (calendarCurrentMonth === 11) {
+            calendarCurrentMonth = 0;
+            calendarCurrentYear++;
+        } else {
+            calendarCurrentMonth++;
+        }
         renderCalendarMonth();
     }
 }
@@ -5373,19 +5470,43 @@ function goToToday() {
     calendarCurrentMonth = today.getMonth();
     calendarCurrentYear = today.getFullYear();
     calendarSelectedDate = new Date(today);
+    calendarListWeekOffset = 0; // Reset to current week when switching to today
     
     if (calendarCurrentView === 'month') {
         renderCalendarMonth();
+    } else if (calendarCurrentView === 'list') {
+        renderCalendarList();
     }
 }
 
-function updateDeadlineDetails(events) {
+function updateDeadlineDetails(events, isFromListView = false) {
     const detailsDiv = document.getElementById('deadlineDetails');
     const deadlineCountEl = document.getElementById('deadlineCount');
     
+    // Helper function to convert military time to 12-hour format
+    const formatTimeAmPm = (timeStr) => {
+        if (!timeStr) return '';
+        const [hours, mins] = timeStr.substring(0, 5).split(':');
+        let h = parseInt(hours);
+        const m = mins;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12;
+        return `${h}:${m} ${ampm}`;
+    };
+    
     if (!events || events.length === 0) {
-        detailsDiv.innerHTML = '<p class="text-gray-500 text-sm">Select an event to view details</p>';
-        deadlineCountEl.textContent = `0 events happening today`;
+        detailsDiv.innerHTML = '';
+        if (calendarSelectedDate) {
+            const selectedDateStr = calendarSelectedDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric'
+            });
+            deadlineCountEl.textContent = `0 events happening on ${selectedDateStr}`;
+        } else {
+            deadlineCountEl.textContent = `0 events`;
+        }
         return;
     }
     
@@ -5405,9 +5526,22 @@ function updateDeadlineDetails(events) {
             const [hours, mins] = event.start_time.split(':');
             const startTime = new Date(eventDate);
             startTime.setHours(parseInt(hours), parseInt(mins));
-            const endTime = event.end_time ? event.end_time.substring(0, 5) : '';
+            const startTimeFormatted = formatTimeAmPm(event.start_time);
+            const endTimeFormatted = event.end_time ? formatTimeAmPm(event.end_time) : '';
             
-            timeStr += ` · ${event.start_time.substring(0, 5)}${endTime ? ' - ' + endTime : ''}`;
+            let endDateTimeStr = '';
+            if (endTimeFormatted) {
+                const endDate = event.end_date ? new Date(event.end_date) : eventDate;
+                const endDateStr = endDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric'
+                });
+                endDateTimeStr = ` - ${endDateStr} ${endTimeFormatted}`;
+            }
+            
+            timeStr += ` · ${startTimeFormatted}${endDateTimeStr}`;
         }
         
         // Extract location separately for proper display
@@ -5419,11 +5553,23 @@ function updateDeadlineDetails(events) {
                     <h4 class="font-semibold text-gray-900 text-lg mb-2">${escapeHtml(event.event_name)}</h4>
                     <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #0284c7; border-radius: 4px; font-size: 11px; font-weight: 600;">EVENT</span>
                 </div>
-                <div class="space-y-2 text-sm">
-                    <p class="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> ${timeStr}</p>
-                    <p class="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="M12 2a8 8 0 0 1 8 8c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 8-8m0 5a3 3 0 1 0 0 6a3 3 0 0 0 0-6" clip-rule="evenodd"/><path stroke="currentColor" stroke-width="2" d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 1 1 16 0Z"/><path stroke="currentColor" stroke-width="2" d="M15 10a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z"/></g></svg> ${escapeHtml(locationValue)}</p>
-                    ${event.capacity ? `<p class="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M16 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m4.78 3.58A6.95 6.95 0 0 0 18 7c-.67 0-1.31.1-1.92.28c.58.55.92 1.32.92 2.15V10h5v-.57c0-.81-.48-1.53-1.22-1.85M6 6c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2m1.92 1.28C7.31 7.1 6.67 7 6 7c-.99 0-1.93.21-2.78.58A2.01 2.01 0 0 0 2 9.43V10h5v-.57c0-.83.34-1.6.92-2.15M10 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 16 9.43zm-1 6c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6h-8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 21 21.43zM5 16c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H3v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 11 21.43zm1.75-9v-2h-1.5v2H9l3 3l3-3z"/></svg> ${event.capacity}</p>` : ''}
-                    ${event.total_registrations !== undefined ? `<p class="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2" fill="currentColor"/><circle cx="6" cy="18" r="2" fill="currentColor"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="6" r="2" fill="currentColor"/><circle cx="18" cy="6" r="2" fill="currentColor"/><path fill="currentColor" d="M11 18.07v1.43c0 .28.22.5.5.5h1.4c.13 0 .26-.05.35-.15l5.83-5.83l-2.12-2.12l-5.81 5.81c-.1.1-.15.23-.15.36M12.03 14L14 12.03V12c0-1.1-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm8.82-2.44l-1.41-1.41c-.2-.2-.51-.2-.71 0l-1.06 1.06l2.12 2.12l1.06-1.06c.2-.2.2-.51 0-.71"/></svg> ${event.total_registrations}/${event.capacity || '∞'}</p>` : ''}
+                <div style="display: table; width: 100%; margin-top: 12px;">
+                    <div style="display: table-row;">
+                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg></div>
+                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${timeStr}</div>
+                    </div>
+                    <div style="display: table-row;">
+                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><g fill="none"><path d="M12 2a8 8 0 0 1 8 8c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 8-8m0 5a3 3 0 1 0 0 6a3 3 0 0 0 0-6" clip-rule="evenodd"/><path stroke="currentColor" stroke-width="2" d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 1 1 16 0Z"/><path stroke="currentColor" stroke-width="2" d="M15 10a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z"/></g></svg></div>
+                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${escapeHtml(locationValue)}</div>
+                    </div>
+                    ${event.capacity ? `<div style="display: table-row;">
+                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><path fill="currentColor" d="M16 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m4.78 3.58A6.95 6.95 0 0 0 18 7c-.67 0-1.31.1-1.92.28c.58.55.92 1.32.92 2.15V10h5v-.57c0-.81-.48-1.53-1.22-1.85M6 6c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2m1.92 1.28C7.31 7.1 6.67 7 6 7c-.99 0-1.93.21-2.78.58A2.01 2.01 0 0 0 2 9.43V10h5v-.57c0-.83.34-1.6.92-2.15M10 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 16 9.43zm-1 6c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6h-8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 21 21.43zM5 16c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H3v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 11 21.43zm1.75-9v-2h-1.5v2H9l3 3l3-3z"/></svg></div>
+                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${event.capacity}</div>
+                    </div>` : ''}
+                    ${event.total_registrations !== undefined ? `<div style="display: table-row;">
+                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><circle cx="12" cy="6" r="2" fill="currentColor"/><circle cx="6" cy="18" r="2" fill="currentColor"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="6" r="2" fill="currentColor"/><circle cx="18" cy="6" r="2" fill="currentColor"/><path fill="currentColor" d="M11 18.07v1.43c0 .28.22.5.5.5h1.4c.13 0 .26-.05.35-.15l5.83-5.83l-2.12-2.12l-5.81 5.81c-.1.1-.15.23-.15.36M12.03 14L14 12.03V12c0-1.1-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm8.82-2.44l-1.41-1.41c-.2-.2-.51-.2-.71 0l-1.06 1.06l2.12 2.12l1.06-1.06c.2-.2.2-.51 0-.71"/></svg></div>
+                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${event.total_registrations}/${event.capacity || '∞'}</div>
+                    </div>` : ''}
                 </div>
             </div>
         `;
@@ -5435,7 +5581,27 @@ function updateDeadlineDetails(events) {
     
     // Update count to show events for the selected date
     const eventCount = events.length;
-    deadlineCountEl.textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''} happening today`;
+    if (eventCount > 1) {
+        const selectedDate = new Date(events[0].event_date);
+        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric'
+        });
+        deadlineCountEl.textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''} happening on ${selectedDateStr}`;
+    } else if (eventCount === 1 && isFromListView) {
+        // Single event from list view - hide the count message
+        deadlineCountEl.textContent = '';
+    } else if (eventCount === 1 && !isFromListView) {
+        // Single event from month view - show the count message
+        const selectedDate = new Date(events[0].event_date);
+        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric'
+        });
+        deadlineCountEl.textContent = `1 event happening on ${selectedDateStr}`;
+    }
 }
 
 let currentParticipantFilter = 'all';
@@ -6923,7 +7089,7 @@ function renderCatalogue(events) {
                 </button>
                 <div id="${uniqueId}" class="hidden absolute top-14 right-4 bg-white rounded-lg shadow-lg border border-gray-200 w-64 z-50" style="min-width: 240px;">
                     <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium text-gray-700 border-b border-gray-100" onclick="event.stopPropagation(); editEventCover(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
-                        <i class="bi bi-image" style="margin-right: 8px;"></i>Edit Event cover
+                        <i class="bi bi-image" style="margin-right: 8px;"></i>Change Event cover
                     </button>
                     <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium text-gray-700 border-b border-gray-100" onclick="event.stopPropagation(); openEditGalleryModal(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
                         <i class="bi bi-collection" style="margin-right: 8px;"></i>Edit event gallery
@@ -6936,8 +7102,8 @@ function renderCatalogue(events) {
             <div class="p-5 flex-1 flex flex-col">
                 <h3 class="text-lg font-semibold text-gray-900">${event.event_name}</h3>
                 <div class="mt-2 text-sm text-slate-500 space-y-1">
-                    <div><i class="bi bi-calendar-event"></i> ${formattedDate}</div>
-                    ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div><i class="bi bi-geo-alt"></i> ${event.location}</div>` : ''}
+                    <div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#64748b" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> ${formattedDate}</div>
+                    ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="#64748b" d="M16 10c0-2.21-1.79-4-4-4s-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4m-6 0c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2"/><path fill="#64748b" d="M11.42 21.81c.17.12.38.19.58.19s.41-.06.58-.19c.3-.22 7.45-5.37 7.42-11.82c0-4.41-3.59-8-8-8s-8 3.59-8 8c-.03 6.44 7.12 11.6 7.42 11.82M12 4c3.31 0 6 2.69 6 6c.02 4.44-4.39 8.43-6 9.74c-1.61-1.31-6.02-5.29-6-9.74c0-3.31 2.69-6 6-6"/></svg> ${event.location}</div>` : ''}
                 </div>
                 <p class="mt-3 text-sm text-slate-600 line-clamp-3">${event.description || 'No description provided'}</p>
             </div>
