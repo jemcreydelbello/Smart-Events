@@ -10,7 +10,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 require_once '../config/db.php';
 require_once '../config/email_config.php';
-require_once '../includes/SimpleMailer.php';
+require_once '../includes/SMTPMailer.php';
 
 // Helper function to check if coordinator has access to an event
 function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
@@ -521,7 +521,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Send registration confirmation email with QR code
         try {
-            $mailer = new SimpleMailer(
+            $mailer = new SMTPMailer(
                 SMTP_HOST,
                 SMTP_PORT,
                 SMTP_USER,
