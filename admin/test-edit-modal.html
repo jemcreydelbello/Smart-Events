@@ -1,0 +1,243 @@
+<!-- Test Edit Modal - Complete Flow Test -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Modal Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .test-card { background: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 6px; }
+        .test-card h3 { margin-top: 0; color: #1E73BB; }
+        .log { background: #000; color: #0f0; font-family: monospace; padding: 10px; border-radius: 4px; overflow-y: auto; height: 300px; margin: 10px 0; font-size: 12px; }
+        button { background: #1E73BB; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #155a9b; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Edit Modal - Complete Flow Diagnostic Test</h1>
+    
+    <div class="test-card">
+        <h3>Test 1: Verify API Update Works</h3>
+        <button onclick="testAPIUpdate()">Run Update Test</button>
+        <div id="test1-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>Test 2: Verify Detail Fetch Works</h3>
+        <button onclick="testDetailFetch()">Fetch Event 92</button>
+        <div id="test2-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>Test 3: Full Edit Flow Simulation</h3>
+        <p>This will simulate:</p>
+        <ol>
+            <li>Fetch event details</li>
+            <li>Modify the data</li>
+            <li>Submit update</li>
+            <li>Fetch again to verify</li>
+        </ol>
+        <button onclick="testFullFlow()">Run Full Flow</button>
+        <div id="test3-log" class="log"></div>
+    </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost/Smart-Events/api';
+
+function log(elementId, message, type = 'info') {
+    const elem = document.getElementById(elementId);
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+    const line = `[${timestamp}] ${prefix} ${message}`;
+    elem.innerHTML += `<div class="${type}">${line}</div>`;
+    elem.scrollTop = elem.scrollHeight;
+}
+
+async function testAPIUpdate() {
+    const logId = 'test1-log';
+    document.getElementById(logId).innerHTML = '';
+    log(logId, 'Starting API Update Test...');
+    
+    try {
+        const newName = 'FLOW TEST UPDATE ' + new Date().toLocaleTimeString();
+        const formData = new FormData();
+        formData.append('action', 'update_event');
+        formData.append('event_id', '92');
+        formData.append('event_name', newName);
+        formData.append('location', 'Meeting Room B');
+        formData.append('event_date', '2024-03-17');
+        formData.append('start_time', '14:30:00');
+        formData.append('end_time', '16:45:00');
+        formData.append('capacity', '10');
+        formData.append('description', 'Test Description');
+        formData.append('registration_link', 'https://www.jotform.com');
+        formData.append('website_link', 'website.com');
+        formData.append('registration_start', '2024-03-17 10:26:00');
+        formData.append('registration_end', '2024-03-20 10:27:00');
+        formData.append('is_private', '0');
+        
+        log(logId, 'Sending FormData to ' + API_BASE + '/events.php');
+        log(logId, 'Event Name: ' + newName);
+        
+        const response = await fetch(API_BASE + '/events.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        log(logId, 'Response Status: ' + response.status, response.status === 200 ? 'success' : 'error');
+        
+        const data = await response.json();
+        log(logId, 'Response Data: ' + JSON.stringify(data), data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            log(logId, 'Update API call succeeded', 'success');
+            
+            // Verify by fetching
+            const verifyResponse = await fetch(API_BASE + '/events.php?action=detail&event_id=92');
+            const verifyData = await verifyResponse.json();
+            
+            if (verifyData.success && verifyData.data.event_name === newName) {
+                log(logId, 'VERIFIED: Database was actually updated!', 'success');
+            } else {
+                log(logId, 'WARNING: API returned success but data might not have been saved', 'warning');
+                log(logId, 'Fetched name: ' + (verifyData.data?.event_name || 'N/A'));
+            }
+        } else {
+            log(logId, 'API returned error: ' + data.message, 'error');
+        }
+        
+    } catch (err) {
+        log(logId, 'Error: ' + err.message, 'error');
+    }
+}
+
+async function testDetailFetch() {
+    const logId = 'test2-log';
+    document.getElementById(logId).innerHTML = '';
+    log(logId, 'Fetching event 92 details...');
+    
+    try {
+        const response = await fetch(API_BASE + '/events.php?action=detail&event_id=92');
+        log(logId, 'API Response Status: ' + response.status);
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            log(logId, 'Successfully fetched event data', 'success');
+            const event = data.data;
+            log(logId, 'Event Name: ' + event.event_name);
+            log(logId, 'Event Date: ' + event.event_date);
+            log(logId, 'Start Time: ' + event.start_time);
+            log(logId, 'End Date: ' + event.end_date);
+            log(logId, 'End Time: ' + event.end_time);
+            log(logId, 'Registration Start: ' + event.registration_start);
+            log(logId, 'Registration End: ' + event.registration_end);
+            
+            // Test form population
+            const startDateTime = event.event_date + 'T' + event.start_time.substring(0, 5);
+            const endDateTime = event.end_date + 'T' + event.end_time.substring(0, 5);
+            log(logId, 'Would populate form with:', 'info');
+            log(logId, '  Start DateTime: ' + startDateTime);
+            log(logId, '  End DateTime: ' + endDateTime);
+        } else {
+            log(logId, 'API returned error: ' + data.message, 'error');
+        }
+    } catch (err) {
+        log(logId, 'Error: ' + err.message, 'error');
+    }
+}
+
+async function testFullFlow() {
+    const logId = 'test3-log';
+    document.getElementById(logId).innerHTML = '';
+    log(logId, '=== STARTING FULL FLOW TEST ===');
+    
+   try {
+        // Step 1: Fetch
+        log(logId, 'STEP 1: Fetching event 92...');
+        let response = await fetch(API_BASE + '/events.php?action=detail&event_id=92');
+        let data = await response.json();
+        
+        if (!data.success) {
+            log(logId, 'Failed to fetch event', 'error');
+            return;
+        }
+        
+        const originalEvent = data.data;
+        log(logId, 'Fetched: ' + originalEvent.event_name, 'success');
+        
+        // Step 2: Simulate edit
+        log(logId, 'STEP 2: Simulating user edits...');
+        const newName = 'COMPLETE FLOW TEST ' + Math.floor(Math.random() * 10000);
+        log(logId, 'Will change name from "' + originalEvent.event_name + '" to "' + newName + '"');
+        
+        // Step 3: Submit update
+        log(logId, 'STEP 3: Submitting update...');
+        const formData = new FormData();
+        formData.append('action', 'update_event');
+        formData.append('event_id', '92');
+        formData.append('event_name', newName);
+        formData.append('location', originalEvent.location);
+        formData.append('event_date', originalEvent.event_date);
+        formData.append('start_time', originalEvent.start_time);
+        formData.append('end_time', originalEvent.end_time);
+        formData.append('capacity', originalEvent.capacity);
+        formData.append('description', originalEvent.description || '');
+        formData.append('registration_link', originalEvent.registration_link || '');
+        formData.append('website_link', originalEvent.website || '');
+        formData.append('registration_start', originalEvent.registration_start || '');
+        formData.append('registration_end', originalEvent.registration_end || '');
+        formData.append('is_private', originalEvent.is_private || '0');
+        
+        response = await fetch(API_BASE + '/events.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        data = await response.json();
+        
+        if (!data.success) {
+            log(logId, 'Update failed: ' + data.message, 'error');
+            return;
+        }
+        
+        log(logId, 'Update succeeded', 'success');
+        
+        // Step 4: Fetch again to verify
+        log(logId, 'STEP 4: Fetching event again to verify...');
+        response = await fetch(API_BASE + '/events.php?action=detail&event_id=92');
+        data = await response.json();
+        
+        if (!data.success) {
+            log(logId, 'Failed to re-fetch event', 'error');
+            return;
+        }
+        
+        const updatedEvent = data.data;
+        
+        if (updatedEvent.event_name === newName) {
+            log(logId, '✅ SUCCESS! Event was updated correctly', 'success');
+            log(logId, 'Name changed to: ' + updatedEvent.event_name);
+            log(logId, 'Still has location: ' + updatedEvent.location);
+            log(logId, 'Still has capacity: ' + updatedEvent.capacity);
+        } else {
+            log(logId, '❌ FAILURE! Event name did not update', 'error');
+            log(logId, 'Expected: ' + newName);
+            log(logId, 'Actual: ' + updatedEvent.event_name);
+        }
+        
+        log(logId, '=== FULL FLOW TEST COMPLETE ===');
+        
+    } catch (err) {
+        log(logId, 'Error: ' + err.message, 'error');
+    }
+}
+</script>
+</body>
+</html>

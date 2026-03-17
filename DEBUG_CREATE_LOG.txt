@@ -1,0 +1,488 @@
+[2026-03-17 08:09:49] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = TEST MULTIPART UPDATE hahah
+  [location] = Multipart Test Location
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Multipart test
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarypWYBtzERUpRnVjPK
+---
+[2026-03-17 08:17:56] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarykC9jgA83BZ7mP7ej
+---
+[2026-03-17 08:20:19] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryamFgAYm6ycfm5UPL
+---
+[2026-03-17 08:20:28] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary08i4yxFYMD8Rr4kE
+---
+[2026-03-17 08:23:07] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary9D8FvARJOxNwDKnS
+---
+[2026-03-17 08:23:34] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarygD4fKRDQLjkUjDXj
+---
+[2026-03-17 08:24:07] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryv1IzCv8bWyX7UhYi
+---
+[2026-03-17 08:24:29] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary2CWwEUju2ss6QKOb
+---
+[2026-03-17 08:24:38] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meetingg
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarys6JATqpvbxZmW9XA
+---
+[2026-03-17 08:25:09] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarydzaHlLxFaY66Ula2
+---
+[2026-03-17 08:25:54] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 1
+  [private_code] = ACFGV4
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryMKFxMjr2UD0vxyXP
+---
+[2026-03-17 08:27:12] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 1
+  [private_code] = GW59G3
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarygGrZecy2WhYWMqwX
+---
+[2026-03-17 08:27:35] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary6Km2kWocG50pO101
+---
+[2026-03-17 08:28:18] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 111
+  [event_name] = Test Private Event
+  [location] = Test Location
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Test private event
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryOAcf98Ri1P7RRYyq
+---
+[2026-03-17 08:28:28] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = Test Private
+  [location] = Loc
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Test
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryDS8XXFnyqAF9EY3S
+---
+[2026-03-17 08:28:58] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryNFJvCO1c61zzHqAA
+---
+[2026-03-17 08:29:48] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 111
+  [event_name] = Welcome to the Team: New Hire Orientation
+  [location] = Test Location
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Test private event
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryfBJONPg3QYAdCjn1
+---
+[2026-03-17 08:30:18] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 111
+  [event_name] = New Hire Orientation
+  [location] = Test Location
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Mandatory half-day session for all new hires. Cove...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary3LwcTjXvjoPFb0NS
+---
+[2026-03-17 08:30:42] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 111
+  [event_name] = New Hire Orientation
+  [location] = Meeting Room B
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Mandatory half-day session for all new hires. Cove...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryKhh5f70YfxkyiH4b
+---
+[2026-03-17 08:32:28] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryTqB673HMjXnMNjMf
+---
+[2026-03-17 08:34:11] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 92
+  [event_name] = Celebrating Cultural Heritage Month
+  [location] = Meeting Room B
+  [start_event] = 2024-03-17 14:30:00
+  [end_event] = 2024-03-17 16:45:00
+  [registration_start] = 2024-03-17 10:26:00
+  [registration_end] = 2024-03-20 10:27:00
+  [capacity] = 30
+  [description] = Join us for a panel discussion on cultural traditi...
+  [registration_link] = https://www.jotform.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 8RUUG5
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryAG0A6A75AHq6BCqt
+---
+[2026-03-17 08:35:11] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Curl Test Location
+  [start_event] = 2026-03-18 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-18 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarycdY1dMduaaVI1nms
+---
+[2026-03-17 08:35:40] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-20 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryST5L9v4REPHkGchg
+---
+[2026-03-17 08:36:04] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = 
+  [website_link] = 
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary3V1AGK2Rke6XfpFA
+---
+[2026-03-17 08:37:10] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 92
+  [event_name] = Celebrating Cultural Heritage Month
+  [location] = Meeting Room B
+  [start_event] = 2026-03-17 14:30:00
+  [end_event] = 2026-03-17 16:45:00
+  [registration_start] = 2026-03-17 10:26:00
+  [registration_end] = 2026-03-20 10:27:00
+  [capacity] = 30
+  [description] = Join us for a panel discussion on cultural traditi...
+  [registration_link] = https://www.jotform.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 8RUUG5
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryX6Ay8kkfLq25HOQu
+---

@@ -1,0 +1,178 @@
+[17-Mar-2026 06:19:07 Europe/Berlin] 
+=== TEST UPDATE DEBUG START ===
+[17-Mar-2026 06:19:07 Europe/Berlin] TEST DATA:
+[17-Mar-2026 06:19:07 Europe/Berlin]   Event ID: 4
+[17-Mar-2026 06:19:07 Europe/Berlin]   Event Name: Debug Test Event 2026-03-17 06:19:07
+[17-Mar-2026 06:19:07 Europe/Berlin]   Location: Debug Location
+[17-Mar-2026 06:19:07 Europe/Berlin]   Start Event: 2026-03-17 10:00:00
+[17-Mar-2026 06:19:07 Europe/Berlin]   End Event: 2026-03-17 16:00:00
+[17-Mar-2026 06:19:07 Europe/Berlin]   Capacity: 50
+[17-Mar-2026 06:19:07 Europe/Berlin]   Description: Updated by debug script at 2026-03-17 06:19:07
+[17-Mar-2026 06:19:07 Europe/Berlin]   Registration Link: https://example.com
+[17-Mar-2026 06:19:07 Europe/Berlin]   Website Link: https://website.com
+[17-Mar-2026 06:19:07 Europe/Berlin]   Registration Start: 2026-03-17 08:00:00
+[17-Mar-2026 06:19:07 Europe/Berlin]   Registration End: 2026-03-17 09:00:00
+[17-Mar-2026 06:19:07 Europe/Berlin]   Is Private: 0
+[17-Mar-2026 06:19:07 Europe/Berlin] 
+1. VERIFYING EVENT EXISTS:
+[17-Mar-2026 06:19:07 Europe/Berlin] ✗ Event NOT FOUND with ID=4
+[17-Mar-2026 06:19:07 Europe/Berlin] ERROR: Event 4 does not exist
+[17-Mar-2026 06:19:22 Europe/Berlin] 
+=== TEST UPDATE DEBUG START ===
+[17-Mar-2026 06:19:22 Europe/Berlin] Using existing event ID: 45
+[17-Mar-2026 06:19:22 Europe/Berlin] TEST DATA:
+[17-Mar-2026 06:19:22 Europe/Berlin]   Event ID: 45
+[17-Mar-2026 06:19:22 Europe/Berlin]   Event Name: Debug Test Event 2026-03-17 06:19:22
+[17-Mar-2026 06:19:22 Europe/Berlin]   Location: Debug Location
+[17-Mar-2026 06:19:22 Europe/Berlin]   Start Event: 2026-03-17 10:00:00
+[17-Mar-2026 06:19:22 Europe/Berlin]   End Event: 2026-03-17 16:00:00
+[17-Mar-2026 06:19:22 Europe/Berlin]   Capacity: 50
+[17-Mar-2026 06:19:22 Europe/Berlin]   Description: Updated by debug script at 2026-03-17 06:19:22
+[17-Mar-2026 06:19:22 Europe/Berlin]   Registration Link: https://example.com
+[17-Mar-2026 06:19:22 Europe/Berlin]   Website Link: https://website.com
+[17-Mar-2026 06:19:22 Europe/Berlin]   Registration Start: 2026-03-17 08:00:00
+[17-Mar-2026 06:19:22 Europe/Berlin]   Registration End: 2026-03-17 09:00:00
+[17-Mar-2026 06:19:22 Europe/Berlin]   Is Private: 0
+[17-Mar-2026 06:19:22 Europe/Berlin] 
+1. VERIFYING EVENT EXISTS:
+[17-Mar-2026 06:19:22 Europe/Berlin] ✓ Event FOUND: ID=45, Name=2026 Global Sprint & Stride
+[17-Mar-2026 06:19:22 Europe/Berlin] 
+2. PERFORMING UPDATE:
+[17-Mar-2026 06:19:22 Europe/Berlin] Query: UPDATE events SET 
+                    event_name = {}, 
+                    location = {}, 
+                    start_event = {}, 
+                    end_event = {}, 
+                    capacity = {}, 
+                    description = {}, 
+                    registration_link = {}, 
+                    website_link = {}, 
+                    registration_start = {}, 
+                    registration_end = {}, 
+                    is_private = {}
+                    WHERE event_id = {}
+[17-Mar-2026 06:19:22 Europe/Berlin] Types: 'ssssisssssii' (12 chars for 12 params)
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[0] (s): 'Debug Test Event 2026-03-17 06:19:22'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[1] (s): 'Debug Location'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[2] (s): '2026-03-17 10:00:00'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[3] (s): '2026-03-17 16:00:00'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[4] (i): 50
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[5] (s): 'Updated by debug script at 2026-03-17 06:19:22'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[6] (s): 'https://example.com'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[7] (s): 'https://website.com'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[8] (s): '2026-03-17 08:00:00'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[9] (s): '2026-03-17 09:00:00'...
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[10] (i): 0
+[17-Mar-2026 06:19:22 Europe/Berlin]   Param[11] (i): 45
+[17-Mar-2026 06:19:22 Europe/Berlin] ERROR: Unknown column 'website_link' in 'field list'
+[17-Mar-2026 06:20:40 Europe/Berlin] 
+=== TEST UPDATE DEBUG START ===
+[17-Mar-2026 06:20:40 Europe/Berlin] Using existing event ID: 45
+[17-Mar-2026 06:20:40 Europe/Berlin] TEST DATA:
+[17-Mar-2026 06:20:40 Europe/Berlin]   Event ID: 45
+[17-Mar-2026 06:20:40 Europe/Berlin]   Event Name: Debug Test Event 2026-03-17 06:20:40
+[17-Mar-2026 06:20:40 Europe/Berlin]   Location: Debug Location
+[17-Mar-2026 06:20:40 Europe/Berlin]   Start Event: 2026-03-17 10:00:00
+[17-Mar-2026 06:20:40 Europe/Berlin]   End Event: 2026-03-17 16:00:00
+[17-Mar-2026 06:20:40 Europe/Berlin]   Capacity: 50
+[17-Mar-2026 06:20:40 Europe/Berlin]   Description: Updated by debug script at 2026-03-17 06:20:40
+[17-Mar-2026 06:20:40 Europe/Berlin]   Registration Link: https://example.com
+[17-Mar-2026 06:20:40 Europe/Berlin]   Website Link: https://website.com
+[17-Mar-2026 06:20:40 Europe/Berlin]   Registration Start: 2026-03-17 08:00:00
+[17-Mar-2026 06:20:40 Europe/Berlin]   Registration End: 2026-03-17 09:00:00
+[17-Mar-2026 06:20:40 Europe/Berlin]   Is Private: 0
+[17-Mar-2026 06:20:40 Europe/Berlin] 
+1. VERIFYING EVENT EXISTS:
+[17-Mar-2026 06:20:40 Europe/Berlin] ✓ Event FOUND: ID=45, Name=2026 Global Sprint & Stride
+[17-Mar-2026 06:20:40 Europe/Berlin] 
+2. PERFORMING UPDATE:
+[17-Mar-2026 06:20:40 Europe/Berlin] Query: UPDATE events SET 
+                    event_name = {}, 
+                    location = {}, 
+                    start_event = {}, 
+                    end_event = {}, 
+                    capacity = {}, 
+                    description = {}, 
+                    registration_link = {}, 
+                    website_link = {}, 
+                    registration_start = {}, 
+                    registration_end = {}, 
+                    is_private = {}
+                    WHERE event_id = {}
+[17-Mar-2026 06:20:40 Europe/Berlin] Types: 'ssssisssssii' (12 chars for 12 params)
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[0] (s): 'Debug Test Event 2026-03-17 06:20:40'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[1] (s): 'Debug Location'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[2] (s): '2026-03-17 10:00:00'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[3] (s): '2026-03-17 16:00:00'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[4] (i): 50
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[5] (s): 'Updated by debug script at 2026-03-17 06:20:40'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[6] (s): 'https://example.com'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[7] (s): 'https://website.com'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[8] (s): '2026-03-17 08:00:00'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[9] (s): '2026-03-17 09:00:00'...
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[10] (i): 0
+[17-Mar-2026 06:20:40 Europe/Berlin]   Param[11] (i): 45
+[17-Mar-2026 06:20:40 Europe/Berlin] ERROR: Unknown column 'website_link' in 'field list'
+[17-Mar-2026 06:21:18 Europe/Berlin] 
+=== TEST UPDATE DEBUG START ===
+[17-Mar-2026 06:21:18 Europe/Berlin] Using existing event ID: 45
+[17-Mar-2026 06:21:18 Europe/Berlin] TEST DATA:
+[17-Mar-2026 06:21:18 Europe/Berlin]   Event ID: 45
+[17-Mar-2026 06:21:18 Europe/Berlin]   Event Name: Debug Test Event 2026-03-17 06:21:18
+[17-Mar-2026 06:21:18 Europe/Berlin]   Location: Debug Location
+[17-Mar-2026 06:21:18 Europe/Berlin]   Start Event: 2026-03-17 10:00:00
+[17-Mar-2026 06:21:18 Europe/Berlin]   End Event: 2026-03-17 16:00:00
+[17-Mar-2026 06:21:18 Europe/Berlin]   Capacity: 50
+[17-Mar-2026 06:21:18 Europe/Berlin]   Description: Updated by debug script at 2026-03-17 06:21:18
+[17-Mar-2026 06:21:18 Europe/Berlin]   Registration Link: https://example.com
+[17-Mar-2026 06:21:18 Europe/Berlin]   Website Link: https://website.com
+[17-Mar-2026 06:21:18 Europe/Berlin]   Registration Start: 2026-03-17 08:00:00
+[17-Mar-2026 06:21:18 Europe/Berlin]   Registration End: 2026-03-17 09:00:00
+[17-Mar-2026 06:21:18 Europe/Berlin]   Is Private: 0
+[17-Mar-2026 06:21:18 Europe/Berlin] 
+1. VERIFYING EVENT EXISTS:
+[17-Mar-2026 06:21:18 Europe/Berlin] ✓ Event FOUND: ID=45, Name=2026 Global Sprint & Stride
+[17-Mar-2026 06:21:18 Europe/Berlin] 
+2. PERFORMING UPDATE:
+[17-Mar-2026 06:21:18 Europe/Berlin] Query: UPDATE events SET 
+                    event_name = {}, 
+                    location = {}, 
+                    start_event = {}, 
+                    end_event = {}, 
+                    capacity = {}, 
+                    description = {}, 
+                    registration_link = {}, 
+                    website = {}, 
+                    registration_start = {}, 
+                    registration_end = {}, 
+                    is_private = {}
+                    WHERE event_id = {}
+[17-Mar-2026 06:21:18 Europe/Berlin] Types: 'ssssisssssii' (12 chars for 12 params)
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[0] (s): 'Debug Test Event 2026-03-17 06:21:18'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[1] (s): 'Debug Location'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[2] (s): '2026-03-17 10:00:00'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[3] (s): '2026-03-17 16:00:00'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[4] (i): 50
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[5] (s): 'Updated by debug script at 2026-03-17 06:21:18'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[6] (s): 'https://example.com'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[7] (s): 'https://website.com'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[8] (s): '2026-03-17 08:00:00'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[9] (s): '2026-03-17 09:00:00'...
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[10] (i): 0
+[17-Mar-2026 06:21:18 Europe/Berlin]   Param[11] (i): 45
+[17-Mar-2026 06:21:18 Europe/Berlin] Query prepared successfully
+[17-Mar-2026 06:21:18 Europe/Berlin] Parameters bound
+[17-Mar-2026 06:21:18 Europe/Berlin] ✓ Query executed successfully
+[17-Mar-2026 06:21:18 Europe/Berlin]   Rows affected: 1
+[17-Mar-2026 06:21:18 Europe/Berlin] 
+3. VERIFYING UPDATE WAS SAVED:
+[17-Mar-2026 06:21:18 Europe/Berlin] ✓ Event found after update:
+[17-Mar-2026 06:21:18 Europe/Berlin]   ID: 45
+[17-Mar-2026 06:21:18 Europe/Berlin]   Name: Debug Test Event 2026-03-17 06:21:18
+[17-Mar-2026 06:21:18 Europe/Berlin]   Location: Debug Location
+[17-Mar-2026 06:21:18 Europe/Berlin]   Description: Updated by debug script at 2026-03-17 06:21:18...
+[17-Mar-2026 06:21:18 Europe/Berlin] ✓ EVENT_NAME WAS UPDATED CORRECTLY
+[17-Mar-2026 06:21:18 Europe/Berlin] ✓ LOCATION WAS UPDATED CORRECTLY
+[17-Mar-2026 06:21:18 Europe/Berlin] 
+=== TEST UPDATE DEBUG END ===
+

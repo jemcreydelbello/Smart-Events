@@ -1,0 +1,43 @@
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+=== COMPREHENSIVE EVENT EDIT TEST ===
+[17-Mar-2026 06:30:38 Europe/Berlin] Test Event ID: 45
+[17-Mar-2026 06:30:38 Europe/Berlin] Original Name: Debug Test Event 2026-03-17 06:21:18
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+Test Data:
+[17-Mar-2026 06:30:38 Europe/Berlin]   event_name: DIRECT TEST 2026-03-17 06:30:38
+[17-Mar-2026 06:30:38 Europe/Berlin]   location: Test Location 06:30
+[17-Mar-2026 06:30:38 Europe/Berlin]   website: https://website-test.example.com
+[17-Mar-2026 06:30:38 Europe/Berlin]   capacity: 99
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+Executing UPDATE query...
+[17-Mar-2026 06:30:38 Europe/Berlin] Query: UPDATE events SET 
+                    event_name = {}, 
+                    location = {}, 
+                    start_event = {}, 
+                    end_event = {}, 
+                    capacity = {}, 
+                    description = {}, 
+                    registration_link = {}, 
+                    website = {}, 
+                    registration_start = {}, 
+                    registration_end = {}, 
+                    is_private = {}
+                    WHERE event_id = {}
+[17-Mar-2026 06:30:38 Europe/Berlin] Types: 'ssssisssssii' (12 chars)
+[17-Mar-2026 06:30:38 Europe/Berlin] ✓ Query executed successfully, rows affected: 1
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+Verifying update in database...
+[17-Mar-2026 06:30:38 Europe/Berlin] Updated Event:
+[17-Mar-2026 06:30:38 Europe/Berlin]   ID: 45
+[17-Mar-2026 06:30:38 Europe/Berlin]   Name: DIRECT TEST 2026-03-17 06:30:38
+[17-Mar-2026 06:30:38 Europe/Berlin]   Location: Test Location 06:30
+[17-Mar-2026 06:30:38 Europe/Berlin]   Website: https://website-test.example.com
+[17-Mar-2026 06:30:38 Europe/Berlin]   Capacity: 99
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+Test Results:
+[17-Mar-2026 06:30:38 Europe/Berlin]   event_name_match: ✓ PASS
+[17-Mar-2026 06:30:38 Europe/Berlin]   location_match: ✓ PASS
+[17-Mar-2026 06:30:38 Europe/Berlin]   website_match: ✓ PASS
+[17-Mar-2026 06:30:38 Europe/Berlin]   capacity_match: ✓ PASS
+[17-Mar-2026 06:30:38 Europe/Berlin] 
+✓ ALL TESTS PASSED - EVENT EDIT IS WORKING CORRECTLY

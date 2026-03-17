@@ -1,7 +1,7 @@
-// Event Details Page JavaScript
+﻿// Event Details Page JavaScript
 
-console.log('📄 event-details.js loaded - STARTING');
-console.log('🔍 window object available:', typeof window !== 'undefined');
+console.log('≡ƒôä event-details.js loaded - STARTING');
+console.log('≡ƒöì window object available:', typeof window !== 'undefined');
 
 // API_BASE is defined in admin.js, use it or set default
 var API_BASE = window.API_BASE || '../api';
@@ -9,13 +9,262 @@ var API_BASE = window.API_BASE || '../api';
 // Declare currentEventId as module-level variable (admin.js also declares this)
 var currentEventId = null;
 
-// Declare attendeesData globally for use across both files
-var attendeesData = { initial: [], walkIn: [], actual: [] };
+// attendeesData is also already declared in admin.js
+// Do not redeclare it here - use window.attendeesData instead
 
 // ========================================
 // IMMEDIATE FUNCTION DEFINITIONS
 // (Available as soon as this file loads)
 // ========================================
+
+window.enableEventDetailsEdit = function() {
+    console.log('≡ƒô¥ enableEventDetailsEdit called');
+    // Find all readonly input fields and textareas in event details form
+    const detailsForm = document.querySelector('.event-details-form');
+    if (!detailsForm) {
+        console.warn('Γ¥î Event details form not found');
+        return;
+    }
+    
+    const inputs = detailsForm.querySelectorAll('input[readonly], textarea[readonly]');
+    console.log('Found', inputs.length, 'readonly inputs');
+    
+    const editBtn = document.getElementById('editEventDetailsBtn');
+    const saveBtn = document.getElementById('saveEventDetailsBtn');
+    const cancelBtn = document.getElementById('cancelEventDetailsBtn');
+    
+    // Enable all inputs
+    inputs.forEach(input => {
+        input.removeAttribute('readonly');
+        input.classList.remove('cursor-not-allowed');
+        input.classList.add('cursor-text');
+        input.style.backgroundColor = 'white';
+        input.style.cursor = 'text';
+    });
+    
+    // Make event image clickable
+    const imageContainer = document.getElementById('detailsEventImage');
+    if (imageContainer) {
+        imageContainer.style.cursor = 'pointer';
+        imageContainer.style.borderColor = '#3b82f6';
+        imageContainer.onclick = function() {
+            document.getElementById('editEventImage').click();
+        };
+        imageContainer.onmouseover = function() {
+            this.style.borderColor = '#1e40af';
+            this.style.backgroundColor = '#eff6ff';
+        };
+        imageContainer.onmouseout = function() {
+            this.style.borderColor = '#3b82f6';
+            this.style.backgroundColor = '#f9fafb';
+        };
+    }
+    
+    // Toggle buttons
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'block';
+    if (cancelBtn) cancelBtn.style.display = 'block';
+    
+    console.log('Γ£ô Event details edit mode enabled');
+};
+
+window.cancelEventDetailsEdit = function() {
+    console.log('≡ƒöÖ cancelEventDetailsEdit called');
+    // Find all input fields and textareas in event details form
+    const detailsForm = document.querySelector('.event-details-form');
+    if (!detailsForm) return;
+    
+    const inputs = detailsForm.querySelectorAll('input, textarea');
+    const editBtn = document.getElementById('editEventDetailsBtn');
+    const saveBtn = document.getElementById('saveEventDetailsBtn');
+    const cancelBtn = document.getElementById('cancelEventDetailsBtn');
+    
+    // Reload event details to revert changes
+    if (window.currentEventId) {
+        loadEventDetails(window.currentEventId);
+        
+        // After reload completes, make all inputs readonly again
+        // Use a small delay to ensure DOM updates are complete
+        setTimeout(() => {
+            inputs.forEach(input => {
+                input.setAttribute('readonly', 'readonly');
+                input.classList.remove('cursor-text');
+                input.classList.add('cursor-not-allowed');
+                input.style.backgroundColor = 'white';
+                input.style.cursor = 'not-allowed';
+            });
+            console.log('Γ£ô Made fields readonly after reload');
+        }, 600);
+    }
+    
+    // Make event image non-clickable
+    const imageContainer = document.getElementById('detailsEventImage');
+    if (imageContainer) {
+        imageContainer.style.cursor = 'default';
+        imageContainer.style.borderColor = '#e5e7eb';
+        imageContainer.style.backgroundColor = '#f9fafb';
+        imageContainer.onclick = null;
+        imageContainer.onmouseover = null;
+        imageContainer.onmouseout = null;
+    }
+    
+    // Toggle buttons
+    if (editBtn) editBtn.style.display = 'block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    
+    // Reset file input
+    const fileInput = document.getElementById('editEventImage');
+    if (fileInput) fileInput.value = '';
+    
+    console.log('Γ£ô Event details edit mode cancelled');
+};
+
+window.handleEditEventImage = function(event) {
+    console.log('≡ƒû╝∩╕Å handleEditEventImage called');
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file is an image
+    if (!file.type.startsWith('image/')) {
+        showNotification('Please select a valid image file', 'error');
+        return;
+    }
+
+    // Get current event ID
+    let eventId = window.currentEventId;
+    if (!eventId) {
+        const params = new URLSearchParams(window.location.search);
+        eventId = params.get('id') || params.get('eventId') || params.get('event_id');
+    }
+
+    if (!eventId) {
+        showNotification('Event ID not found', 'error');
+        return;
+    }
+
+    // Preview the image
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const eventImageDisplay = document.getElementById('eventImageDisplay');
+        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+        const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+        
+        // Update public layout
+        if (eventImageDisplay && eventImagePlaceholder) {
+            eventImageDisplay.src = e.target.result;
+            eventImageDisplay.style.display = 'block';
+            eventImagePlaceholder.style.display = 'none';
+        }
+        // Update private layout
+        if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+            eventImageDisplayPrivate.src = e.target.result;
+            eventImageDisplayPrivate.style.display = 'block';
+            eventImagePlaceholderPrivate.style.display = 'none';
+        }
+        console.log('Γ£ô Image preview displayed');
+    };
+    reader.readAsDataURL(file);
+    
+    // Store file for later upload with event details
+    window.pendingEventImage = {
+        file: file,
+        eventId: eventId
+    };
+    
+    console.log('Γ£ô Event image selected for upload');
+};
+
+window.saveEventDetails = function() {
+    console.log('≡ƒÆ╛ saveEventDetails called');
+    // Get all form data
+    const eventId = window.currentEventId;
+    if (!eventId) {
+        showNotification('Event ID not found', 'error');
+        return;
+    }
+    
+    const eventTitle = document.getElementById('editEventName')?.value || '';
+    const location = document.getElementById('eventLocation')?.value || '';
+    const capacity = document.getElementById('eventCapacity')?.value || '';
+    const registrationLink = document.getElementById('eventRegistrationLink')?.value || '';
+    const websiteLink = document.getElementById('eventWebsiteLink')?.value || '';
+    const description = document.getElementById('eventDescription')?.value || '';
+    const startEvent = document.getElementById('editStartEvent')?.value || '';
+    const endEvent = document.getElementById('editEndEvent')?.value || '';
+    const registrationStart = document.getElementById('editRegistrationStart')?.value || '';
+    const registrationEnd = document.getElementById('editRegistrationEnd')?.value || '';
+    
+    console.log('Form values:', { eventTitle, location, capacity, startEvent, endEvent });
+    
+    // Validate required fields
+    if (!eventTitle.trim() || !location.trim() || !capacity || !startEvent || !endEvent) {
+        showNotification('Please fill in all required fields (Title, Location, Capacity, Start Event, End Event)', 'error');
+        return;
+    }
+    
+    // Validate end event is after start event
+    if (new Date(endEvent) <= new Date(startEvent)) {
+        showNotification('End Event must be after Start Event', 'error');
+        return;
+    }
+    
+    // Create FormData for potential image upload
+    const formData = new FormData();
+    formData.append('action', 'update_event');
+    formData.append('event_id', eventId);
+    formData.append('event_name', eventTitle);
+    formData.append('location', location);
+    formData.append('start_event', startEvent);
+    formData.append('end_event', endEvent);
+    formData.append('capacity', capacity);
+    formData.append('registration_start', registrationStart);
+    formData.append('registration_end', registrationEnd);
+    formData.append('registration_link', registrationLink);
+    formData.append('website_link', websiteLink);
+    formData.append('description', description);
+    
+    // Add image if one was selected
+    if (window.pendingEventImage && window.pendingEventImage.file) {
+        formData.append('image', window.pendingEventImage.file);
+        console.log('≡ƒô╕ Image attached to save request');
+    }
+    
+    fetch('../api/events.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Event details updated successfully', 'success');
+            console.log('Γ£à Event details saved');
+            
+            // Clear pending image
+            window.pendingEventImage = null;
+            const fileInput = document.getElementById('editEventImage');
+            if (fileInput) fileInput.value = '';
+            
+            // Exit edit mode - this will also reload event details
+            // Don't call loadEventDetails again as cancelEventDetailsEdit already does it
+            window.cancelEventDetailsEdit();
+        } else {
+            showNotification('Error saving event details: ' + (data.message || 'Unknown error'), 'error');
+            console.error('Γ¥î Error saving:', data);
+        }
+    })
+    .catch(err => {
+        showNotification('Error saving event details: ' + err.message, 'error');
+        console.error('Γ¥î Error:', err);
+    });
+};
+
+console.log('Γ£à Event Details Edit Functions Assigned to window:');
+console.log('  - window.enableEventDetailsEdit:', typeof window.enableEventDetailsEdit);
+console.log('  - window.cancelEventDetailsEdit:', typeof window.cancelEventDetailsEdit);
+console.log('  - window.handleEditEventImage:', typeof window.handleEditEventImage);
+console.log('  - window.saveEventDetails:', typeof window.saveEventDetails);
 
 // Helper function to get user headers for API requests
 function getUserHeaders() {
@@ -105,7 +354,7 @@ function convert24To12Hour(timeStr) {
 // Helper function to get correct image URL path
 function getImageUrl(imagePath) {
     if (!imagePath) {
-        console.log('🖼️ getImageUrl: No path provided');
+        console.log('≡ƒû╝∩╕Å getImageUrl: No path provided');
         return null;
     }
     
@@ -113,14 +362,14 @@ function getImageUrl(imagePath) {
     
     // If it's already a full URL (starts with http), return as-is
     if (imagePath.startsWith('http')) {
-        console.log('🖼️ getImageUrl: Full URL detected, returning as-is:', imagePath);
+        console.log('≡ƒû╝∩╕Å getImageUrl: Full URL detected, returning as-is:', imagePath);
         return imagePath;
     }
     
     // If it contains /Smart-Events/ (from database), convert to relative path
     if (imagePath.includes('/Smart-Events/')) {
         result = imagePath.replace('/Smart-Events/', '../');
-        console.log('🖼️ getImageUrl: Converted from:', imagePath, 'to:', result);
+        console.log('≡ƒû╝∩╕Å getImageUrl: Converted from:', imagePath, 'to:', result);
         return result;
     }
     
@@ -132,25 +381,25 @@ function getImageUrl(imagePath) {
         } else {
             result = '../uploads/events/' + imagePath;
         }
-        console.log('🖼️ getImageUrl: Filename detected, converting from:', imagePath, 'to:', result);
+        console.log('≡ƒû╝∩╕Å getImageUrl: Filename detected, converting from:', imagePath, 'to:', result);
         return result;
     }
     
     // If path is relative to webroot (uploads/...), prepend ../ for admin nested folder
     if (imagePath.startsWith('uploads/')) {
         result = '../' + imagePath;
-        console.log('🖼️ getImageUrl: Converted from:', imagePath, 'to:', result);
+        console.log('≡ƒû╝∩╕Å getImageUrl: Converted from:', imagePath, 'to:', result);
         return result;
     }
     
     // If path starts with /, use it as-is (from webroot)
     if (imagePath.startsWith('/')) {
-        console.log('🖼️ getImageUrl: Root path detected, returning as-is:', imagePath);
+        console.log('≡ƒû╝∩╕Å getImageUrl: Root path detected, returning as-is:', imagePath);
         return imagePath;
     }
     
     // Otherwise return as-is
-    console.log('🖼️ getImageUrl: Unknown format, returning as-is:', imagePath);
+    console.log('≡ƒû╝∩╕Å getImageUrl: Unknown format, returning as-is:', imagePath);
     return imagePath;
 }
 
@@ -263,15 +512,15 @@ function loadSidebarNavigation() {
                 if (sidebarContainer) {
                     sidebarContainer.innerHTML = html;
                     setupNavigationForEventDetails();
-                    console.log('✓ Sidebar loaded successfully on event-details page');
+                    console.log('Γ£ô Sidebar loaded successfully on event-details page');
                     resolve();
                 } else {
-                    console.error('✗ Sidebar container not found');
+                    console.error('Γ£ù Sidebar container not found');
                     reject('Sidebar container not found');
                 }
             })
             .catch(error => {
-                console.error('✗ Error loading sidebar:', error);
+                console.error('Γ£ù Error loading sidebar:', error);
                 const sidebarContainer = document.getElementById('sidebarContainer');
                 if (sidebarContainer) {
                     sidebarContainer.innerHTML = '<div style="color: red; padding: 20px;">Error loading navigation</div>';
@@ -347,7 +596,7 @@ function setupNavigationForEventDetails() {
 // Setup admin profile information from localStorage
 function setupAdminProfile() {
     const adminName = localStorage.getItem('adminName') || 'Admin User';
-    const adminAvatar = localStorage.getItem('adminAvatar') || '👤';
+    const adminAvatar = localStorage.getItem('adminAvatar') || '≡ƒæñ';
     
     const adminNameEl = document.getElementById('adminName');
     const adminAvatarEl = document.getElementById('adminAvatar');
@@ -371,18 +620,18 @@ function loadEventDetails() {
         .then(data => {
             console.log('Event data received:', data);
             if (data.success && data.data) {
-                console.log('✓ Event found:', data.data.event_name);
+                console.log('Γ£ô Event found:', data.data.event_name);
                 displayEventDetails(data.data);
                 loadEventTasks(); // Load tasks after event details are displayed
                 loadAttendees(); // Load attendees after event details are displayed
                 loadGiveaways(); // Load giveaways after event details are displayed
             } else {
-                console.error('✗ API returned error or no data:', data);
+                console.error('Γ£ù API returned error or no data:', data);
                 showError('Failed to load event details: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('✗ Fetch error loading event details:', error);
+            console.error('Γ£ù Fetch error loading event details:', error);
             showError('Error loading event details: ' + error.message);
         });
 }
@@ -404,14 +653,14 @@ function loadEventAccessCode(eventId) {
                 codeField.style.fontSize = '16px';
                 codeField.style.textAlign = 'center';
                 codeField.style.letterSpacing = '2px';
-                console.log('✓ Loaded access code for event');
+                console.log('Γ£ô Loaded access code for event');
             } else {
-                codeField.value = '—';
+                codeField.value = 'ΓÇö';
             }
         })
         .catch(error => {
             console.error('Error loading access code:', error);
-            codeField.value = '—';
+            codeField.value = 'ΓÇö';
         });
 }
 
@@ -419,7 +668,7 @@ function displayEventDetails(event) {
     console.log('displayEventDetails() called with:', event);
     
     if (!event || !event.event_id) {
-        console.error('✗ Invalid event data');
+        console.error('Γ£ù Invalid event data');
         showError('Invalid event data received');
         return;
     }
@@ -432,7 +681,7 @@ function displayEventDetails(event) {
         const titleEl = document.getElementById('eventTitle');
         if (titleEl) {
             titleEl.textContent = event.event_name || 'Event Details';
-            console.log('✓ Updated page title to:', event.event_name);
+            console.log('Γ£ô Updated page title to:', event.event_name);
         }
     } catch (e) {
         console.error('Error updating title:', e);
@@ -447,6 +696,38 @@ function displayEventDetails(event) {
     
     // Details tab - populate all fields with error checking
     try {
+        // Convert full datetime strings to datetime-local format (YYYY-MM-DDTHH:mm)
+        let startEventValue = '';
+        let endEventValue = '';
+        let registrationStartValue = '';
+        let registrationEndValue = '';
+        
+        // Helper function to convert datetime string to datetime-local format
+        const convertToDatetimeLocal = (dateStr) => {
+            if (!dateStr) return '';
+            try {
+                // Handle format: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
+                const cleaned = String(dateStr).replace('T', ' ').trim();
+                // Extract just YYYY-MM-DD HH:mm part (16 characters)
+                if (cleaned.length >= 16) {
+                    const yearMonth = cleaned.substring(0, 10); // YYYY-MM-DD
+                    const time = cleaned.substring(11, 16); // HH:mm
+                    return yearMonth + 'T' + time; // YYYY-MM-DDTHH:mm
+                }
+                return '';
+            } catch (e) {
+                console.warn('Failed to convert datetime:', dateStr, e);
+                return '';
+            }
+        };
+        
+        startEventValue = convertToDatetimeLocal(event.start_event);
+        endEventValue = convertToDatetimeLocal(event.end_event);
+        registrationStartValue = convertToDatetimeLocal(event.registration_start);
+        registrationEndValue = convertToDatetimeLocal(event.registration_end);
+        
+        console.log('Converted datetime values:', { startEventValue, endEventValue, registrationStartValue, registrationEndValue });
+        
         const fields = [
             { id: 'detailsEventTitle', value: event.event_name || '-', label: 'Event Title' },
             { id: 'detailsEventLocation', value: event.location || '-', label: 'Location' },
@@ -456,40 +737,109 @@ function displayEventDetails(event) {
             { id: 'detailsEventDescription', value: event.description || '-', label: 'Description' },
             { id: 'detailsRegistrationLink', value: event.registration_link || '-', label: 'Registration Link' },
             { id: 'detailsEventCapacity', value: capacity || '-', label: 'Capacity' },
-            { id: 'detailsEventTypeField', value: (event.is_private == 1 ? 'Private' : 'Public'), label: 'Event Type' }
+            { id: 'detailsEventTypeField', value: (event.is_private == 1 ? 'Private' : 'Public'), label: 'Event Type' },
+            { id: 'startEvent', value: startEventValue, label: 'Start Event Datetime', isDatetime: true },
+            { id: 'endEvent', value: endEventValue, label: 'End Event Datetime', isDatetime: true },
+            { id: 'registrationStart', value: registrationStartValue, label: 'Registration Start', isDatetime: true },
+            { id: 'registrationEnd', value: registrationEndValue, label: 'Registration End', isDatetime: true },
+            { id: 'editStartEvent', value: startEventValue, label: 'Edit Start Event Datetime', isDatetime: true },
+            { id: 'editEndEvent', value: endEventValue, label: 'Edit End Event Datetime', isDatetime: true },
+            { id: 'editRegistrationStart', value: registrationStartValue, label: 'Edit Registration Start', isDatetime: true },
+            { id: 'editRegistrationEnd', value: registrationEndValue, label: 'Edit Registration End', isDatetime: true }
         ];
         
         fields.forEach(field => {
             const el = document.getElementById(field.id);
             if (el) {
-                if (el.tagName === 'TEXTAREA') {
-                    el.textContent = field.value;
-                } else {
-                    el.value = field.value;
+                try {
+                    if (el.tagName === 'TEXTAREA') {
+                        el.textContent = field.value;
+                    } else if (field.isDatetime) {
+                        // For datetime-local fields, remove readonly temporarily if it exists
+                        const wasReadonly = el.hasAttribute('readonly');
+                        if (wasReadonly) {
+                            el.removeAttribute('readonly');
+                        }
+                        // Force set the value
+                        el.value = field.value;
+                        el.setAttribute('value', field.value);
+                        // Restore readonly if it was there
+                        if (wasReadonly) {
+                            el.setAttribute('readonly', 'readonly');
+                        }
+                        console.log(`Γ£ô Set ${field.label}: "${field.value}" (readonly was: ${wasReadonly})`);
+                    } else {
+                        el.value = field.value;
+                        console.log(`Γ£ô Set ${field.label}:`, field.value);
+                    }
+                } catch (fieldError) {
+                    console.warn(`ΓÜá Error setting field ${field.id}:`, fieldError);
                 }
-                console.log(`✓ Set ${field.label}:`, field.value);
             } else {
-                console.warn(`⚠ Field not found: #${field.id}`);
+                console.warn(`ΓÜá Field not found: #${field.id}`);
             }
         });
     } catch (e) {
-        console.error('✗ Error setting form fields:', e.message, e);
+        console.error('Γ£ù Error setting form fields:', e.message, e);
     }
     
     // Event Image - Display visually
     try {
-        const imageContainer = document.getElementById('detailsEventImage');
-        if (imageContainer) {
-            if (event.image_url || event.image) {
-                const imageUrl = getImageUrl(event.image_url || event.image);
-                imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
-            } else {
-                imageContainer.innerHTML = '<span class="text-gray-400" style="font-size: 48px; display: flex; flex-direction: column; align-items: center; gap: 8px;"><span style="font-size: 24px; line-height: 1;">📷 No image</span></span>';
+        const eventImageDisplay = document.getElementById('eventImageDisplay');
+        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+        const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+        
+        if (event.image_url || event.image) {
+            const imageUrl = getImageUrl(event.image_url || event.image);
+            // Set image for public layout
+            if (eventImageDisplay && eventImagePlaceholder) {
+                eventImageDisplay.src = imageUrl;
+                eventImageDisplay.style.display = 'block';
+                eventImagePlaceholder.style.display = 'none';
             }
-            console.log('✓ Set event image');
+            // Set image for private layout
+            if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+                eventImageDisplayPrivate.src = imageUrl;
+                eventImageDisplayPrivate.style.display = 'block';
+                eventImagePlaceholderPrivate.style.display = 'none';
+            }
+        } else {
+            // Hide images for public layout
+            if (eventImageDisplay && eventImagePlaceholder) {
+                eventImageDisplay.style.display = 'none';
+                eventImagePlaceholder.style.display = 'flex';
+            }
+            // Hide images for private layout
+            if (eventImageDisplayPrivate && eventImagePlaceholderPrivate) {
+                eventImageDisplayPrivate.style.display = 'none';
+                eventImagePlaceholderPrivate.style.display = 'flex';
+            }
         }
+        console.log('Γ£ô Set event image');
     } catch (e) {
         console.error('Error setting image:', e);
+    }
+    
+    // Toggle layout based on event privacy status
+    try {
+        const privateEventLayout = document.getElementById('privateEventLayout');
+        const publicEventLayout = document.getElementById('publicEventLayout');
+        const privateEventRegistrationSection = document.getElementById('privateEventRegistrationSection');
+        
+        if (event.is_private == 1) {
+            // Show private event layout (Private Code + Event Image)
+            if (privateEventLayout) privateEventLayout.style.display = 'grid';
+            if (publicEventLayout) publicEventLayout.style.display = 'none';
+            if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'block';
+        } else {
+            // Show public event layout (Registration & Web Links + Event Image)
+            if (privateEventLayout) privateEventLayout.style.display = 'none';
+            if (publicEventLayout) publicEventLayout.style.display = 'grid';
+            if (privateEventRegistrationSection) privateEventRegistrationSection.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Error toggling layout:', e);
     }
     
     // Handle Privacy Access section visibility
@@ -509,7 +859,7 @@ function displayEventDetails(event) {
             if (detailsPrivateAccessCode && event.private_access_code) {
                 detailsPrivateAccessCode.value = event.private_access_code;
             }
-            console.log('✓ Privacy Access section shown - Event is PRIVATE');
+            console.log('Γ£ô Privacy Access section shown - Event is PRIVATE');
         } else {
             // Event is public - hide the section
             if (privacyAccessSection) {
@@ -518,13 +868,13 @@ function displayEventDetails(event) {
             if (detailsPrivateEvent) {
                 detailsPrivateEvent.checked = false;
             }
-            console.log('✓ Privacy Access section hidden - Event is PUBLIC');
+            console.log('Γ£ô Privacy Access section hidden - Event is PUBLIC');
         }
     } catch (e) {
         console.error('Error handling privacy access section:', e);
     }
     
-    console.log('✓ displayEventDetails completed successfully');
+    console.log('Γ£ô displayEventDetails completed successfully');
     
     // Load additional data after displaying basic event info
     setTimeout(() => {
@@ -552,7 +902,7 @@ function displayEventDetails(event) {
 
 function switchTab(tabName) {
     try {
-        console.log('🔀 Switching to tab:', tabName);
+        console.log('≡ƒöÇ Switching to tab:', tabName);
         
         // Hide all tabs
         document.querySelectorAll('.event-tab-content').forEach(tab => {
@@ -567,14 +917,14 @@ function switchTab(tabName) {
         
         // Show selected tab
         const tabElement = document.getElementById(tabName);
-        console.log('🔍 Looking for tab element with ID:', tabName, '| Found:', !!tabElement);
+        console.log('≡ƒöì Looking for tab element with ID:', tabName, '| Found:', !!tabElement);
         
         if (tabElement) {
             tabElement.classList.add('active');
             tabElement.style.display = 'block';
-            console.log('✓ Activated tab element:', tabName, 'Display:', window.getComputedStyle(tabElement).display);
+            console.log('Γ£ô Activated tab element:', tabName, 'Display:', window.getComputedStyle(tabElement).display);
         } else {
-            console.error('❌ Tab element not found:', tabName);
+            console.error('Γ¥î Tab element not found:', tabName);
             console.error('   Available tab elements:', Array.from(document.querySelectorAll('.event-tab-content')).map(el => el.id));
         }
         
@@ -587,86 +937,86 @@ function switchTab(tabName) {
         
         // Load data when specific tabs are clicked
         if (tabName === 'tasks') {
-            console.log('✓ Loading tasks tab...');
+            console.log('Γ£ô Loading tasks tab...');
             loadEventTasks();
         }
         
         if (tabName === 'attendees') {
-            console.log('✓ Loading attendees tab...');
+            console.log('Γ£ô Loading attendees tab...');
             loadAttendees();
         }
         
         if (tabName === 'kpi') {
-            console.log('✓ Loading KPI tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading KPI tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadSavedKPIData()');
+                console.log('  ΓåÆ Calling loadSavedKPIData()');
                 loadSavedKPIData();
-                console.log('  → Calling initializeKPIInputListeners()');
+                console.log('  ΓåÆ Calling initializeKPIInputListeners()');
                 initializeKPIInputListeners();
-                console.log('  → Calling loadKPIData()');
+                console.log('  ΓåÆ Calling loadKPIData()');
                 loadKPIData(currentEventId);
-                console.log('  → KPI tab fully loaded');
+                console.log('  ΓåÆ KPI tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
         
         if (tabName === 'emails') {
-            console.log('✓ Loading emails tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading emails tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadEmailBlasts()');
+                console.log('  ΓåÆ Calling loadEmailBlasts()');
                 loadEmailBlasts(currentEventId);
-                console.log('  → Emails tab fully loaded');
+                console.log('  ΓåÆ Emails tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
 
         if (tabName === 'marketing') {
-            console.log('✓ Loading marketing tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading marketing tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadGiveaways()');
+                console.log('  ΓåÆ Calling loadGiveaways()');
                 loadGiveaways();
-                console.log('  → Marketing tab fully loaded');
+                console.log('  ΓåÆ Marketing tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
 
         if (tabName === 'logistics') {
-            console.log('✓ Loading logistics tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading logistics tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadLogistics()');
+                console.log('  ΓåÆ Calling loadLogistics()');
                 loadLogistics();
-                console.log('  → Logistics tab fully loaded');
+                console.log('  ΓåÆ Logistics tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
 
         if (tabName === 'finance') {
-            console.log('✓ Loading finance tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading finance tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadExpenses()');
+                console.log('  ΓåÆ Calling loadExpenses()');
                 loadExpenses();
-                console.log('  → Finance tab fully loaded');
+                console.log('  ΓåÆ Finance tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
 
         if (tabName === 'postmortem') {
-            console.log('✓ Loading postmortem tab... currentEventId:', currentEventId);
+            console.log('Γ£ô Loading postmortem tab... currentEventId:', currentEventId);
             if (currentEventId) {
-                console.log('  → Calling loadPostmortemData()');
+                console.log('  ΓåÆ Calling loadPostmortemData()');
                 loadPostmortemData(currentEventId);
-                console.log('  → Postmortem tab fully loaded');
+                console.log('  ΓåÆ Postmortem tab fully loaded');
             } else {
-                console.error('  ❌ No currentEventId available');
+                console.error('  Γ¥î No currentEventId available');
             }
         }
     } catch (error) {
-        console.error('❌ ERROR in switchTab():', error);
+        console.error('Γ¥î ERROR in switchTab():', error);
         console.error('   Stack:', error.stack);
     }
 }
@@ -687,8 +1037,8 @@ function loadCoordinators(eventId) {
                     const html = `
                         <tr>
                             <td class="px-4 py-3">${escapeHtml(event.coordinator_name)}</td>
-                            <td class="px-4 py-3">${escapeHtml(event.coordinator_email || '—')}</td>
-                            <td class="px-4 py-3">${escapeHtml(event.coordinator_contact || '—')}</td>
+                            <td class="px-4 py-3">${escapeHtml(event.coordinator_email || 'ΓÇö')}</td>
+                            <td class="px-4 py-3">${escapeHtml(event.coordinator_contact || 'ΓÇö')}</td>
                             <td class="px-4 py-3 flex gap-2">
                                 <button class="action-btn" onclick="removeCoordinatorFromEvent(${event.coordinator_id}, ${eventId})" title="Remove Coordinator" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
@@ -768,7 +1118,7 @@ function loadOtherInfo(eventId) {
 
 // Remove coordinator - Show confirmation modal
 function removeCoordinatorFromEvent(coordinatorId, eventId) {
-    console.log('🔍 removeCoordinatorFromEvent called:', { coordinatorId, eventId, currentEventId });
+    console.log('≡ƒöì removeCoordinatorFromEvent called:', { coordinatorId, eventId, currentEventId });
     
     // Use provided eventId, or fallback to currentEventId
     const finalEventId = eventId || currentEventId;
@@ -779,10 +1129,10 @@ function removeCoordinatorFromEvent(coordinatorId, eventId) {
     }
     
     let modal = document.getElementById('removeCoordinatorModal');
-    console.log('🔍 Modal found:', !!modal);
+    console.log('≡ƒöì Modal found:', !!modal);
     
     if (!modal) {
-        console.log('🔍 Modal not found, creating modals...');
+        console.log('≡ƒöì Modal not found, creating modals...');
         if (typeof createOtherInformationModals === 'function') {
             createOtherInformationModals();
             modal = document.getElementById('removeCoordinatorModal');
@@ -790,12 +1140,12 @@ function removeCoordinatorFromEvent(coordinatorId, eventId) {
     }
     
     if (!modal) {
-        console.error('❌ Modal not found after creation');
+        console.error('Γ¥î Modal not found after creation');
         showNotification('Error: Confirmation modal not available', 'error');
         return;
     }
     
-    console.log('✅ Showing modal for removal');
+    console.log('Γ£à Showing modal for removal');
     window.pendingRemoveCoordinatorId = coordinatorId;
     window.pendingRemoveEventId = finalEventId;
     modal.classList.add('active');
@@ -812,7 +1162,7 @@ function confirmRemoveCoordinator() {
         return;
     }
     
-    console.log(`🗑️ Removing coordinator ${coordinatorId} from event ${eventId}`);
+    console.log(`≡ƒùæ∩╕Å Removing coordinator ${coordinatorId} from event ${eventId}`);
     
     fetch(`${API_BASE}/events.php`, {
         method: 'PUT',
@@ -834,7 +1184,7 @@ function confirmRemoveCoordinator() {
             document.getElementById('removeCoordinatorModal').classList.remove('active');
             
             if (data.success) {
-                showNotification('✓ Coordinator removed successfully!', 'success');
+                showNotification('Γ£ô Coordinator removed successfully!', 'success');
                 // Refresh the coordinator list
                 if (typeof loadEventCoordinators === 'function') {
                     loadEventCoordinators();
@@ -846,7 +1196,7 @@ function confirmRemoveCoordinator() {
             }
         })
         .catch(error => {
-            console.error('✗ Error removing coordinator:', error);
+            console.error('Γ£ù Error removing coordinator:', error);
             showNotification('Error removing coordinator: ' + error.message, 'error');
             document.getElementById('removeCoordinatorModal').classList.remove('active');
         });
@@ -876,12 +1226,12 @@ function generateAttendeesTable(attendees) {
                 <button type="button" onclick="viewAttendeeQR('${escapeHtml(regCode)}', '${escapeHtml(attendee.full_name || attendee.name || 'Attendee')}')" 
                         title="View QR Code" 
                         style="background: white; color: #2196f3; border: 1px solid #2196f3; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                    📱
+                    ≡ƒô▒
                 </button>
                 ${!isAttended ? `<button type="button" onclick="markParticipantAsAttended(${attendeeId}, '${escapeHtml(regCode)}')" 
                         title="Mark as Attended" 
                         style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                    ✓ Mark as Attended
+                    Γ£ô Mark as Attended
                 </button>` : ''}
                 <button type="button" onclick="deleteParticipant(${attendeeId}, '${escapeHtml(regCode)}')" 
                         title="Delete" 
@@ -1095,7 +1445,7 @@ function handleAddAttendeeSubmit(event) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            console.log('✓ Attendee added successfully:', data);
+            console.log('Γ£ô Attendee added successfully:', data);
             showAddAttendeeSuccess('Attendee added successfully! Registration code: ' + data.registration_code);
             
             // Clear form and reload attendees after a short delay
@@ -1119,14 +1469,14 @@ function handleAddAttendeeSubmit(event) {
 
 function showAddAttendeeError(message) {
     const errorDiv = document.getElementById('addAttendeeErrorMessage');
-    errorDiv.textContent = '✕ ' + message;
+    errorDiv.textContent = 'Γ£ò ' + message;
     errorDiv.style.display = 'block';
     document.getElementById('addAttendeeSuccessMessage').style.display = 'none';
 }
 
 function showAddAttendeeSuccess(message) {
     const successDiv = document.getElementById('addAttendeeSuccessMessage');
-    successDiv.textContent = '✓ ' + message;
+    successDiv.textContent = 'Γ£ô ' + message;
     successDiv.style.display = 'block';
     document.getElementById('addAttendeeErrorMessage').style.display = 'none';
 }
@@ -1142,11 +1492,11 @@ function openOtherInfoModal() {
 // Load Dashboard Data
 function loadDashboard(eventId) {
     if (!eventId) {
-        console.warn('❌ loadDashboard: No eventId provided');
+        console.warn('Γ¥î loadDashboard: No eventId provided');
         return;
     }
     
-    console.log('📊 Loading DASHBOARD for EVENT ID:', eventId);
+    console.log('≡ƒôè Loading DASHBOARD for EVENT ID:', eventId);
     
     // Fetch attendees first for accurate registration stats
     fetch(`${API_BASE}/participants.php?action=list&event_id=${eventId}`, {
@@ -1155,13 +1505,13 @@ function loadDashboard(eventId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                console.log('📊 Dashboard API returned', data.data.length, 'attendees');
+                console.log('≡ƒôè Dashboard API returned', data.data.length, 'attendees');
                 updateDashboardAttendees(data.data);
             } else {
-                console.error('❌ Dashboard API error:', data.message);
+                console.error('Γ¥î Dashboard API error:', data.message);
             }
         })
-        .catch(error => console.error('❌ Error loading attendees for dashboard:', error));
+        .catch(error => console.error('Γ¥î Error loading attendees for dashboard:', error));
     
     // Fetch event details for other KPI cards
     fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`, {
@@ -1212,7 +1562,7 @@ function updateDashboardKPIs(event) {
 
 function updateDashboardAttendees(attendees) {
     if (!attendees) {
-        console.warn('⚠️  updateDashboardAttendees: No attendees data');
+        console.warn('ΓÜá∩╕Å  updateDashboardAttendees: No attendees data');
         return;
     }
     
@@ -1227,16 +1577,16 @@ function updateDashboardAttendees(attendees) {
     if (regEl) {
         regEl.textContent = total;
     } else {
-        console.warn('⚠️  dashRegistrations element not found');
+        console.warn('ΓÜá∩╕Å  dashRegistrations element not found');
     }
     
     if (detailEl) {
         detailEl.textContent = `CHECKED IN: ${attended} (${total > 0 ? Math.round((attended/total)*100) : 0}%)`;
     } else {
-        console.warn('⚠️  dashRegistrationsDetail element not found');
+        console.warn('ΓÜá∩╕Å  dashRegistrationsDetail element not found');
     }
     
-    console.log(`✅ Dashboard for event ${currentEventId}: ${total} total registrations, ${attended} attended`);
+    console.log(`Γ£à Dashboard for event ${currentEventId}: ${total} total registrations, ${attended} attended`);
 }
 
 function updateDashboardTasks(tasks) {
@@ -1297,15 +1647,15 @@ function updateDashboardTasks(tasks) {
     document.getElementById('costDriversList').innerHTML = `
         <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
             <span>Hall Rental</span>
-            <span style="font-weight: 600;">₱4,200.00</span>
+            <span style="font-weight: 600;">Γé▒4,200.00</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
             <span>Lunch Pack</span>
-            <span style="font-weight: 600;">₱3,960.00</span>
+            <span style="font-weight: 600;">Γé▒3,960.00</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span>Badge Printing</span>
-            <span style="font-weight: 600;">₱420.00</span>
+            <span style="font-weight: 600;">Γé▒420.00</span>
         </div>
     `;
     
@@ -1453,7 +1803,7 @@ function updateDashboardProgram() {
 }
 function editEvent() {
     // Load current event data into the form and open edit modal
-    console.log('🔧 Opening edit modal for event ID:', currentEventId);
+    console.log('≡ƒöº Opening edit modal for event ID:', currentEventId);
     loadEventDataIntoEditForm();
     
     // Open the modal after a brief delay to ensure data is loaded
@@ -1463,7 +1813,7 @@ function editEvent() {
         modal.style.alignItems = 'flex-start';
         modal.style.justifyContent = 'center';
         document.body.style.overflow = 'hidden';
-        console.log('✓ Edit modal opened');
+        console.log('Γ£ô Edit modal opened');
     }, 300);
 }
 
@@ -1499,21 +1849,21 @@ function closeEditEventModal() {
 
 function loadEventDataIntoEditForm() {
     // Load current event data from the page into the form
-    console.log('📋 Loading event data for ID:', currentEventId);
+    console.log('≡ƒôï Loading event data for ID:', currentEventId);
     
     fetch(`${API_BASE}/events.php?action=detail&event_id=${currentEventId}`, {
         headers: getUserHeaders()
     })
         .then(response => response.json())
         .then(data => {
-            console.log('📥 Event data received:', data);
+            console.log('≡ƒôÑ Event data received:', data);
             
             if (data.success && data.data) {
                 const event = data.data;
                 
                 // Set the hidden event ID field
                 document.getElementById('editEventId').value = event.event_id;
-                console.log('✓ Event ID set to:', event.event_id);
+                console.log('Γ£ô Event ID set to:', event.event_id);
                 
                 // Populate form fields
                 document.getElementById('editEventTitle').value = event.event_name || '';
@@ -1524,13 +1874,13 @@ function loadEventDataIntoEditForm() {
                 document.getElementById('editEventLocation').value = event.location || '';
                 document.getElementById('editEventDescription').value = event.description || '';
                 
-                console.log('✓ All form fields populated');
+                console.log('Γ£ô All form fields populated');
                 
                 // Display current image if available
                 const imagePreview = document.getElementById('editEventImagePreview');
                 if (event.image_url) {
                     const imageUrl = getImageUrl(event.image_url);
-                    console.log('🖼️ Loading image:', imageUrl);
+                    console.log('≡ƒû╝∩╕Å Loading image:', imageUrl);
                     const img = document.createElement('img');
                     img.src = imageUrl;
                     img.alt = 'Event Image';
@@ -1540,19 +1890,19 @@ function loadEventDataIntoEditForm() {
                     imagePreview.innerHTML = '';
                     imagePreview.appendChild(img);
                 } else {
-                    imagePreview.innerHTML = '<span style="color: #999; text-align: center;">📷 No image</span>';
+                    imagePreview.innerHTML = '<span style="color: #999; text-align: center;">≡ƒô╖ No image</span>';
                 }
                 
                 // Add image preview update listener
                 attachImagePreviewListener();
-                console.log('✓ Event form loaded and ready');
+                console.log('Γ£ô Event form loaded and ready');
             } else {
                 alert('Failed to load event data: ' + (data.message || 'Unknown error'));
-                console.error('❌ Failed to load event:', data);
+                console.error('Γ¥î Failed to load event:', data);
             }
         })
         .catch(error => {
-            console.error('❌ Error loading event:', error);
+            console.error('Γ¥î Error loading event:', error);
             alert('Error loading event data: ' + error.message);
         });
 }
@@ -1593,11 +1943,11 @@ function handleEditEventSubmit(event) {
     
     if (!eventId) {
         alert('Error: Event ID not found. Please refresh and try again.');
-        console.error('❌ Event ID is missing. editEventId:', document.getElementById('editEventId').value, 'currentEventId:', currentEventId);
+        console.error('Γ¥î Event ID is missing. editEventId:', document.getElementById('editEventId').value, 'currentEventId:', currentEventId);
         return;
     }
     
-    console.log('💾 Saving event ID:', eventId);
+    console.log('≡ƒÆ╛ Saving event ID:', eventId);
     
     const submitBtn = document.getElementById('editEventSubmitBtn');
     const originalText = submitBtn.textContent;
@@ -1628,7 +1978,7 @@ function handleEditEventSubmit(event) {
         
         fetchOptions.body = formData;
         
-        console.log('📤 Sending FormData with image:', imageInput.files[0].name);
+        console.log('≡ƒôñ Sending FormData with image:', imageInput.files[0].name);
     } else {
         // Use JSON for text-only update
         const jsonData = {
@@ -1645,28 +1995,28 @@ function handleEditEventSubmit(event) {
         fetchOptions.headers['Content-Type'] = 'application/json';
         fetchOptions.body = JSON.stringify(jsonData);
         
-        console.log('📤 Sending JSON data:', jsonData);
+        console.log('≡ƒôñ Sending JSON data:', jsonData);
     }
     
     fetch(`${API_BASE}/events.php`, fetchOptions)
     .then(response => response.json())
     .then(data => {
-        console.log('📥 Response from server:', data);
+        console.log('≡ƒôÑ Response from server:', data);
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
         
         if (data.success) {
-            alert('✓ Event updated successfully');
+            alert('Γ£ô Event updated successfully');
             closeEditEventModal();
             // Reload event details
             loadEventDetails();
         } else {
-            alert('❌ Failed to update event: ' + (data.message || 'Unknown error'));
+            alert('Γ¥î Failed to update event: ' + (data.message || 'Unknown error'));
             console.error('Update failed:', data);
         }
     })
     .catch(error => {
-        console.error('❌ Error:', error);
+        console.error('Γ¥î Error:', error);
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
         alert('Error updating event: ' + error.message);
@@ -1714,7 +2064,7 @@ function showError(message) {
     document.querySelector('.event-details-container').innerHTML = `
         <div style="text-align: center; padding: 60px 20px; color: #999;">
             <p>${escapeHtml(message)}</p>
-            <a href="index.html?page=events" style="color: #C41E3A; text-decoration: none; font-weight: 600;">← Back to Events</a>
+            <a href="index.html?page=events" style="color: #C41E3A; text-decoration: none; font-weight: 600;">ΓåÉ Back to Events</a>
         </div>
     `;
 }
@@ -1811,313 +2161,60 @@ function closeAddTaskModal() {
     document.getElementById('taskErrorMessage').style.display = 'none';
 }
 
-// ========== TASK COORDINATOR LOOKUP FUNCTIONS ==========
-
-function openLookupCoordinatorTaskModal() {
-    if (!currentEventId) {
-        alert('Please save the event first before assigning coordinators to tasks');
-        return;
-    }
-    console.log('🔍 Opening Task Coordinator Lookup modal for event:', currentEventId);
-    const modal = document.getElementById('lookupCoordinatorTaskModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-    const searchInput = document.getElementById('coordinatorTaskSearchInput');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-    loadEventAssignedCoordinatorsForTask();
-}
-
-function closeLookupCoordinatorTaskModal() {
-    console.log('✕ Closing Task Coordinator Lookup modal');
-    const modal = document.getElementById('lookupCoordinatorTaskModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    const searchInput = document.getElementById('coordinatorTaskSearchInput');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-}
-
-async function loadEventAssignedCoordinatorsForTask() {
-    try {
-        console.log('📥 Fetching coordinators for event:', currentEventId);
-        
-        // Build the API URL
-        const apiUrl = `${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`;
-        console.log('API URL:', apiUrl);
-        
-        // Fetch coordinators assigned to this specific event
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: getUserHeaders()
-        });
-        
-        console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-        
-        if (data.success) {
-            console.log('✓ Coordinators loaded:', data.data);
-            // Store coordinators globally for later use
-            window.allEventCoordinators = data.data || [];
-            displayEventCoordinatorsForTask(data.data || []);
-        } else {
-            console.error('❌ API returned error:', data.message);
-            document.getElementById('coordinatorsTaskList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + (data.message || 'Unknown error') + '</p>';
-        }
-    } catch (error) {
-        console.error('❌ Error loading coordinators:', error);
-        document.getElementById('coordinatorsTaskList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Error loading coordinators: ' + error.message + '</p>';
-    }
-}
-
-function displayEventCoordinatorsForTask(coordinators) {
-    const listContainer = document.getElementById('coordinatorsTaskList');
-    
-    console.log('🎨 Displaying coordinators:', coordinators);
-    console.log('📊 Current selections:', window.selectedCoordinatorsForTask ? Array.from(window.selectedCoordinatorsForTask.keys()) : 'none');
-    
-    if (!coordinators || coordinators.length === 0) {
-        console.warn('⚠️ No coordinators found');
-        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">No coordinators assigned to this event. Please assign coordinators in the Event Details tab first.</p>';
-        return;
-    }
-    
-    let html = '';
-    coordinators.forEach(coordinator => {
-        // Skip coordinators that are already selected (already in preview)
-        if (window.selectedCoordinatorsForTask && window.selectedCoordinatorsForTask.has(coordinator.coordinator_id)) {
-            console.log(`⊘ Skipping already selected: ${coordinator.coordinator_name}`);
-            return;
-        }
-        
-        // Build profile image path
-        let profileImageUrl = '/assets/placeholder-avatar.png'; // Default placeholder
-        if (coordinator.coordinator_image) {
-            // Check if it's a full URL or just a filename
-            if (coordinator.coordinator_image.includes('data:image')) {
-                profileImageUrl = coordinator.coordinator_image;
-            } else if (coordinator.coordinator_image.includes('http')) {
-                profileImageUrl = coordinator.coordinator_image;
-            } else {
-                // Assume it's a filename in uploads/coordinators directory
-                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
-            }
-        }
-        
-        // Encode coordinator data for safe passing through onclick
-        const coordDataJson = JSON.stringify(coordinator).replace(/"/g, '&quot;');
-        
-        html += `
-            <label class="coordinator-card-task" data-coordinator-id="${coordinator.coordinator_id}" style="border: 2px solid #e5e7eb; border-radius: 6px; padding: 16px; display: flex; align-items: center; background: white; margin-bottom: 12px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#1E73BB'" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'" onclick="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', null, '${coordDataJson}')">
-                <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" data-coordinator-name="${coordinator.coordinator_name.replace(/"/g, '&quot;')}" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;" onchange="toggleCoordinatorSelection(${coordinator.coordinator_id}, '${coordinator.coordinator_name.replace(/'/g, "\\'")}', event, '${coordDataJson}')">
-                <div style="display: flex; gap: 12px; align-items: center; flex: 1; margin-left: 12px;">
-                    <!-- Profile Picture -->
-                    <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
-                    </div>
-                    <div style="flex: 1;">
-                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #1f2937; font-size: 14px;">${coordinator.coordinator_name}</p>
-                        <p style="margin: 0 0 2px 0; font-size: 13px; color: #6b7280;">${coordinator.email || 'No email'}</p>
-                        <p style="margin: 0; font-size: 12px; color: #9ca3af;">${coordinator.contact_number || 'No phone'}</p>
-                    </div>
-                </div>
-            </label>
-        `;
-    });
-    
-    if (html === '') {
-        html = '<p style="text-align: center; color: #9ca3af; padding: 20px;">All assigned coordinators have been selected. ✓</p>';
-    }
-    
-    listContainer.innerHTML = html;
-    console.log('✓ Coordinators rendered with checkboxes');
-}
-
-function filterCoordinatorsTaskList() {
-    const searchInput = document.getElementById('coordinatorTaskSearchInput');
-    const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
-    console.log('🔎 Filtering coordinators with:', searchValue);
-    const cards = document.querySelectorAll('.coordinator-card-task');
-    
-    let visibleCount = 0;
-    cards.forEach(card => {
-        const name = card.querySelector('p').textContent.toLowerCase();
-        const emailElement = card.querySelectorAll('p')[1];
-        const email = emailElement ? emailElement.textContent.toLowerCase() : '';
-        
-        if (name.includes(searchValue) || email.includes(searchValue)) {
-            card.style.display = 'flex';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
-        }
-    });
-    
-    console.log('Found', visibleCount, 'matching coordinators');
-}
-
-function selectCoordinatorForTask(coordinatorId, coordinatorName, event) {
-    if (event) event.stopPropagation();
-    
-    console.log('✓ Old selectCoordinatorForTask called - using new toggle selection');
-    toggleCoordinatorSelection(coordinatorId, coordinatorName, event);
-}
-
-function displaySelectedCoordinatorsPreview() {
-    const previewContainer = document.getElementById('selectedCoordinatorsPreview');
-    const previewContent = document.getElementById('selectedCoordinatorsPreviewContent');
-    
-    if (!previewContainer || !previewContent) return;
-    
-    if (!window.selectedCoordinatorsForTask || window.selectedCoordinatorsForTask.size === 0) {
-        previewContainer.style.display = 'none';
-        return;
-    }
-    
-    // Calculate if scrolling is needed (more than 4 coordinators)
-    const isScrollable = window.selectedCoordinatorsForTask.size > 4;
-    const maxHeight = isScrollable ? '280px' : 'auto';
-    const overflowStyle = isScrollable ? 'overflow-y: auto; overflow-x: hidden;' : '';
-    
-    let previewHtml = `
-        <div style="${overflowStyle} ${isScrollable ? 'max-height: ' + maxHeight + '; border: 1px solid #e5e7eb; border-radius: 6px;' : ''}">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <thead>
-                    <tr style="border-bottom: 2px solid #e5e7eb; background: #f9fafb; ${isScrollable ? 'position: sticky; top: 0; z-index: 10;' : ''}">
-                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 50px;">PHOTO</th>
-                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 20%;">NAME</th>
-                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 25%;">EMAIL ADDRESS</th>
-                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">COMPANY</th>
-                        <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #6b7280; width: 18%;">CONTACT NUMBER</th>
-                        <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #6b7280; width: 50px;">ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-    
-    window.selectedCoordinatorsForTask.forEach(coordinator => {
-        // Build profile image path
-        let profileImageUrl = '/assets/placeholder-avatar.png';
-        if (coordinator.coordinator_image) {
-            if (coordinator.coordinator_image.includes('data:image')) {
-                profileImageUrl = coordinator.coordinator_image;
-            } else if (coordinator.coordinator_image.includes('http')) {
-                profileImageUrl = coordinator.coordinator_image;
-            } else {
-                profileImageUrl = `../uploads/coordinators/${coordinator.coordinator_image}`;
-            }
-        }
-        
-        previewHtml += `
-            <tr style="border-bottom: 1px solid #e5e7eb; background: white;">
-                <td style="padding: 12px 8px; text-align: center;">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
-                        <img src="${profileImageUrl}" alt="${coordinator.coordinator_name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/assets/placeholder-avatar.png'">
-                    </div>
-                </td>
-                <td style="padding: 12px 8px; color: #1f2937; font-weight: 500;">${coordinator.coordinator_name}</td>
-                <td style="padding: 12px 8px; color: #6b7280; word-break: break-all;">${coordinator.email || 'No email'}</td>
-                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.company || 'N/A'}</td>
-                <td style="padding: 12px 8px; color: #6b7280;">${coordinator.contact_number || 'No phone'}</td>
-                <td style="padding: 12px 8px; text-align: center;">
-                    <button type="button" onclick="removeCoordinatorFromSelection(${coordinator.coordinator_id})" style="background: none; border: 1px solid #ef4444; color: #ef4444; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'" onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    previewHtml += `
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    previewContent.innerHTML = previewHtml;
-    previewContainer.style.display = 'block';
-    console.log('✓ Preview table displayed', window.selectedCoordinatorsForTask.size, 'coordinators', isScrollable ? '(scrollable)' : '(fixed height)');
-}
-
-function removeCoordinatorFromSelection(coordinatorId) {
-    if (window.selectedCoordinatorsForTask) {
-        window.selectedCoordinatorsForTask.delete(coordinatorId);
-        console.log(`✖️ Removed coordinator ${coordinatorId} from selection`);
-        
-        // Update the preview
-        displaySelectedCoordinatorsPreview();
-        
-        // Update preview in form if still needed
-        updateTaskResponsibleField();
-        
-        // Refresh the lookup list to show the deleted coordinator again
-        if (window.allEventCoordinators) {
-            console.log('🔄 Refreshing lookup coordinator list...');
-            displayEventCoordinatorsForTask(window.allEventCoordinators);
-        }
-    }
-}
-
-function updateTaskResponsibleField() {
-    const responsibleField = document.getElementById('taskResponsible');
-    if (!responsibleField) return;
-    
-    if (!window.selectedCoordinatorsForTask || window.selectedCoordinatorsForTask.size === 0) {
-        responsibleField.value = '';
-        responsibleField.dataset.coordinatorIds = '';
-        const previewContainer = document.getElementById('selectedCoordinatorsPreview');
-        if (previewContainer) {
-            previewContainer.style.display = 'none';
-        }
-    } else {
-        const coordinatorNames = Array.from(window.selectedCoordinatorsForTask.values()).map(c => c.coordinator_name).join(', ');
-        const coordinatorIds = Array.from(window.selectedCoordinatorsForTask.keys()).join(',');
-        responsibleField.value = coordinatorNames;
-        responsibleField.dataset.coordinatorIds = coordinatorIds;
-    }
-}
-
 function handleTaskFormSubmit(event) {
     event.preventDefault();
     
-    const taskName = document.getElementById('taskName').value.trim();
-    const dueDate = document.getElementById('taskDueDate').value;
-    const partyResponsible = document.getElementById('taskResponsible').value.trim();
-    const status = document.getElementById('taskStatus').value;
-    const remarks = document.getElementById('taskRemarks').value.trim();
-    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const taskId = document.getElementById('task_id').value;
+    const taskName = document.getElementById('task_name').value.trim();
+    const dueDate = document.getElementById('task_due_date').value;
+    const partyResponsible = document.getElementById('party_responsible').value.trim();
+    const status = document.getElementById('task_status').value;
+    const remarks = document.getElementById('task_remarks').value.trim();
+    const submitBtn = document.getElementById('taskSubmitBtn');
+    const errorDiv = document.getElementById('taskErrorMessage');
     
     // Validation
-    if (!taskName || !dueDate || !partyResponsible) {
-        alert('Please fill in all required fields (Task, Due Date, and Party Responsible)');
+    if (!taskName || !dueDate) {
+        errorDiv.textContent = 'Please fill in all required fields';
+        errorDiv.style.display = 'block';
         return;
     }
     
     if (taskName.length < 3) {
-        alert('Task name must be at least 3 characters long');
+        errorDiv.textContent = 'Task name must be at least 3 characters long';
+        errorDiv.style.display = 'block';
         return;
     }
+    
+    // Convert date from yyyy-mm-dd to mm/dd/yyyy for API
+    const dateObj = new Date(dueDate + 'T00:00:00Z');
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getUTCDate()).padStart(2, '0');
+    const year = dateObj.getUTCFullYear();
+    const formattedDate = `${month}/${day}/${year}`;
     
     const payload = {
         event_id: currentEventId,
         task_name: taskName,
-        due_date: dueDate,
+        due_date: formattedDate,
         party_responsible: partyResponsible,
         status: status,
         remarks: remarks
     };
     
+    const isEdit = taskId !== '';
+    const method = isEdit ? 'PUT' : 'POST';
+    
+    if (isEdit) {
+        payload.task_id = taskId;
+    }
+    
     // Disable submit button
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating...';
+    submitBtn.textContent = isEdit ? 'Updating...' : 'Creating...';
     
     fetch(`${API_BASE}/tasks.php`, {
-        method: 'POST',
+        method: method,
         headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
         body: JSON.stringify(payload)
     })
@@ -2743,13 +2840,9 @@ function renderMonthTasksList() {
                     <p style="margin: 0 0 4px 0; color: #999; font-size: 12px;">${dateStr}</p>
                     <span style="display: inline-block; padding: 2px 8px; background: ${statusColor}; color: white; border-radius: 3px; font-size: 11px; font-weight: 500;">${escapeHtml(task.status)}</span>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" onclick="editTask(${task.task_id})" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" title="Edit">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
-                    </button>
-                    <button type="button" onclick="deleteTask(${task.task_id})" style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" title="Delete">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
-                    </button>
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" onclick="editTask(${task.task_id})" style="background: none; border: none; color: #2196f3; cursor: pointer; font-weight: 500; font-size: 12px; padding: 4px 8px;">Edit</button>
+                    <button type="button" onclick="deleteTask(${task.task_id})" style="background: none; border: none; color: #f44336; cursor: pointer; font-weight: 500; font-size: 12px; padding: 4px 8px;">Delete</button>
                 </div>
             </div>
         `;
@@ -2802,9 +2895,9 @@ function renderCalendar() {
     
     let weekDisplay = `${startMonth} ${startDay}`;
     if (weekStart.getMonth() !== weekEnd.getMonth()) {
-        weekDisplay += ` – ${endMonth} ${endDay}`;
+        weekDisplay += ` ΓÇô ${endMonth} ${endDay}`;
     } else {
-        weekDisplay += ` – ${endDay}`;
+        weekDisplay += ` ΓÇô ${endDay}`;
     }
     weekDisplay += `, ${year}`;
     
@@ -3061,7 +3154,7 @@ function renderDeadlineTasksList(tasks) {
                 margin-top: 6px;
                 margin-bottom: 4px;
             `;
-            respEl.innerHTML = `👤 <strong>${escapeHtml(task.party_responsible)}</strong>`;
+            respEl.innerHTML = `≡ƒæñ <strong>${escapeHtml(task.party_responsible)}</strong>`;
             taskEl.appendChild(respEl);
         }
         
@@ -3115,15 +3208,12 @@ function loadKPIData(eventId) {
         const participants = participantsData.data;
         console.log('KPI: Fetched', participants.length, 'total participants');
         
-        // Update attendeesData with proper filtering - MATCH ATTENDEES TAB LOGIC
-        // Initial Attendees = Not yet attended (status = 'registered')
-        // Walk-in Attendees = Those with is_walkIn = 1
-        // Actual Attendees = All who attended (status = 'attended')
-        attendeesData.initial = participants.filter(a => a.status === 'registered');  // Not yet attended
-        attendeesData.walkIn = participants.filter(a => a.is_walkIn == 1);            // Actual walk-ins
-        attendeesData.actual = participants.filter(a => a.status === 'attended');     // Attended/checked-in
+        // Update attendeesData with fresh data - use EXACT same logic as Attendees section
+        // Filter by status field only (no 'attended' field in API response)
+        attendeesData.initial = participants.filter(a => a.status !== 'ATTENDED');
+        attendeesData.actual = participants.filter(a => a.status === 'ATTENDED');
         
-        console.log('KPI: Registered (Initial):', attendeesData.initial.length, '| Walk-in:', attendeesData.walkIn.length, '| Actual (Attended):', attendeesData.actual.length);
+        console.log('KPI: Initial count:', attendeesData.initial.length, '| Actual count:', attendeesData.actual.length);
         
         // Now fetch event data for capacity
         return fetch(`${API_BASE}/events.php?action=detail&event_id=${eventId}`, { headers })
@@ -3147,19 +3237,21 @@ function loadKPIData(eventId) {
             document.getElementById('kpiTargetAttendees').value = targetAttendees;
         }
         
-        // Calculate attendee counts using filtered data
-        const initialAttendees = attendeesData.initial.length;        // Registered (is_walkIn = 0)
-        const actualWalkInCount = attendeesData.walkIn.length;         // Actual walk-ins (is_walkIn = 1)
-        const totalAttendees = initialAttendees + actualWalkInCount;
-        const actualAttendees = attendeesData.actual.length;           // Attended/checked-in
+        let projectedWalkIn = parseInt(document.getElementById('kpiProjectedWalkIn').value) || 0;
+        
+        // Calculate attendee counts using attendeesData that was just updated
+        const initialAttendees = attendeesData.initial.length;
+        const walkInAttendees = projectedWalkIn;
+        const totalAttendees = initialAttendees + walkInAttendees;
+        const actualAttendees = attendeesData.actual.length;
         const remaining = Math.max(0, targetAttendees - totalAttendees);
         const progressPercent = targetAttendees > 0 ? Math.round((actualAttendees / targetAttendees) * 100) : 0;
         
-        console.log('KPI Calculations:', { targetAttendees, initialAttendees, actualWalkInCount, actualAttendees, remaining, progressPercent });
+        console.log('KPI Calculations:', { targetAttendees, projectedWalkIn, initialAttendees, actualAttendees, remaining, progressPercent });
         
         // Update UI
         document.getElementById('kpiInitialAttendees').textContent = initialAttendees;
-        document.getElementById('kpiWalkInAttendees').textContent = actualWalkInCount;
+        document.getElementById('kpiWalkInAttendees').textContent = walkInAttendees;
         document.getElementById('kpiTargetDisplay').textContent = targetAttendees;
         document.getElementById('kpiRemaining').textContent = remaining;
         document.getElementById('kpiActualAttendeesCount').textContent = actualAttendees;
@@ -3175,13 +3267,13 @@ function loadKPIData(eventId) {
         messageContainer.classList.add('bg-blue-50', 'border-blue-200');
         
         if (remaining > 0) {
-            messageEl.textContent = `Target: ${targetAttendees} | Registered: ${initialAttendees} + Walk-ins: ${actualWalkInCount} + Attended: ${actualAttendees} | Remaining: ${remaining}`;
+            messageEl.textContent = `${remaining} more attendees needed to meet the target. Total registered attendees: ${totalAttendees}.`;
         } else if (actualAttendees >= targetAttendees) {
-            messageEl.textContent = `Target met! ${actualAttendees} attendees checked in out of ${targetAttendees} target. (Registered: ${initialAttendees}, Walk-in: ${actualWalkInCount})`;
+            messageEl.textContent = `Target met! ${actualAttendees} attendees checked in out of ${targetAttendees} target.`;
             messageContainer.classList.remove('bg-blue-50', 'border-blue-200');
             messageContainer.classList.add('bg-green-50', 'border-green-200');
         } else {
-            messageEl.textContent = `${actualAttendees} attended. (Registered: ${initialAttendees}, Walk-in: ${actualWalkInCount}) Need ${remaining} more.`;
+            messageEl.textContent = `${actualAttendees} attendees checked in. ${remaining} more needed.`;
         }
     })
     .catch(error => {
@@ -3197,6 +3289,7 @@ console.log('[DEBUG] Assigned window.loadKPIData immediately after function defi
 // Update KPI data when input values change
 function initializeKPIInputListeners() {
     const targetInput = document.getElementById('kpiTargetAttendees');
+    const walkInInput = document.getElementById('kpiProjectedWalkIn');
     
     // Use both 'change' and 'input' events for real-time updates
     const updateKPI = () => {
@@ -3208,6 +3301,11 @@ function initializeKPIInputListeners() {
     if (targetInput) {
         targetInput.addEventListener('change', updateKPI);
         targetInput.addEventListener('input', updateKPI);
+    }
+    
+    if (walkInInput) {
+        walkInInput.addEventListener('change', updateKPI);
+        walkInInput.addEventListener('input', updateKPI);
     }
 }
 
@@ -3273,7 +3371,7 @@ function saveKPIDetails() {
         console.log('API Result:', result);
         
         if (result.success) {
-            console.log('✓ KPI saved to database:', result.data);
+            console.log('Γ£ô KPI saved to database:', result.data);
             
             // Also save to localStorage for offline access
             const kpiData = {
@@ -3289,7 +3387,7 @@ function saveKPIDetails() {
             const messageContainer = messageEl.parentElement;
             messageContainer.classList.remove('bg-blue-50', 'border-blue-200', 'bg-green-50', 'border-green-200');
             messageContainer.classList.add('bg-green-50', 'border-green-200');
-            messageEl.textContent = '✓ KPI Details saved successfully!';
+            messageEl.textContent = 'Γ£ô KPI Details saved successfully!';
             
             // Refresh the KPI data
             setTimeout(() => {
@@ -3341,7 +3439,7 @@ function loadSavedKPIData() {
         
         if (result.success && result.data) {
             // Load from database
-            console.log('✓ Found KPI data in database:', result.data);
+            console.log('Γ£ô Found KPI data in database:', result.data);
             document.getElementById('kpiTargetAttendees').value = result.data.target_attendees;
             document.getElementById('kpiProjectedWalkIn').value = result.data.projected_walk_in;
         } else {
@@ -3351,7 +3449,7 @@ function loadSavedKPIData() {
             if (savedData) {
                 try {
                     const kpiData = JSON.parse(savedData);
-                    console.log('✓ Found KPI data in localStorage:', kpiData);
+                    console.log('Γ£ô Found KPI data in localStorage:', kpiData);
                     document.getElementById('kpiTargetAttendees').value = kpiData.targetAttendees;
                     document.getElementById('kpiProjectedWalkIn').value = kpiData.projectedWalkIn;
                 } catch (e) {
@@ -3372,7 +3470,7 @@ function loadSavedKPIData() {
         if (savedData) {
             try {
                 const kpiData = JSON.parse(savedData);
-                console.log('✓ Fallback to localStorage:', kpiData);
+                console.log('Γ£ô Fallback to localStorage:', kpiData);
                 document.getElementById('kpiTargetAttendees').value = kpiData.targetAttendees;
                 document.getElementById('kpiProjectedWalkIn').value = kpiData.projectedWalkIn;
             } catch (e) {
@@ -3723,8 +3821,6 @@ function loadExpenses() {
             if (data.success) {
                 renderExpensesTable(data.data);
                 updateGrandTotal(data.grand_total || 0);
-                updateBudgetDisplay(data.budget || 0, data.grand_total || 0, data.balance || 0);
-                updateModalBudgetDisplay(data.budget || 0, data.balance || 0);
             } else {
                 console.error('[Finance] Error:', data.message);
             }
@@ -3736,118 +3832,13 @@ function loadExpenses() {
                 tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Error loading expenses</td></tr>';
             }
         });
-    
-    // Also load budget into the input field
-    loadBudgetInput();
 }
-
-function updateBudgetDisplay(budget, total, balance) {
-    // Update KPI cards
-    const budgetDisplay = document.getElementById('budgetAmount');
-    const balanceDisplay = document.getElementById('balanceAmount');
-    const balanceStatus = document.getElementById('balanceStatus');
-    
-    if (budgetDisplay) {
-        const formattedBudget = parseFloat(budget).toFixed(2);
-        budgetDisplay.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-    
-    if (balanceDisplay) {
-        const isNegative = balance < 0;
-        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
-        balanceDisplay.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        balanceDisplay.style.color = isNegative ? '#ef5350' : '#22c55e';
-    }
-    
-    if (balanceStatus) {
-        balanceStatus.textContent = balance < 0 ? 'Over Budget' : 'Remaining';
-        balanceStatus.style.color = balance < 0 ? '#ef5350' : '#666';
-    }
-}
-
-function updateModalBudgetDisplay(budget, balance) {
-    // Update modal budget display
-    const modalBudget = document.getElementById('modalBudgetDisplay');
-    const modalBalance = document.getElementById('modalBalanceDisplay');
-    
-    if (modalBudget) {
-        const formattedBudget = parseFloat(budget).toFixed(2);
-        modalBudget.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-    
-    if (modalBalance) {
-        const isNegative = balance < 0;
-        const absBalance = Math.abs(parseFloat(balance)).toFixed(2);
-        modalBalance.textContent = (isNegative ? '-' : '') + '₱' + absBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        modalBalance.style.color = isNegative ? '#ef5350' : '#22c55e';
-    }
-}
-
-function loadBudgetInput() {
-    if (!currentEventId) return;
-    
-    const headers = getUserHeaders();
-    headers['Content-Type'] = 'application/json';
-    
-    fetch(`${API_BASE}/finance.php?action=get_budget&event_id=${currentEventId}`, { headers })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const budgetInput = document.getElementById('budgetInput');
-                if (budgetInput) {
-                    budgetInput.value = data.budget || 0;
-                }
-            }
-        })
-        .catch(error => console.error('Error loading budget:', error));
-}
-
-function saveBudget() {
-    if (!currentEventId) {
-        showNotification('Please select an event first', 'error');
-        return;
-    }
-    
-    const budgetInput = document.getElementById('budgetInput');
-    const budget = parseFloat(budgetInput.value || 0);
-    
-    if (budget < 0) {
-        showNotification('Budget cannot be negative', 'error');
-        return;
-    }
-    
-    const headers = getUserHeaders();
-    headers['Content-Type'] = 'application/json';
-    
-    fetch(`${API_BASE}/finance.php?action=set_budget`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-            event_id: currentEventId,
-            budget: budget
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Budget saved successfully', 'success');
-            loadExpenses(); // Reload to update all displays
-        } else {
-            showNotification('Error: ' + data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error saving budget', 'error');
-    });
-}
-
 
 function updateGrandTotal(total) {
     const totalDisplay = document.getElementById('grandTotalDisplay');
     if (totalDisplay) {
         const formattedTotal = parseFloat(total).toFixed(2);
-        totalDisplay.textContent = '₱' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        totalDisplay.textContent = 'Γé▒' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 }
 
@@ -3869,8 +3860,8 @@ function renderExpensesTable(items) {
         <tr style="border-bottom: 1px solid #e8e8e8;">
             <td class="px-4 py-3 text-sm text-gray-900">${escapeHtml(item.description || '-')}</td>
             <td class="px-4 py-3 text-sm text-gray-900">${item.quantity || 1}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">₱${unitPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
-            <td class="px-4 py-3 text-sm text-gray-900 font-semibold">₱${total.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">Γé▒${unitPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
+            <td class="px-4 py-3 text-sm text-gray-900 font-semibold">Γé▒${total.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
             <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
                 <button onclick="editExpense(${item.expense_id})" 
                         style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
@@ -4115,7 +4106,7 @@ function loadPostmortemData(eventId) {
     // Load postmortem data for the Postmortem tab
     if (!eventId) return;
     
-    console.log('📊 Loading postmortem data for event:', eventId);
+    console.log('≡ƒôè Loading postmortem data for event:', eventId);
     
     // First calculate metrics from existing data
     fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${eventId}`, {
@@ -4123,7 +4114,7 @@ function loadPostmortemData(eventId) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('📊 Postmortem calculation:', data);
+        console.log('≡ƒôè Postmortem calculation:', data);
     })
     .catch(err => console.error('Error calculating postmortem:', err));
     
@@ -4136,7 +4127,7 @@ function loadPostmortemData(eventId) {
         if (data.success && data.data) {
             const pm = data.data;
             
-            console.log('✓ Postmortem data loaded:', pm);
+            console.log('Γ£ô Postmortem data loaded:', pm);
             
             // Update statistics cards
             document.getElementById('postmortemRegistrations').textContent = pm.registered_count || 0;
@@ -4173,7 +4164,7 @@ function loadPostmortemData(eventId) {
             
             // Update button states
             if (pm.automated_report_generated) {
-                document.getElementById('automatedReportBtn').textContent = '✓ Automated Report Generated';
+                document.getElementById('automatedReportBtn').textContent = 'Γ£ô Automated Report Generated';
                 document.getElementById('automatedReportBtn').disabled = true;
             } else {
                 document.getElementById('automatedReportBtn').textContent = 'Automated Report';
@@ -4181,7 +4172,7 @@ function loadPostmortemData(eventId) {
             }
             
             if (pm.log_report_created) {
-                document.getElementById('logReportBtn').textContent = '✓ Log Report Created';
+                document.getElementById('logReportBtn').textContent = 'Γ£ô Log Report Created';
                 document.getElementById('logReportBtn').disabled = false;
             } else {
                 document.getElementById('logReportBtn').textContent = 'Log Report';
@@ -4196,35 +4187,35 @@ function loadPostmortemData(eventId) {
 
 function loadAttendees() {
     if (!currentEventId) {
-        console.warn('❌ loadAttendees: No currentEventId set');
+        console.warn('Γ¥î loadAttendees: No currentEventId set');
         return;
     }
     
-    console.log('📋 Loading attendees for EVENT ID:', currentEventId);
+    console.log('≡ƒôï Loading attendees for EVENT ID:', currentEventId);
     
     fetch(`${API_BASE}/participants.php?action=list&event_id=${currentEventId}`, {
         headers: getUserHeaders()
     })
     .then(response => {
-        console.log('📋 Attendees API response status:', response.status);
+        console.log('≡ƒôï Attendees API response status:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('📋 Attendees API data:', data);
+        console.log('≡ƒôï Attendees API data:', data);
         if (data.success && Array.isArray(data.data)) {
-            console.log('✓ Loaded', data.data.length, 'total attendees');
+            console.log('Γ£ô Loaded', data.data.length, 'total attendees');
             
-            // Separate attendees by status - use lowercase status values ('registered', 'attended')
-            attendeesData.initial = data.data.filter(a => a.status === 'registered');
-            attendeesData.actual = data.data.filter(a => a.status === 'attended');
+            // Separate attendees by status - use status field as the authoritative source
+            attendeesData.initial = data.data.filter(a => a.status !== 'ATTENDED');
+            attendeesData.actual = data.data.filter(a => a.status === 'ATTENDED');
             
             // Sync to window object
             window.attendeesData = attendeesData;
             
-            console.log('✓ Initial List:', attendeesData.initial.length, '| Actual Attendees:', attendeesData.actual.length);
+            console.log('Γ£ô Initial List:', attendeesData.initial.length, '| Actual Attendees:', attendeesData.actual.length);
             
             renderAttendees();
             
@@ -4233,7 +4224,7 @@ function loadAttendees() {
                 loadKPIData(currentEventId);
             }
         } else {
-            console.error('❌ Failed to load attendees:', data.message || 'No data returned');
+            console.error('Γ¥î Failed to load attendees:', data.message || 'No data returned');
             // Still render empty state
             attendeesData.initial = [];
             attendeesData.actual = [];
@@ -4246,7 +4237,7 @@ function loadAttendees() {
         }
     })
     .catch(error => {
-        console.error('❌ Error loading attendees:', error);
+        console.error('Γ¥î Error loading attendees:', error);
         // Still render empty state
         attendeesData.initial = [];
         attendeesData.actual = [];
@@ -4260,27 +4251,27 @@ function loadAttendees() {
 }
 
 function renderAttendees() {
-    console.log('🎨 Rendering attendees...');
+    console.log('≡ƒÄ¿ Rendering attendees...');
     
     // Check if attendees tab is visible
     const attendeesTab = document.getElementById('attendees');
     if (attendeesTab) {
-        console.log('✓ Attendees tab found. Display:', window.getComputedStyle(attendeesTab).display, 'Has active class:', attendeesTab.classList.contains('active'));
+        console.log('Γ£ô Attendees tab found. Display:', window.getComputedStyle(attendeesTab).display, 'Has active class:', attendeesTab.classList.contains('active'));
     } else {
-        console.error('❌ Attendees tab element not found!');
+        console.error('Γ¥î Attendees tab element not found!');
     }
     
     const initialBody = document.getElementById('initialListBody');
     const actualBody = document.getElementById('actualAttendeesBody');
     
     if (!initialBody || !actualBody) {
-        console.error('❌ Attendees table elements not found! initialBody:', initialBody, 'actualBody:', actualBody);
+        console.error('Γ¥î Attendees table elements not found! initialBody:', initialBody, 'actualBody:', actualBody);
         return;
     }
     
-    console.log('✓ Found attendees table elements');
-    console.log('✓ initialListBody display:', window.getComputedStyle(initialBody).display);
-    console.log('✓ actualAttendeesBody display:', window.getComputedStyle(actualBody).display);
+    console.log('Γ£ô Found attendees table elements');
+    console.log('Γ£ô initialListBody display:', window.getComputedStyle(initialBody).display);
+    console.log('Γ£ô actualAttendeesBody display:', window.getComputedStyle(actualBody).display);
     
     // Update counts
     const initialCountEl = document.getElementById('initialCount');
@@ -4289,7 +4280,7 @@ function renderAttendees() {
     if (initialCountEl) initialCountEl.textContent = attendeesData.initial.length;
     if (actualCountEl) actualCountEl.textContent = attendeesData.actual.length;
     
-    console.log('✓ Updated counts: Initial=' + attendeesData.initial.length + ', Actual=' + attendeesData.actual.length);
+    console.log('Γ£ô Updated counts: Initial=' + attendeesData.initial.length + ', Actual=' + attendeesData.actual.length);
     
     // Helper function to get field value with fallback - ALWAYS returns string
     const getField = (obj, field) => {
@@ -4314,9 +4305,9 @@ function renderAttendees() {
                 <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'phone'))}</td>
                 <td style="padding: 15px; text-align: right;">
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">📱</button>
-                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">↩</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">✓</button>`}
-                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">🗑</button>
+                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">≡ƒô▒</button>
+                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">Γå⌐</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">Γ£ô</button>`}
+                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">≡ƒùæ</button>
                     </div>
                 </td>
             </tr>
@@ -4325,10 +4316,10 @@ function renderAttendees() {
     
     // Render initial list
     if (attendeesData.initial.length === 0) {
-        console.log('ℹ Initial list is empty');
+        console.log('Γä╣ Initial list is empty');
         initialBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999; font-size: 14px;">No registered participants yet</td></tr>';
     } else {
-        console.log('✓ Rendering ' + attendeesData.initial.length + ' initial attendees');
+        console.log('Γ£ô Rendering ' + attendeesData.initial.length + ' initial attendees');
         initialBody.innerHTML = attendeesData.initial.map((attendee, index) => {
             return renderAttendeeRow(attendee, index, false);
         }).join('');
@@ -4336,16 +4327,16 @@ function renderAttendees() {
     
     // Render actual attendees
     if (attendeesData.actual.length === 0) {
-        console.log('ℹ Actual attendees list is empty');
+        console.log('Γä╣ Actual attendees list is empty');
         actualBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999; font-size: 14px;">No attendees marked yet</td></tr>';
     } else {
-        console.log('✓ Rendering ' + attendeesData.actual.length + ' actual attendees');
+        console.log('Γ£ô Rendering ' + attendeesData.actual.length + ' actual attendees');
         actualBody.innerHTML = attendeesData.actual.map((attendee, index) => {
             return renderAttendeeRow(attendee, index, true);
         }).join('');
     }
     
-    console.log('✓ Attendees rendering complete');
+    console.log('Γ£ô Attendees rendering complete');
     
     // Ensure Initial List tab is shown by default
     switchAttendeesTab('initial');
@@ -4357,12 +4348,12 @@ function switchAttendeesTab(tab) {
     const initialContent = document.getElementById('initialListContent');
     const actualContent = document.getElementById('actualAttendeesContent');
     
-    console.log('📋 switchAttendeesTab called with:', tab);
+    console.log('≡ƒôï switchAttendeesTab called with:', tab);
     console.log('Buttons found - initialBtn:', !!initialBtn, 'actualBtn:', !!actualBtn);
     console.log('Content divs found - initialContent:', !!initialContent, 'actualContent:', !!actualContent);
     
     if (!initialBtn || !actualBtn || !initialContent || !actualContent) {
-        console.error('❌ Missing elements for tab switching!');
+        console.error('Γ¥î Missing elements for tab switching!');
         console.error('  - initialBtn:', initialBtn ? 'found' : 'NOT FOUND');
         console.error('  - actualBtn:', actualBtn ? 'found' : 'NOT FOUND');
         console.error('  - initialContent:', initialContent ? 'found' : 'NOT FOUND');
@@ -4371,7 +4362,7 @@ function switchAttendeesTab(tab) {
     }
     
     if (tab === 'initial') {
-        console.log('✓ Switching TO Initial List tab');
+        console.log('Γ£ô Switching TO Initial List tab');
         // Style Initial List button as active with gradient
         initialBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
         initialBtn.style.color = 'white';
@@ -4383,9 +4374,9 @@ function switchAttendeesTab(tab) {
         // Show Initial List content
         initialContent.style.display = 'block';
         actualContent.style.display = 'none';
-        console.log('✓ Initial List tab is now visible');
+        console.log('Γ£ô Initial List tab is now visible');
     } else if (tab === 'actual') {
-        console.log('✓ Switching TO Actual Attendees tab');
+        console.log('Γ£ô Switching TO Actual Attendees tab');
         // Style Initial List button as inactive
         initialBtn.style.background = 'white';
         initialBtn.style.color = '#4b5563';
@@ -4397,15 +4388,15 @@ function switchAttendeesTab(tab) {
         // Show Actual Attendees content
         initialContent.style.display = 'none';
         actualContent.style.display = 'block';
-        console.log('✓ Actual Attendees tab is now visible');
+        console.log('Γ£ô Actual Attendees tab is now visible');
     } else {
-        console.warn('⚠️ Unknown tab:', tab);
+        console.warn('ΓÜá∩╕Å Unknown tab:', tab);
     }
 }
 
 // Alias for switchAttendeesTab for backward compatibility
 function switchAttendeesList(tab) {
-    console.log('🔄 switchAttendeesList called with:', tab);
+    console.log('≡ƒöä switchAttendeesList called with:', tab);
     switchAttendeesTab(tab);
 }
 
@@ -4415,12 +4406,12 @@ function searchAttendees(query) {
     const actualBody = document.getElementById('actualAttendeesBody');
     
     if (!initialBody || !actualBody) {
-        console.error('❌ Attendees table bodies not found');
+        console.error('Γ¥î Attendees table bodies not found');
         return;
     }
     
     const q = query.toLowerCase();
-    console.log('🔍 Searching attendees for:', q);
+    console.log('≡ƒöì Searching attendees for:', q);
     
     // Filter initial attendees - search by full_name, first_name, middle_name, last_name, company, job_title, email
     const filteredInitial = attendeesData.initial.filter(a =>
@@ -4465,9 +4456,9 @@ function searchAttendees(query) {
                 <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'phone'))}</td>
                 <td style="padding: 15px; text-align: right;">
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">📱</button>
-                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">↩</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">✓</button>`}
-                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">🗑</button>
+                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">≡ƒô▒</button>
+                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">Γå⌐</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">Γ£ô</button>`}
+                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">≡ƒùæ</button>
                     </div>
                 </td>
             </tr>
@@ -4491,7 +4482,7 @@ function searchAttendees(query) {
         }).join('');
     }
     
-    console.log('✓ Search complete: Initial=' + filteredInitial.length + ', Actual=' + filteredActual.length);
+    console.log('Γ£ô Search complete: Initial=' + filteredInitial.length + ', Actual=' + filteredActual.length);
 }
 
 // Register searchAttendees as a global function for admin.js
@@ -4813,18 +4804,18 @@ function openCreateOtherInformationModal(eventId) {
 
 // Create modals HTML if they don't exist
 function createOtherInformationModals() {
-    console.log('🔍 createOtherInformationModals called');
+    console.log('≡ƒöì createOtherInformationModals called');
     
     // Check if any modal already exists (don't create duplicates)
     const deleteModal = document.getElementById('deleteOtherInformationModal');
     const removeModal = document.getElementById('removeCoordinatorModal');
     
     if (deleteModal && removeModal) {
-        console.log('✅ Modals already exist, skipping creation');
+        console.log('Γ£à Modals already exist, skipping creation');
         return;
     }
     
-    console.log('🔍 Creating modals... deleteModal:', !!deleteModal, 'removeModal:', !!removeModal);
+    console.log('≡ƒöì Creating modals... deleteModal:', !!deleteModal, 'removeModal:', !!removeModal);
     
     const modalsHTML = `
         <!-- Create Other Information Modal -->
@@ -4832,7 +4823,7 @@ function createOtherInformationModals() {
             <div class="modal-content" style="max-width: 500px;">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Create Other Information</h2>
-                    <button type="button" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+                    <button type="button" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">├ù</button>
                 </div>
                 
                 <form id="otherInformationForm" style="display: flex; flex-direction: column; gap: 16px;">
@@ -4868,7 +4859,7 @@ function createOtherInformationModals() {
             <div class="modal-content" style="max-width: 500px;">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Edit Other Information</h2>
-                    <button type="button" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+                    <button type="button" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">├ù</button>
                 </div>
                 
                 <form id="editOtherInformationForm" style="display: flex; flex-direction: column; gap: 16px;">
@@ -4904,7 +4895,7 @@ function createOtherInformationModals() {
             <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #dc2626;">Delete Other Information</h2>
-                    <button type="button" onclick="document.getElementById('deleteOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+                    <button type="button" onclick="document.getElementById('deleteOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">├ù</button>
                 </div>
                 
                 <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to delete this information? This action cannot be undone.</p>
@@ -4925,7 +4916,7 @@ function createOtherInformationModals() {
             <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #dc2626;">Remove Coordinator</h2>
-                    <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+                    <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">├ù</button>
                 </div>
                 
                 <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to remove this coordinator from the event? This action cannot be undone.</p>
@@ -4942,13 +4933,13 @@ function createOtherInformationModals() {
         </div>
     `;
     
-    console.log('🔍 Inserting modals into DOM...');
+    console.log('≡ƒöì Inserting modals into DOM...');
     document.body.insertAdjacentHTML('beforeend', modalsHTML);
     
     // Verify modals were inserted
     const deleteModalAfter = document.getElementById('deleteOtherInformationModal');
     const removeModalAfter = document.getElementById('removeCoordinatorModal');
-    console.log('✅ Modals inserted successfully. deleteModal:', !!deleteModalAfter, 'removeModal:', !!removeModalAfter);
+    console.log('Γ£à Modals inserted successfully. deleteModal:', !!deleteModalAfter, 'removeModal:', !!removeModalAfter);
 }
 
 // Submit create other information
@@ -5017,8 +5008,8 @@ function displayEventMetadata(metadata) {
             <div style="padding: 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
                 <strong style="color: #374151;">${escapeHtml(item.field_name)}</strong>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="openEditOtherInformationModal(${item.metadata_id}, '${escapeHtml(item.field_name)}', '${escapeHtml(item.field_value)}')" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Edit</button>
-                    <button onclick="deleteOtherInformation(${item.metadata_id})" style="padding: 4px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Delete</button>
+                    <button onclick="openEditOtherInformationModal(${item.metadata_id}, '${escapeHtml(item.field_name)}', '${escapeHtml(item.field_value)}')" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Γ£Å∩╕Å Edit</button>
+                    <button onclick="deleteOtherInformation(${item.metadata_id})" style="padding: 4px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">≡ƒùæ∩╕Å Delete</button>
                 </div>
             </div>
             <div style="padding: 12px;">
@@ -5086,27 +5077,27 @@ function submitEditOtherInformation() {
 
 // Delete other information - Show confirmation modal
 function deleteOtherInformation(metadataId) {
-    console.log('🔍 deleteOtherInformation called:', { metadataId });
+    console.log('≡ƒöì deleteOtherInformation called:', { metadataId });
     
     let modal = document.getElementById('deleteOtherInformationModal');
-    console.log('🔍 Modal found:', !!modal);
+    console.log('≡ƒöì Modal found:', !!modal);
     
     if (!modal) {
-        console.log('🔍 Modal not found, creating modals...');
+        console.log('≡ƒöì Modal not found, creating modals...');
         createOtherInformationModals();
         modal = document.getElementById('deleteOtherInformationModal');
-        console.log('🔍 Modal after creation:', !!modal);
+        console.log('≡ƒöì Modal after creation:', !!modal);
     }
     
     if (!modal) {
-        console.error('❌ Modal still not found after creation!');
+        console.error('Γ¥î Modal still not found after creation!');
         showNotification('Error: Modal not available', 'error');
         return;
     }
     
     // Store the metadata ID for confirmation
     window.pendingDeleteMetadataId = metadataId;
-    console.log('✅ Adding active class to modal');
+    console.log('Γ£à Adding active class to modal');
     modal.classList.add('active');
 }
 
@@ -5115,7 +5106,7 @@ function confirmDeleteOtherInformation() {
     const metadataId = window.pendingDeleteMetadataId;
     const eventId = currentEventId;
     
-    console.log('🔍 confirmDeleteOtherInformation called:', { metadataId, eventId });
+    console.log('≡ƒöì confirmDeleteOtherInformation called:', { metadataId, eventId });
     
     fetch(`${API_BASE}/metadata.php`, {
         method: 'POST',
@@ -5129,7 +5120,7 @@ function confirmDeleteOtherInformation() {
         .then(data => {
             document.getElementById('deleteOtherInformationModal').classList.remove('active');
             if (data.success) {
-                console.log('✅ Deletion successful, refreshing data');
+                console.log('Γ£à Deletion successful, refreshing data');
                 showNotification('Other Information deleted successfully!', 'success');
                 if (typeof loadOtherInfo === 'function') {
                     loadOtherInfo(eventId);
@@ -5167,6 +5158,23 @@ function closeLookupCoordinatorEventModal() {
 
 async function loadPendingCoordinatorsEvent() {
     try {
+        // First, fetch already assigned coordinators for this event
+        let assignedCoordinatorIds = [];
+        const assignedResponse = await fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
+            method: 'GET',
+            headers: getUserHeaders()
+        });
+        
+        if (assignedResponse.ok) {
+            const assignedData = await assignedResponse.json();
+            if (assignedData.success && Array.isArray(assignedData.data)) {
+                assignedCoordinatorIds = assignedData.data.map(c => String(c.coordinator_id));
+                console.log('Γ£ô Already assigned coordinators:', assignedCoordinatorIds);
+                console.log('≡ƒôî Sample assigned ID:', assignedCoordinatorIds[0], 'type:', typeof assignedCoordinatorIds[0]);
+            }
+        }
+        
+        // Now fetch all coordinators
         const response = await fetch(`${API_BASE}/coordinators.php?action=list`, {
             method: 'GET',
             headers: getUserHeaders()
@@ -5175,7 +5183,16 @@ async function loadPendingCoordinatorsEvent() {
         const data = await response.json();
         
         if (data.success) {
-            displayCoordinatorsEventList(data.data || []);
+            // Filter out already assigned coordinators - compare as strings to handle type mismatches
+            const availableCoordinators = (data.data || []).filter(coord => {
+                const coordIdStr = String(coord.coordinator_id || coord.id);
+                const isAssigned = assignedCoordinatorIds.includes(coordIdStr);
+                console.log(`≡ƒôì Coordinator ${coord.coordinator_name} (ID: ${coordIdStr}) - Assigned: ${isAssigned}`);
+                return !isAssigned;
+            });
+            
+            console.log(`≡ƒôï Total: ${data.data.length}, Available: ${availableCoordinators.length}, Assigned: ${assignedCoordinatorIds.length}`);
+            displayCoordinatorsEventList(availableCoordinators);
         } else {
             document.getElementById('coordinatorsEventList').innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading coordinators: ' + (data.message || 'Unknown error') + '</p>';
         }
@@ -5189,7 +5206,7 @@ function displayCoordinatorsEventList(coordinators) {
     const listContainer = document.getElementById('coordinatorsEventList');
     
     if (!coordinators || coordinators.length === 0) {
-        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">No coordinators available</p>';
+        listContainer.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">All coordinators are already assigned to this event</p>';
         return;
     }
     
@@ -5265,9 +5282,45 @@ async function assignCoordinatorToEventFromLookup(coordinatorId, coordinatorName
         const activateData = await activateResponse.json();
         
         if (activateData.success) {
-            alert(`✓ Coordinator "${coordinatorName}" assigned to event and account activated!`);
+            alert(`Γ£ô Coordinator "${coordinatorName}" assigned to event and account activated!`);
             closeLookupCoordinatorEventModal();
-            loadCoordinators(currentEventId); // Refresh the coordinator list
+            
+            // Append the new coordinator to the table instead of reloading
+            const table = document.getElementById('coordinatorsTable');
+            if (table) {
+                // Check if there's a "no coordinators" message and clear it
+                const noCoordMsg = table.querySelector('tr td[colspan="4"]');
+                if (noCoordMsg && noCoordMsg.textContent.includes('No coordinators assigned')) {
+                    table.innerHTML = ''; // Clear the empty message
+                }
+                
+                // Create a new row for the assigned coordinator
+                const newRow = `
+                    <tr>
+                        <td class="px-4 py-3">${escapeHtml(coordinatorName)}</td>
+                        <td class="px-4 py-3">ΓÇö</td>
+                        <td class="px-4 py-3">ΓÇö</td>
+                        <td class="px-4 py-3 flex gap-2">
+                            <button class="action-btn" onclick="removeCoordinatorFromEvent(${coordinatorId}, ${currentEventId})" title="Remove Coordinator" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                // Append the new row to the table (don't reload - keep existing rows in place)
+                table.innerHTML += newRow;
+                console.log(`Γ£ô Appended coordinator "${coordinatorName}" to table`);
+            }
+            
+            // Refresh the modal to hide the newly assigned coordinator
+            setTimeout(() => {
+                const modal = document.getElementById('lookupCoordinatorEventModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    console.log('≡ƒöä Refreshing event modal to filter newly assigned coordinator...');
+                    loadPendingCoordinatorsEvent();
+                }
+            }, 100);
         } else {
             alert('Coordinator assigned to event, but error activating account: ' + (activateData.message || 'Unknown error'));
             loadCoordinators(currentEventId);
@@ -5279,154 +5332,63 @@ async function assignCoordinatorToEventFromLookup(coordinatorId, coordinatorName
 }
 
 // Confirm file fully loaded
-console.log('✅ event-details.js fully loaded - switchTab function available:', typeof switchTab);
+console.log('Γ£à event-details.js fully loaded - switchTab function available:', typeof switchTab);
 
 // ========== COMPREHENSIVE WINDOW ASSIGNMENT SECTION ==========
 // Ensure all KPI functions are available on the window object for onclick handlers
 (function() {
-    console.log('🔄 [WINDOW SETUP] Starting window assignment for event-details.js functions...');
+    console.log('≡ƒöä [WINDOW SETUP] Starting window assignment for event-details.js functions...');
     
     // Check if functions exist before assigning
     if (typeof saveKPIDetails === 'function') {
         window.saveKPIDetails = saveKPIDetails;
-        console.log('✅ [WINDOW SETUP] window.saveKPIDetails assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.saveKPIDetails assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] saveKPIDetails function not found!');
+        console.error('Γ¥î [WINDOW SETUP] saveKPIDetails function not found!');
     }
     
     if (typeof loadKPIData === 'function') {
         window.loadKPIData = loadKPIData;
-        console.log('✅ [WINDOW SETUP] window.loadKPIData assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.loadKPIData assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] loadKPIData function not found!');
+        console.error('Γ¥î [WINDOW SETUP] loadKPIData function not found!');
     }
     
     if (typeof loadSavedKPIData === 'function') {
         window.loadSavedKPIData = loadSavedKPIData;
-        console.log('✅ [WINDOW SETUP] window.loadSavedKPIData assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.loadSavedKPIData assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] loadSavedKPIData function not found!');
+        console.error('Γ¥î [WINDOW SETUP] loadSavedKPIData function not found!');
     }
     
     if (typeof initializeKPIInputListeners === 'function') {
         window.initializeKPIInputListeners = initializeKPIInputListeners;
-        console.log('✅ [WINDOW SETUP] window.initializeKPIInputListeners assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.initializeKPIInputListeners assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] initializeKPIInputListeners function not found!');
+        console.error('Γ¥î [WINDOW SETUP] initializeKPIInputListeners function not found!');
     }
     
     if (typeof setDefaultKPIValues === 'function') {
         window.setDefaultKPIValues = setDefaultKPIValues;
-        console.log('✅ [WINDOW SETUP] window.setDefaultKPIValues assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.setDefaultKPIValues assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] setDefaultKPIValues function not found!');
+        console.error('Γ¥î [WINDOW SETUP] setDefaultKPIValues function not found!');
     }
     
     if (typeof switchTab === 'function') {
         window.switchTab = switchTab;
-        console.log('✅ [WINDOW SETUP] window.switchTab assigned successfully');
+        console.log('Γ£à [WINDOW SETUP] window.switchTab assigned successfully');
     } else {
-        console.error('❌ [WINDOW SETUP] switchTab function not found!');
+        console.error('Γ¥î [WINDOW SETUP] switchTab function not found!');
     }
     
-    // Task Coordinator Lookup Functions
-    if (typeof openLookupCoordinatorTaskModal === 'function') {
-        window.openLookupCoordinatorTaskModal = openLookupCoordinatorTaskModal;
-        console.log('✅ [WINDOW SETUP] window.openLookupCoordinatorTaskModal assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] openLookupCoordinatorTaskModal function not found!');
-    }
-    
-    if (typeof closeLookupCoordinatorTaskModal === 'function') {
-        window.closeLookupCoordinatorTaskModal = closeLookupCoordinatorTaskModal;
-        console.log('✅ [WINDOW SETUP] window.closeLookupCoordinatorTaskModal assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] closeLookupCoordinatorTaskModal function not found!');
-    }
-    
-    if (typeof loadEventAssignedCoordinatorsForTask === 'function') {
-        window.loadEventAssignedCoordinatorsForTask = loadEventAssignedCoordinatorsForTask;
-        console.log('✅ [WINDOW SETUP] window.loadEventAssignedCoordinatorsForTask assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] loadEventAssignedCoordinatorsForTask function not found!');
-    }
-    
-    if (typeof displayEventCoordinatorsForTask === 'function') {
-        window.displayEventCoordinatorsForTask = displayEventCoordinatorsForTask;
-        console.log('✅ [WINDOW SETUP] window.displayEventCoordinatorsForTask assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] displayEventCoordinatorsForTask function not found!');
-    }
-    
-    if (typeof filterCoordinatorsTaskList === 'function') {
-        window.filterCoordinatorsTaskList = filterCoordinatorsTaskList;
-        console.log('✅ [WINDOW SETUP] window.filterCoordinatorsTaskList assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] filterCoordinatorsTaskList function not found!');
-    }
-    
-    if (typeof selectCoordinatorForTask === 'function') {
-        window.selectCoordinatorForTask = selectCoordinatorForTask;
-        console.log('✅ [WINDOW SETUP] window.selectCoordinatorForTask assigned successfully');
-    } else {
-        console.error('❌ [WINDOW SETUP] selectCoordinatorForTask function not found!');
-    }
-    
-    // Defer coordinator function assignment until after admin.js has loaded
-    setTimeout(() => {
-        if (typeof toggleCoordinatorSelection === 'function') {
-            window.toggleCoordinatorSelection = toggleCoordinatorSelection;
-            console.log('✅ [WINDOW SETUP] window.toggleCoordinatorSelection assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] toggleCoordinatorSelection function not found!');
-        }
-        
-        if (typeof updateConfirmButtonState === 'function') {
-            window.updateConfirmButtonState = updateConfirmButtonState;
-            console.log('✅ [WINDOW SETUP] window.updateConfirmButtonState assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] updateConfirmButtonState function not found!');
-        }
-        
-        if (typeof confirmCoordinatorSelection === 'function') {
-            window.confirmCoordinatorSelection = confirmCoordinatorSelection;
-            console.log('✅ [WINDOW SETUP] window.confirmCoordinatorSelection assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] confirmCoordinatorSelection function not found!');
-        }
-        
-        if (typeof displaySelectedCoordinatorsPreview === 'function') {
-            window.displaySelectedCoordinatorsPreview = displaySelectedCoordinatorsPreview;
-            console.log('✅ [WINDOW SETUP] window.displaySelectedCoordinatorsPreview assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] displaySelectedCoordinatorsPreview function not found!');
-        }
-        
-        if (typeof removeCoordinatorFromSelection === 'function') {
-            window.removeCoordinatorFromSelection = removeCoordinatorFromSelection;
-            console.log('✅ [WINDOW SETUP] window.removeCoordinatorFromSelection assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] removeCoordinatorFromSelection function not found!');
-        }
-        
-        if (typeof updateTaskResponsibleField === 'function') {
-            window.updateTaskResponsibleField = updateTaskResponsibleField;
-            console.log('✅ [WINDOW SETUP] window.updateTaskResponsibleField assigned successfully');
-        } else {
-            console.error('❌ [WINDOW SETUP] updateTaskResponsibleField function not found!');
-        }
-    }, 100); // Wait 100ms for admin.js to load and define these functions
-    
-    console.log('🟢 [WINDOW SETUP] Completed. KPI functions available:', {
+    console.log('≡ƒƒó [WINDOW SETUP] Completed. KPI functions available:', {
         saveKPIDetails: typeof window.saveKPIDetails,
         loadKPIData: typeof window.loadKPIData,
         loadSavedKPIData: typeof window.loadSavedKPIData,
         initializeKPIInputListeners: typeof window.initializeKPIInputListeners,
         setDefaultKPIValues: typeof window.setDefaultKPIValues,
-        switchTab: typeof window.switchTab,
-        openLookupCoordinatorTaskModal: typeof window.openLookupCoordinatorTaskModal,
-        closeLookupCoordinatorTaskModal: typeof window.closeLookupCoordinatorTaskModal,
-        selectCoordinatorForTask: typeof window.selectCoordinatorForTask
+        switchTab: typeof window.switchTab
     });
 })();
 
@@ -5484,10 +5446,10 @@ function loadEmailBlasts(eventId) {
                         </td>
                         <td class="px-4 py-3 text-center">
                             <button onclick="editEmailBlast(${email.email_id})" class="inline-block text-blue-600 hover:text-blue-800 mr-3" title="Edit">
-                                ✎
+                                Γ£Ä
                             </button>
                             <button onclick="deleteEmailBlast(${email.email_id})" class="inline-block text-red-600 hover:text-red-800" title="Delete">
-                                🗑
+                                ≡ƒùæ
                             </button>
                         </td>
                     </tr>
@@ -5504,7 +5466,7 @@ function loadEmailBlasts(eventId) {
 }
 
 window.loadEmailBlasts = loadEmailBlasts;
-console.log('[EMAIL] ✓ loadEmailBlasts function defined and assigned to window');
+console.log('[EMAIL] Γ£ô loadEmailBlasts function defined and assigned to window');
 console.log('  Type:', typeof window.loadEmailBlasts);
 console.log('  Callable:', typeof window.loadEmailBlasts === 'function');
 
@@ -5526,7 +5488,7 @@ function openAddEmailBlastModal() {
 }
 
 window.openAddEmailBlastModal = openAddEmailBlastModal;
-console.log('[EMAIL] ✓ openAddEmailBlastModal function defined and assigned to window');
+console.log('[EMAIL] Γ£ô openAddEmailBlastModal function defined and assigned to window');
 console.log('  Type:', typeof window.openAddEmailBlastModal);
 
 function closeAddEmailBlastModal() {
@@ -5536,7 +5498,7 @@ function closeAddEmailBlastModal() {
 }
 
 window.closeAddEmailBlastModal = closeAddEmailBlastModal;
-console.log('[EMAIL] ✓ closeAddEmailBlastModal function defined and assigned to window');
+console.log('[EMAIL] Γ£ô closeAddEmailBlastModal function defined and assigned to window');
 console.log('  Type:', typeof window.closeAddEmailBlastModal);
 
 function saveEmailBlast() {
@@ -5585,7 +5547,7 @@ function saveEmailBlast() {
         console.log('[EMAIL] Save response:', data);
         
         if (data.success) {
-            alert(isEditing ? '✓ Email blast updated successfully!' : '✓ Email blast created successfully!');
+            alert(isEditing ? 'Γ£ô Email blast updated successfully!' : 'Γ£ô Email blast created successfully!');
             closeAddEmailBlastModal();
             loadEmailBlasts(eventId);
         } else {
@@ -5599,7 +5561,7 @@ function saveEmailBlast() {
 }
 
 window.saveEmailBlast = saveEmailBlast;
-console.log('[EMAIL] ✓ saveEmailBlast function defined and assigned to window');
+console.log('[EMAIL] Γ£ô saveEmailBlast function defined and assigned to window');
 console.log('  Type:', typeof window.saveEmailBlast);
 
 function editEmailBlast(emailId) {
@@ -5638,7 +5600,7 @@ function editEmailBlast(emailId) {
 }
 
 window.editEmailBlast = editEmailBlast;
-console.log('[EMAIL] ✓ editEmailBlast function defined and assigned to window');
+console.log('[EMAIL] Γ£ô editEmailBlast function defined and assigned to window');
 console.log('  Type:', typeof window.editEmailBlast);
 
 function deleteEmailBlast(emailId) {
@@ -5658,7 +5620,7 @@ function deleteEmailBlast(emailId) {
         console.log('[EMAIL] Delete response:', data);
         
         if (data.success) {
-            alert('✓ Email blast deleted successfully!');
+            alert('Γ£ô Email blast deleted successfully!');
             loadEmailBlasts(eventId);
         } else {
             alert('Error: ' + (data.message || 'Failed to delete email blast'));
@@ -5736,7 +5698,7 @@ function generateAutomatedReport() {
     const eventId = currentEventId || window.currentEventId;
     
     if (!eventId) {
-        console.warn('⚠️ Event ID is required to generate a report');
+        console.warn('ΓÜá∩╕Å Event ID is required to generate a report');
         return;
     }
     
@@ -5753,7 +5715,7 @@ function generateAutomatedReport() {
     .then(data => {
         if (data.success) {
             showNotification('Automated report generated successfully!', 'success');
-            document.getElementById('automatedReportBtn').textContent = '✓ Automated Report Generated';
+            document.getElementById('automatedReportBtn').textContent = 'Γ£ô Automated Report Generated';
             document.getElementById('automatedReportBtn').disabled = true;
         } else {
             showNotification(data.message || 'Failed to generate report', 'error');
@@ -5765,7 +5727,7 @@ function generateAutomatedReport() {
     });
 }
 window.generateAutomatedReport = generateAutomatedReport; // Immediate assignment
-console.log('✅ [FUNCTION] window.generateAutomatedReport assigned:', typeof window.generateAutomatedReport);
+console.log('Γ£à [FUNCTION] window.generateAutomatedReport assigned:', typeof window.generateAutomatedReport);
 
 function showLogReportForm() {
     console.log('[TOGGLE] showLogReportForm called - showing list view');
@@ -5785,7 +5747,7 @@ function showLogReportForm() {
 }
 
 window.showLogReportForm = showLogReportForm; // Immediate assignment
-console.log('✅ [FUNCTION] window.showLogReportForm assigned:', typeof window.showLogReportForm);
+console.log('Γ£à [FUNCTION] window.showLogReportForm assigned:', typeof window.showLogReportForm);
 
 function showCreateReportForm() {
     console.log('[TOGGLE] showCreateReportForm called - showing form view');
@@ -5805,7 +5767,7 @@ function showCreateReportForm() {
 }
 
 window.showCreateReportForm = showCreateReportForm; // Immediate assignment
-console.log('✅ [FUNCTION] window.showCreateReportForm assigned:', typeof window.showCreateReportForm);
+console.log('Γ£à [FUNCTION] window.showCreateReportForm assigned:', typeof window.showCreateReportForm);
 
 function hideCreateReportForm() {
     console.log('[TOGGLE] hideCreateReportForm called');
@@ -5821,7 +5783,7 @@ function hideCreateReportForm() {
 }
 
 window.hideCreateReportForm = hideCreateReportForm; // Immediate assignment
-console.log('✅ [FUNCTION] window.hideCreateReportForm assigned:', typeof window.hideCreateReportForm);
+console.log('Γ£à [FUNCTION] window.hideCreateReportForm assigned:', typeof window.hideCreateReportForm);
 
 function loadLogReportData() {
     if (!currentEventId) return;
@@ -5850,18 +5812,18 @@ function loadLogReportData() {
     .catch(err => console.error('Error loading log report data:', err));
 }
 window.loadLogReportData = loadLogReportData; // Immediate assignment
-console.log('✅ [FUNCTION] window.loadLogReportData assigned:', typeof window.loadLogReportData);
+console.log('Γ£à [FUNCTION] window.loadLogReportData assigned:', typeof window.loadLogReportData);
 
 function saveLogReport() {
-    console.log('✅ [REAL] saveLogReport called - REAL FUNCTION EXECUTING');
+    console.log('Γ£à [REAL] saveLogReport called - REAL FUNCTION EXECUTING');
     
     if (!currentEventId) {
-        console.warn('❌ Event ID is missing:', currentEventId);
+        console.warn('Γ¥î Event ID is missing:', currentEventId);
         alert('Event ID is required');
         return;
     }
     
-    console.log('📋 Collecting form data...');
+    console.log('≡ƒôï Collecting form data...');
     
     // Check if form fields exist
     const fields = ['logTitleIntroduction', 'logIssueSummary', 'logRootCauseAnalysis', 'logImpactMitigation', 'logResolutionRecovery', 'logCorrectiveMeasures', 'logFeedbackSurvey', 'logLessonLearned', 'logReviewMeasurements'];
@@ -5869,7 +5831,7 @@ function saveLogReport() {
     for (let fieldId of fields) {
         const field = document.getElementById(fieldId);
         if (!field) {
-            console.warn(`⚠️ Form field not found: ${fieldId}`);
+            console.warn(`ΓÜá∩╕Å Form field not found: ${fieldId}`);
         }
     }
     
@@ -5885,14 +5847,14 @@ function saveLogReport() {
     formData.append('log_lesson_learned', document.getElementById('logLessonLearned')?.value || '');
     formData.append('log_review_measurements', document.getElementById('logReviewMeasurements')?.value || '');
     
-    console.log('📤 Sending form data to API:', {
+    console.log('≡ƒôñ Sending form data to API:', {
         event_id: currentEventId,
         log_fields: 9,
         api_base: API_BASE
     });
     
     const apiUrl = `${API_BASE}/postmortem.php?action=save_log_report`;
-    console.log('🌐 API URL:', apiUrl);
+    console.log('≡ƒîÉ API URL:', apiUrl);
     
     fetch(apiUrl, {
         method: 'POST',
@@ -5900,17 +5862,17 @@ function saveLogReport() {
         body: formData
     })
     .then(response => {
-        console.log('📡 Response status:', response.status, response.statusText);
+        console.log('≡ƒôí Response status:', response.status, response.statusText);
         return response.json();
     })
     .then(data => {
-        console.log('✅ API Response:', data);
+        console.log('Γ£à API Response:', data);
         if (data.success) {
-            console.log('✅ Success! Showing notification...');
+            console.log('Γ£à Success! Showing notification...');
             showNotification('Log report saved successfully!', 'success');
             const btn = document.getElementById('logReportBtn');
             if (btn) {
-                btn.textContent = '✓ Log Report Created';
+                btn.textContent = 'Γ£ô Log Report Created';
                 btn.disabled = false;
             }
             // Return to metrics view after save
@@ -5924,18 +5886,18 @@ function saveLogReport() {
                 }
             }, 1000);
         } else {
-            console.warn('❌ API returned success: false');
+            console.warn('Γ¥î API returned success: false');
             showNotification(data.message || 'Failed to save log report', 'error');
         }
     })
     .catch(err => {
-        console.error('❌ Error saving log report:', err);
+        console.error('Γ¥î Error saving log report:', err);
         console.error('Error details:', err.stack);
         showNotification('Error saving log report: ' + err.message, 'error');
     });
 }
 window.saveLogReport = saveLogReport; // Immediate assignment
-console.log('✅ [FUNCTION] window.saveLogReport assigned:', typeof window.saveLogReport);
+console.log('Γ£à [FUNCTION] window.saveLogReport assigned:', typeof window.saveLogReport);
 
 function exportPostmortemPDF() {
     if (!currentEventId) {
@@ -6013,7 +5975,7 @@ window.exportPostmortemPDF = exportPostmortemPDF; // Immediate assignment
 
 // Alias function for HTML onclick handler
 function exportPostmortemReport(eventId) {
-    console.log('📄 exportPostmortemReport called for event:', eventId);
+    console.log('≡ƒôä exportPostmortemReport called for event:', eventId);
     
     if (!eventId) {
         eventId = window.currentEventId || currentEventId;
@@ -6032,7 +5994,7 @@ window.exportPostmortemReport = exportPostmortemReport; // Make globally accessi
 // Flag to indicate event-details.js has fully loaded
 window.eventDetailsJSLoaded = true;
 
-console.log('[EVENT-DETAILS] ✓ event-details.js fully loaded');
+console.log('[EVENT-DETAILS] Γ£ô event-details.js fully loaded');
 console.log('[EVENT-DETAILS] Postmortem functions available:');
 console.log('  - generateAutomatedReport:', typeof window.generateAutomatedReport);
 console.log('  - showLogReportForm:', typeof window.showLogReportForm);
@@ -6047,11 +6009,11 @@ console.log('  - editEmailBlast:', typeof window.editEmailBlast);
 console.log('  - deleteEmailBlast:', typeof window.deleteEmailBlast);
 
 // ====== CRITICAL: Ensure Postmortem Functions Are Globally Accessible ======
-console.log('\n🔒 [SAFETY-WRAP] Ensuring postmortem functions are accessible...');
+console.log('\n≡ƒöÆ [SAFETY-WRAP] Ensuring postmortem functions are accessible...');
 
 // Create wrappers to ensure functions are callable even if assignment fails
 if (!window.generateAutomatedReport) {
-    console.warn('⚠️ generateAutomatedReport not found, creating wrapper');
+    console.warn('ΓÜá∩╕Å generateAutomatedReport not found, creating wrapper');
     window.generateAutomatedReport = function() {
         const originalFunc = window._generateAutomatedReport; 
         if (typeof originalFunc === 'function') {
@@ -6063,7 +6025,7 @@ if (!window.generateAutomatedReport) {
 }
 
 if (!window.showLogReportForm) {
-    console.warn('⚠️ showLogReportForm not found, creating wrapper');
+    console.warn('ΓÜá∩╕Å showLogReportForm not found, creating wrapper');
     window.showLogReportForm = function() {
         document.getElementById('postmortemMetricsView').classList.add('hidden');
         document.getElementById('postmortemLogReportView').classList.remove('hidden');
@@ -6074,7 +6036,7 @@ if (!window.showLogReportForm) {
 }
 
 if (!window.hideLogReportForm) {
-    console.warn('⚠️ hideLogReportForm not found, creating wrapper');
+    console.warn('ΓÜá∩╕Å hideLogReportForm not found, creating wrapper');
     window.hideLogReportForm = function() {
         document.getElementById('postmortemLogReportView').classList.add('hidden');
         document.getElementById('postmortemMetricsView').classList.remove('hidden');
@@ -6082,7 +6044,7 @@ if (!window.hideLogReportForm) {
 }
 
 if (!window.loadLogReportData) {
-    console.warn('⚠️ loadLogReportData not found, creating wrapper');
+    console.warn('ΓÜá∩╕Å loadLogReportData not found, creating wrapper');
     window.loadLogReportData = function() {
         if (!window.currentEventId) return;
         fetch(`../api/postmortem.php?action=get&event_id=${window.currentEventId}`, {
@@ -6107,7 +6069,7 @@ if (!window.loadLogReportData) {
 }
 
 if (!window.saveLogReport) {
-    console.warn('⚠️ saveLogReport not found, creating wrapper');
+    console.warn('ΓÜá∩╕Å saveLogReport not found, creating wrapper');
     window.saveLogReport = function() {
         if (!window.currentEventId) {
             alert('Event ID is required');
@@ -6134,14 +6096,14 @@ if (!window.saveLogReport) {
         .then(data => {
             if (data.success) {
                 alert('Log report saved successfully!');
-                document.getElementById('logReportBtn').textContent = '✓ Log Report Created';
+                document.getElementById('logReportBtn').textContent = 'Γ£ô Log Report Created';
                 setTimeout(() => window.hideLogReportForm(), 1000);
             }
         });
     };
 }
 
-console.log('✅ [SAFETY-WRAP] All postmortem function wrappers are ready');
+console.log('Γ£à [SAFETY-WRAP] All postmortem function wrappers are ready');
 console.log('Final check:');
 console.log('  - window.generateAutomatedReport:', typeof window.generateAutomatedReport);
 console.log('  - window.showLogReportForm:', typeof window.showLogReportForm);

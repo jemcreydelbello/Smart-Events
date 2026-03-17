@@ -441,6 +441,16 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Ensure location column exists
     ensureLocationColumn($conn);
     
+    // Debug: Log the action being received
+    $received_action = $_POST['action'] ?? 'NO_ACTION';
+    error_log('=== POST REQUEST RECEIVED ===');
+    error_log('Timestamp: ' . date('Y-m-d H:i:s'));
+    error_log('Action received: "' . $received_action . '"');
+    error_log('POST keys: ' . implode(', ', array_keys($_POST)));
+    error_log('Content-Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'NOT SET'));
+    error_log('Full POST data: ' . json_encode($_POST));
+    error_log('REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+    
     // Check if this is an image update request
     if (isset($_POST['action']) && $_POST['action'] === 'update_event_image') {
         $event_id = intval($_POST['event_id'] ?? 0);
@@ -529,46 +539,89 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Handle update_event action (update all event details including optional image)
+    $debug_log = dirname(__DIR__) . '/EVENTS_DEBUG.log';
+    file_put_contents($debug_log, "\n=== POST CHECK " . date('Y-m-d H:i:s') . " ===\n", FILE_APPEND);
+    file_put_contents($debug_log, "isset(\$_POST['action']): " . (isset($_POST['action']) ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+    if (isset($_POST['action'])) {
+        file_put_contents($debug_log, "\$_POST['action'] value: \"" . $_POST['action'] . "\"\n", FILE_APPEND);
+        file_put_contents($debug_log, "\$_POST['action'] length: " . strlen($_POST['action']) . "\n", FILE_APPEND);
+        file_put_contents($debug_log, "\$_POST['action'] === 'update_event': " . ($_POST['action'] === 'update_event' ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+        file_put_contents($debug_log, "strcmp result: " . strcmp($_POST['action'], 'update_event') . "\n", FILE_APPEND);
+    }
+    
     if (isset($_POST['action']) && $_POST['action'] === 'update_event') {
-        $event_id = intval($_POST['event_id'] ?? 0);
-        $event_name = isset($_POST['event_name']) ? trim($_POST['event_name']) : '';
-        $location = isset($_POST['location']) ? trim($_POST['location']) : '';
-        $event_date = isset($_POST['event_date']) ? trim($_POST['event_date']) : '';
-        $start_time = isset($_POST['start_time']) ? trim($_POST['start_time']) : '00:00:00';
-        $end_time = isset($_POST['end_time']) ? trim($_POST['end_time']) : '23:59:59';
-        $capacity = intval($_POST['capacity'] ?? 0);
-        $registration_link = isset($_POST['registration_link']) ? trim($_POST['registration_link']) : '';
-        $website_link = isset($_POST['website_link']) ? trim($_POST['website_link']) : '';
-        $description = isset($_POST['description']) ? trim($_POST['description']) : '';
+        file_put_contents($debug_log, "✅ UPDATE_EVENT HANDLER MATCHED!\n", FILE_APPEND);
+        error_log('=== UPDATE_EVENT HANDLER START ===');
+        error_log('Time: ' . date('Y-m-d H:i:s'));
         
-        if (!$event_id || !$event_name || !$location || !$event_date || !$capacity) {
+        // Log all POST data as received
+        error_log('RAW POST DATA:');
+        foreach ($_POST as $key => $value) {
+            if (strlen($value) > 100) {
+                error_log("  POST['$key']: " . substr($value, 0, 100) . "...");
+            } else {
+                error_log("  POST['$key']: '$value'");
+            }
+        }
+        
+        // Extract all parameters
+        $event_id = intval($_POST['event_id'] ?? 0);
+        
+        error_log("PARSED EVENT_ID: $event_id (raw: '" . ($_POST['event_id'] ?? 'NOT SET') . "')");
+        
+        if ($event_id <= 0) {
+            error_log('VALIDATION FAILED: event_id must be > 0, got: ' . $event_id);
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Event ID is invalid']);
+            exit;
+        }
+        
+        $event_name = trim($_POST['event_name'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        $start_event = trim($_POST['start_event'] ?? '');
+        $end_event = trim($_POST['end_event'] ?? '');
+        $capacity = intval($_POST['capacity'] ?? 0);
+        $description = trim($_POST['description'] ?? '');
+        $registration_link = trim($_POST['registration_link'] ?? '');
+        $website_link = trim($_POST['website_link'] ?? '');
+        $is_private = intval($_POST['is_private'] ?? 0);
+        $registration_start = trim($_POST['registration_start'] ?? '');
+        $registration_end = trim($_POST['registration_end'] ?? '');
+        $private_code = trim($_POST['private_code'] ?? '');
+        
+        // Validate required fields
+        if (empty($event_name) || empty($location) || empty($start_event) || empty($end_event) || $capacity <= 0) {
+            error_log("VALIDATION FAILED");
+            error_log("  event_name: '$event_name'");
+            error_log("  location: '$location'");
+            error_log("  start_event: '$start_event'");
+            error_log("  end_event: '$end_event'");
+            error_log("  capacity: $capacity");
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Missing required fields']);
             exit;
         }
         
-        // Construct datetime fields from date and time
-        $start_event = $event_date . ' ' . $start_time;
-        $end_event = $event_date . ' ' . $end_time;
+        error_log("✓ Validation passed for event_id=$event_id");
         
         // Handle image upload if provided
         $image_url = null;
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $file = $_FILES['image'];
+        $upload_path = null;
+        if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['cover_image'];
             
             // Validate file type
             $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!in_array($file['type'], $allowed_types)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed']);
+                echo json_encode(['success' => false, 'message' => 'Invalid file type']);
                 exit;
             }
             
             // Validate file size (max 5MB)
-            $max_size = 5 * 1024 * 1024;
-            if ($file['size'] > $max_size) {
+            if ($file['size'] > 5 * 1024 * 1024) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'File size exceeds maximum limit of 5MB']);
+                echo json_encode(['success' => false, 'message' => 'File too large']);
                 exit;
             }
             
@@ -587,64 +640,154 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Move uploaded file
             if (!move_uploaded_file($file['tmp_name'], $upload_path)) {
                 http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to save uploaded file']);
+                echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
                 exit;
             }
             
-            // Get current event image to delete old file
-            $get_query = "SELECT image_url FROM events WHERE event_id = ?";
-            $get_stmt = $conn->prepare($get_query);
-            $get_stmt->bind_param('i', $event_id);
-            $get_stmt->execute();
-            $get_result = $get_stmt->get_result();
-            $event = $get_result->fetch_assoc();
-            
-            // Delete old image file if exists
-            if ($event && $event['image_url']) {
-                $old_image_path = dirname(__DIR__) . '/' . $event['image_url'];
-                if (file_exists($old_image_path)) {
-                    unlink($old_image_path);
+            // Delete old image if exists
+            $old_event = $conn->query("SELECT image_url FROM events WHERE event_id = $event_id")->fetch_assoc();
+            if ($old_event && $old_event['image_url']) {
+                $old_path = dirname(__DIR__) . '/uploads/events/' . basename($old_event['image_url']);
+                if (file_exists($old_path)) {
+                    @unlink($old_path);
                 }
             }
+            
+            error_log("✓ Image uploaded: $new_filename");
         }
         
-        // Update event details
-        $query = "UPDATE events SET event_name = ?, location = ?, start_event = ?, end_event = ?, capacity = ?, registration_link = ?, website_link = ?, description = ?";
-        $params = [$event_name, $location, $start_event, $end_event, $capacity, $registration_link, $website_link, $description];
-        $types = 'ssssisss';
+        // Build UPDATE query
+        $query = "UPDATE events SET 
+                    event_name = ?, 
+                    location = ?, 
+                    start_event = ?, 
+                    end_event = ?, 
+                    capacity = ?, 
+                    description = ?, 
+                    registration_link = ?, 
+                    website = ?, 
+                    registration_start = ?, 
+                    registration_end = ?, 
+                    is_private = ?";
         
-        // Add image update if image was provided
+        $params = [
+            $event_name,              // s
+            $location,                // s
+            $start_event,             // s
+            $end_event,               // s
+            $capacity,                // i
+            $description,             // s
+            $registration_link,       // s
+            $website_link,            // s
+            $registration_start,      // s
+            $registration_end,        // s
+            $is_private               // i
+        ];
+        
+        // Type string: s(name) s(loc) s(start) s(end) i(cap) s(desc) s(reg_link) s(web) s(reg_start) s(reg_end) i(private)
+        // Pattern: ssss i sssss i  (correctly: s s s s i s s s s s i = 11 chars)
+        $types = 'ssssisssssi';  // 11 chars for 11 params
+        
+        // Note: access_code is stored in separate event_access_codes table, not in events table
+        // We'll handle it after updating the events table
+        
+        // Add image if uploaded
         if ($image_url) {
             $query .= ", image_url = ?";
             $params[] = $image_url;
             $types .= 's';
         }
         
+        // Add WHERE clause
         $query .= " WHERE event_id = ?";
         $params[] = $event_id;
         $types .= 'i';
         
+        error_log("Query: " . str_replace('?', '{}', $query));
+        error_log("Types: '$types' (" . strlen($types) . " chars for " . count($params) . " params)");
+        
+        // Execute update
         $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            error_log("❌ Prepare failed: " . $conn->error);
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+            exit;
+        }
+        
         $stmt->bind_param($types, ...$params);
         
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Event details updated successfully']);
-        } else {
-            // Delete uploaded file if db update fails
-            if ($image_url && file_exists($upload_path)) {
-                unlink($upload_path);
+        if (!$stmt->execute()) {
+            error_log("❌ Execute failed: " . $stmt->error);
+            if ($image_url && $upload_path && file_exists($upload_path)) {
+                @unlink($upload_path);
             }
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to update event: ' . $stmt->error]);
+            echo json_encode(['success' => false, 'message' => 'Update failed: ' . $stmt->error]);
+            exit;
         }
+        
+        error_log("✅ UPDATE successful! Rows affected: " . $stmt->affected_rows);
+        
+        // Handle private event access code in separate table
+        if ($is_private) {
+            if (!empty($private_code)) {
+                // Check if access code already exists for this event
+                $code_check = "SELECT code_id FROM event_access_codes WHERE event_id = ? AND is_active = 1";
+                $code_check_stmt = $conn->prepare($code_check);
+                $code_check_stmt->bind_param('i', $event_id);
+                $code_check_stmt->execute();
+                $code_result = $code_check_stmt->get_result();
+                $code_check_stmt->close();
+                
+                if ($code_result->num_rows > 0) {
+                    // Update existing code
+                    $update_code = "UPDATE event_access_codes SET access_code = ? WHERE event_id = ? AND is_active = 1";
+                    $update_code_stmt = $conn->prepare($update_code);
+                    $update_code_stmt->bind_param('si', $private_code, $event_id);
+                    $update_code_stmt->execute();
+                    $update_code_stmt->close();
+                    error_log("✓ Updated access code for event $event_id");
+                } else {
+                    // Create new code
+                    $insert_code = "INSERT INTO event_access_codes (event_id, access_code, is_active) VALUES (?, ?, 1)";
+                    $insert_code_stmt = $conn->prepare($insert_code);
+                    $insert_code_stmt->bind_param('is', $event_id, $private_code);
+                    $insert_code_stmt->execute();
+                    $insert_code_stmt->close();
+                    error_log("✓ Created access code for event $event_id");
+                }
+            }
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Event updated successfully']);
+        $stmt->close();
         exit;
     }
     
     // Check if this is a FormData request (Content-Type: multipart/form-data)
     // FormData always sends data as $_POST, even without files
     $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
-    if (strpos($content_type, 'multipart/form-data') !== false || !empty($_POST)) {
-        // FormData request (with or without file upload)
+    
+    // GUARD: Only create if no action is specified (action = 'create' or null)
+    $received_action = $_POST['action'] ?? null;
+    $debug_log = dirname(__DIR__) . '/EVENTS_DEBUG.log';
+    file_put_contents($debug_log, "\n=== CREATE HANDLER CHECK ===\n", FILE_APPEND);
+    file_put_contents($debug_log, "Received action: " . ($received_action === null ? 'NULL' : '"' . $received_action . '"') . "\n", FILE_APPEND);
+    file_put_contents($debug_log, "\$received_action === null: " . ($received_action === null ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+    file_put_contents($debug_log, "\$received_action === 'create': " . ($received_action === 'create' ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+    error_log('=== CREATE HANDLER CHECK ===');
+    error_log('Received action: ' . ($received_action === null ? 'NULL' : '"' . $received_action . '"'));
+    error_log('Condition $received_action === null: ' . ($received_action === null ? 'TRUE' : 'FALSE'));
+    error_log('Condition $received_action === "create": ' . ($received_action === 'create' ? 'TRUE' : 'FALSE'));
+    error_log('Content-Type has multipart/form-data: ' . (strpos($content_type, 'multipart/form-data') !== false ? 'TRUE' : 'FALSE'));
+    error_log('!empty($_POST): ' . (!empty($_POST) ? 'TRUE' : 'FALSE'));
+    
+    if (($received_action === null || $received_action === 'create') && 
+        (strpos($content_type, 'multipart/form-data') !== false || !empty($_POST))) {
+        file_put_contents($debug_log, "⚠️ CREATE HANDLER TRIGGERED\n", FILE_APPEND);
+        error_log('⚠️ CREATE HANDLER TRIGGERED - This might be why empty events are created!');
+        // FormData request for CREATE (with or without file upload)
         $event_name = isset($_POST['event_name']) ? trim($_POST['event_name']) : '';
         $description = isset($_POST['description']) ? trim($_POST['description']) : '';
         $location = isset($_POST['location']) ? trim($_POST['location']) : '';
@@ -759,6 +902,21 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log('EVENT CREATE - After file handling, image_url: ' . ($image_url ? $image_url : 'NULL (no file uploaded)'));
         error_log('EVENT CREATE - DateTime values: start_event=' . $start_event . ', end_event=' . $end_event . ', location=' . $location);
         error_log('EVENT CREATE - Description and other fields: description="' . $description . '", capacity=' . $capacity . ', is_private=' . $is_private);
+        
+        // VALIDATION: Ensure required fields are not empty
+        if (empty($event_name) || empty($location) || empty($start_event) || empty($end_event) || $capacity <= 0) {
+            error_log("❌ EVENT CREATE VALIDATION FAILED");
+            error_log("  event_name: '$event_name' (empty: " . (empty($event_name) ? 'YES' : 'NO') . ")");
+            error_log("  location: '$location' (empty: " . (empty($location) ? 'YES' : 'NO') . ")");
+            error_log("  start_event: '$start_event' (empty: " . (empty($start_event) ? 'YES' : 'NO') . ")");
+            error_log("  end_event: '$end_event' (empty: " . (empty($end_event) ? 'YES' : 'NO') . ")");
+            error_log("  capacity: $capacity (<=0: " . ($capacity <= 0 ? 'YES' : 'NO') . ")");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Missing required fields: event name, location, start date, end date, and capacity are required']);
+            exit;
+        }
+        
+        error_log("✓ EVENT CREATE VALIDATION PASSED");
         
         // Insert event with image
         // Check if coordinator_id column exists in events table

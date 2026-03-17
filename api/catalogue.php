@@ -176,6 +176,9 @@ try {
             $select_query = "SELECT e.event_id, e.event_name, DATE(e.start_event) as event_date, e.location, e.description, e.image_url, e.is_private
                             FROM events e
                             WHERE e.end_event < NOW()
+                            AND e.start_event IS NOT NULL
+                            AND e.start_event != '0000-00-00 00:00:00'
+                            AND e.end_event != '0000-00-00 00:00:00'
                             AND e.event_id NOT IN (SELECT COALESCE(event_id, -1) FROM catalogue WHERE event_id IS NOT NULL)
                             ORDER BY e.start_event DESC";
             
@@ -242,6 +245,9 @@ try {
             $query = "(SELECT NULL as catalogue_id, e.event_id, e.event_name, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.image_url, e.is_private, e.description
                       FROM events e
                       WHERE e.end_event < NOW()
+                      AND e.start_event IS NOT NULL
+                      AND e.start_event != '0000-00-00 00:00:00'
+                      AND e.end_event != '0000-00-00 00:00:00'
                       AND e.event_id NOT IN (SELECT event_id FROM catalogue WHERE event_id IS NOT NULL AND is_published = 1))
                       UNION
                       (SELECT c.catalogue_id, c.event_id, c.event_name, c.event_date, NULL as start_time, NULL as end_time, c.location, c.image_url, c.is_private, c.description
