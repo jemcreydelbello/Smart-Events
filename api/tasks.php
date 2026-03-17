@@ -42,12 +42,31 @@ try {
 
 // Helper function to check if coordinator has access to an event
 function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
+    // Check if assigned directly via coordinator_id column
     $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('ii', $event_id, $coordinator_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    return $result->num_rows > 0;
+    if ($result->num_rows > 0) {
+        return true;
+    }
+    
+    // Check if event_coordinators junction table exists
+    $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+    if ($junctionTableExists && $junctionTableExists->num_rows > 0) {
+        // Check if assigned via junction table
+        $junctionQuery = "SELECT event_id FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+        $junctionStmt = $conn->prepare($junctionQuery);
+        $junctionStmt->bind_param('ii', $event_id, $coordinator_id);
+        $junctionStmt->execute();
+        $junctionResult = $junctionStmt->get_result();
+        $hasAccess = $junctionResult->num_rows > 0;
+        $junctionStmt->close();
+        return $hasAccess;
+    }
+    
+    return false;
 }
 
 // Helper function to get user role and info

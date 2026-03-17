@@ -438,6 +438,61 @@ function logActivity(actionType, actionDescription) {
 }
 
 // ================================================================================
+// SIDEBAR & NAVIGATION
+// ================================================================================
+
+// Load and display profile image in sidebar avatar
+async function loadSidebarProfileImage(profile, hasImage) {
+    const avatarElement = document.getElementById('userInitials');
+    const avatarContainer = avatarElement?.parentElement;
+    
+    if (!avatarContainer) {
+        console.warn('[SIDEBAR-IMAGE] Avatar container not found');
+        return;
+    }
+    
+    try {
+        // Check for image field (admin_image or coordinator_image)
+        const imageField = profile.admin_image || profile.coordinator_image;
+        
+        if (!imageField) {
+            console.log('[SIDEBAR-IMAGE] No image in profile');
+            // Show initials only
+            avatarContainer.style.backgroundImage = 'none';
+            if (avatarElement) avatarElement.style.display = 'inline';
+            return;
+        }
+        
+        const imageUrl = getProfileImageUrl(imageField);
+        console.log('[SIDEBAR-IMAGE] Loading profile image:', imageUrl);
+        
+        // Test if image exists before setting it
+        const img = new Image();
+        img.onload = function() {
+            console.log('[SIDEBAR-IMAGE] Image loaded successfully, displaying in sidebar');
+            avatarContainer.style.backgroundImage = `url('${imageUrl}')`;
+            avatarContainer.style.backgroundSize = 'cover';
+            avatarContainer.style.backgroundPosition = 'center';
+            // Hide initials when image is loaded
+            if (avatarElement) avatarElement.style.display = 'none';
+        };
+        img.onerror = function() {
+            console.warn('[SIDEBAR-IMAGE] Image failed to load from:', imageUrl);
+            // Keep showing initials if image fails
+            avatarContainer.style.backgroundImage = 'none';
+            if (avatarElement) avatarElement.style.display = 'inline';
+        };
+        img.src = imageUrl;
+        
+    } catch (e) {
+        console.error('[SIDEBAR-IMAGE] Error loading profile image:', e);
+        // Fallback to showing initials
+        if (avatarElement) avatarElement.style.display = 'inline';
+    }
+}
+
+
+// ================================================================================
 // SECTION 2: SIDEBAR & NAVIGATION
 // ================================================================================
 
@@ -502,6 +557,19 @@ function updateUserProfile() {
             nameEl.textContent = nameToDisplay;
             emailEl.textContent = emailToDisplay;
             
+            // Update user initials
+            var initialsEl = document.getElementById('userInitials');
+            if (initialsEl) {
+                var initials = nameToDisplay.split(' ')
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase();
+                initialsEl.textContent = initials || 'AD';
+            }
+            
+            // Load and display profile image in sidebar
+            loadSidebarProfileImage(profile, isAdmin || isCoordinator);
+            
             if (isAdmin) {
                 accountTypeEl.textContent = 'Admin';
                 accountTypeEl.className = 'session-meta text-blue-600 font-semibold';
@@ -531,6 +599,713 @@ window.addEventListener('storage', function(e) {
         updateUserProfile();
     }
 });
+
+// ================================================================================
+// PROFILE SETTINGS EDITOR
+// ================================================================================
+
+// Fetch user profile from database
+async function fetchUserProfileFromDatabase() {
+    console.log('[PROFILE-DB] Fetching user profile from database...');
+    
+    try {
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAdmin = admin && admin.id;
+        const userInfo = isAdmin ? admin : user;
+        
+        console.log('[PROFILE-DB] User detected as', isAdmin ? 'ADMIN' : 'COORDINATOR', '| User info:', userInfo);
+        
+        if (!userInfo || !userInfo.id) {
+            console.warn('[PROFILE-DB] No user found in localStorage');
+            return null;
+        }
+        
+        const userId = userInfo.id;
+        const endpoint = isAdmin ? 'admins.php' : 'coordinators.php';
+        const paramName = isAdmin ? 'admin_id' : 'coordinator_id';
+        const fullUrl = `${API_BASE}/${endpoint}?action=detail&${paramName}=${userId}`;
+        
+        console.log('[PROFILE-DB] Fetching from URL:', fullUrl);
+        
+        const response = await fetch(fullUrl, {
+            method: 'GET',
+            headers: getUserHeaders()
+        });
+        
+        console.log('[PROFILE-DB] Response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('[PROFILE-DB] API returned status', response.status);
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[PROFILE-DB] API response:', data);
+        
+        if (data.success && data.data) {
+            console.log('[PROFILE-DB] Profile fetched successfully, has image:', !!data.data.admin_image || !!data.data.coordinator_image);
+            return data.data;
+        } else {
+            console.warn('[PROFILE-DB] API returned false success:', data);
+            return null;
+        }
+    } catch (e) {
+        console.error('[PROFILE-DB] Error fetching profile:', e);
+        return null;
+    }
+}
+
+// Load profile data into the settings form
+async function loadProfileSettings() {
+    console.log('[PROFILE-SETTINGS] Loading profile settings...');
+    
+    try {
+        // Get user type from localStorage FIRST to know which table to fetch from
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAdmin = admin && admin.id;
+        const localProfile = isAdmin ? admin : user;
+        
+        console.log('[PROFILE-SETTINGS] Local profile:', { 
+            type: isAdmin ? 'ADMIN' : 'COORDINATOR',
+            id: isAdmin ? admin.id : user.coordinator_id,
+            name: isAdmin ? admin.full_name : user.coordinator_name
+        });
+        
+        // Try to fetch from database
+        let dbProfile = await fetchUserProfileFromDatabase();
+        
+        // Use database profile if available, otherwise use localStorage
+        let profile = dbProfile || localProfile;
+        
+        // Check if profile exists - handle both admin (user_id/admin_id) and coordinator (coordinator_id) IDs
+        const profileId = profile?.id || profile?.user_id || profile?.admin_id || profile?.coordinator_id;
+        if (!profile || !profileId) {
+            console.warn('[PROFILE-SETTINGS] No profile found in either database or localStorage');
+            return;
+        }
+        
+        console.log('[PROFILE-SETTINGS] Using profile from:', dbProfile ? 'DATABASE' : 'LOCALSTORAGE');
+        console.log('[PROFILE-SETTINGS] Profile data:', { 
+            id: profileId,
+            name: profile.full_name || profile.coordinator_name || 'Unknown',
+            email: profile.email,
+            has_admin_image: !!profile.admin_image,
+            has_coordinator_image: !!profile.coordinator_image
+        });
+        
+        // Parse full name into first and last
+        const fullName = profile.full_name || profile.coordinator_name || profile.name || '';
+        const nameParts = fullName.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        console.log('[PROFILE-SETTINGS] Parsed name:', { fullName, firstName, lastName });
+        
+        // Set form values
+        const firstNameEl = document.getElementById('profileFirstName');
+        const lastNameEl = document.getElementById('profileLastName');
+        const emailEl = document.getElementById('profileEmail');
+        const companyEl = document.getElementById('profileCompany');
+        const contactEl = document.getElementById('profileContact');
+        const addressEl = document.getElementById('profileAddress');
+        
+        if (firstNameEl) {
+            firstNameEl.value = firstName;
+            console.log('[PROFILE-SETTINGS] Set firstName to:', firstName);
+        }
+        if (lastNameEl) {
+            lastNameEl.value = lastName;
+            console.log('[PROFILE-SETTINGS] Set lastName to:', lastName);
+        }
+        if (emailEl) emailEl.value = profile.email || '';
+        if (companyEl) companyEl.value = profile.company || '';
+        if (contactEl) contactEl.value = profile.contact_number || profile.phone || '';
+        if (addressEl) addressEl.value = profile.address || '';
+        
+        // Update profile initials and image
+        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'AD';
+        console.log('[PROFILE-SETTINGS] Initials:', initials);
+        
+        const profileInitialsEl = document.getElementById('profileInitials');
+        const userInitialsEl = document.getElementById('userInitials');
+        if (profileInitialsEl) profileInitialsEl.textContent = initials;
+        if (userInitialsEl) userInitialsEl.textContent = initials;
+        
+        // Load profile image from database
+        const imageField = profile.admin_image || profile.coordinator_image;
+        console.log('[PROFILE-SETTINGS] Image field value:', imageField);
+        
+        if (imageField) {
+            console.log('[PROFILE-SETTINGS] Found image in database:', imageField);
+            const imageUrl = getProfileImageUrl(imageField);
+            console.log('[PROFILE-SETTINGS] Constructed image URL:', imageUrl);
+            displayProfileImage(imageUrl, imageField);
+            // Also load in sidebar
+            loadSidebarProfileImage(profile, !!(profile.admin_image || profile.coordinator_image));
+        } else {
+            console.log('[PROFILE-SETTINGS] No image found in database, showing initials');
+            // Reset to initials only
+            const avatarEl = document.getElementById('profileAvatarPreview');
+            if (avatarEl) {
+                avatarEl.style.backgroundImage = 'none';
+                avatarEl.innerHTML = `<span id="profileInitials">${initials}</span>`;
+            }
+        }
+        
+        console.log('[PROFILE-SETTINGS] Profile loaded successfully');
+    } catch (e) {
+        console.error('[PROFILE-SETTINGS] Error loading profile:', e);
+    }
+    
+    // Set up image upload handler
+    setupProfileImageUpload();
+}
+
+// Get profile image URL with proper path
+function getProfileImageUrl(imageFilename) {
+    if (!imageFilename) return null;
+    
+    // If it's already a full URL, return as-is
+    if (imageFilename.startsWith('http')) {
+        return imageFilename;
+    }
+    
+    // Check what type of user we are to determine the folder
+    const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+    const isAdmin = admin && admin.id;
+    
+    if (isAdmin) {
+        // Admin images are in uploads/admins/
+        return '../uploads/admins/' + imageFilename;
+    } else {
+        // Coordinator images are in uploads/coordinators/
+        return '../uploads/coordinators/' + imageFilename;
+    }
+}
+
+// Display profile image
+function displayProfileImage(imageUrl, fallbackInitials) {
+    const avatarEl = document.getElementById('profileAvatarPreview');
+    if (!avatarEl) return;
+    
+    if (imageUrl) {
+        avatarEl.style.backgroundImage = `url('${imageUrl}')`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarEl.innerHTML = ''; // Remove initials when image is present
+        console.log('[PROFILE-IMAGE] Profile image displayed:', imageUrl);
+    } else {
+        // Show initials instead
+        avatarEl.style.backgroundImage = 'none';
+        const initials = document.getElementById('profileInitials')?.textContent || 'AD';
+        avatarEl.innerHTML = `<span id="profileInitials">${initials}</span>`;
+    }
+}
+
+// Handle profile image upload
+function setupProfileImageUpload() {
+    const imageInput = document.getElementById('profileImageInput');
+    if (!imageInput) return;
+    
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+        }
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const avatarEl = document.getElementById('profileAvatarPreview');
+            if (avatarEl) {
+                avatarEl.style.backgroundImage = `url('${event.target.result}')`;
+                avatarEl.style.backgroundSize = 'cover';
+                avatarEl.style.backgroundPosition = 'center';
+                avatarEl.innerHTML = ''; // Remove initials
+            }
+            
+            // Store the file for saving
+            window.profileImageFile = file;
+            console.log('[PROFILE-SETTINGS] Image preview updated');
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Save profile settings
+async function saveProfileSettings() {
+    console.log('[PROFILE-SETTINGS] Saving profile settings...');
+    
+    try {
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAdmin = admin && admin.id;
+        const profile = isAdmin ? admin : user;
+        
+        // Get profile ID - handle both admin and coordinator
+        const userId = profile?.id || profile?.admin_id || profile?.coordinator_id;
+        if (!profile || !userId) {
+            alert('Error: Profile not found');
+            console.error('[PROFILE-SETTINGS] Profile missing:', { profile, userId });
+            return;
+        }
+        
+        console.log('[PROFILE-SETTINGS] Saving for user:', userId, 'isAdmin:', isAdmin);
+        
+        // Get form values
+        const firstName = document.getElementById('profileFirstName').value.trim();
+        const lastName = document.getElementById('profileLastName').value.trim();
+        const email = document.getElementById('profileEmail').value.trim();
+        const company = document.getElementById('profileCompany').value.trim();
+        const contact = document.getElementById('profileContact').value.trim();
+        const address = document.getElementById('profileAddress').value.trim();
+        
+        if (!firstName || !email) {
+            alert('First name and email are required');
+            return;
+        }
+        
+        // Create FormData for image upload
+        const formData = new FormData();
+        formData.append('action', 'update');
+        formData.append(isAdmin ? 'admin_id' : 'coordinator_id', userId);
+        formData.append('full_name', (firstName + ' ' + lastName).trim());
+        formData.append('email', email);
+        formData.append('company', company);
+        formData.append('contact_number', contact);
+        formData.append('address', address);
+        
+        // Add image if user selected one
+        if (window.profileImageFile) {
+            formData.append('profile_image', window.profileImageFile);
+            console.log('[PROFILE-SETTINGS] Image file attached for upload');
+        }
+        
+        // Send to API
+        const endpoint = isAdmin ? 'admins.php' : 'coordinators.php';
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'X-User-Role': profile.role || profile.role_name || 'user',
+                'X-User-Id': String(userId),
+                'X-Coordinator-Id': String(profile.coordinator_id || userId)
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('[PROFILE-SETTINGS] Profile saved to database successfully');
+            
+            // Update localStorage with new profile data
+            const updatedProfile = {
+                ...profile,
+                full_name: (firstName + ' ' + lastName).trim(),
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                company: company,
+                contact_number: contact,
+                phone: contact,
+                address: address
+            };
+            
+            // Add image filename if returned from API
+            if (data.data && data.data.admin_image) {
+                updatedProfile.admin_image = data.data.admin_image;
+            } else if (data.data && data.data.coordinator_image) {
+                updatedProfile.coordinator_image = data.data.coordinator_image;
+            }
+            
+            const storageKey = isAdmin ? 'admin' : 'user';
+            localStorage.setItem(storageKey, JSON.stringify(updatedProfile));
+            
+            // Clear the file input for next upload
+            window.profileImageFile = null;
+            const imageInput = document.getElementById('profileImageInput');
+            if (imageInput) imageInput.value = '';
+            
+            // Update sidebar profile
+            updateUserProfile();
+            
+            // Reload profile to show changes
+            await loadProfileSettings();
+            
+            alert('Profile updated successfully!');
+            console.log('[PROFILE-SETTINGS] Profile update complete');
+        } else {
+            alert('Error saving profile: ' + (data.message || 'Unknown error'));
+            console.error('[PROFILE-SETTINGS] API returned false success:', data);
+        }
+    } catch (e) {
+        console.error('[PROFILE-SETTINGS] Error saving profile:', e);
+        alert('Error saving profile: ' + e.message);
+    }
+}
+
+// Initialize profile settings when settings page is loaded
+function initializeProfileSettings() {
+    // Refresh sidebar profile first
+    updateUserProfile();
+    
+    // Then load profile settings form
+    loadProfileSettings();
+    
+    // Set up save button handler
+    const settingsPage = document.getElementById('settings');
+    if (settingsPage) {
+        // Find and attach event listeners to buttons within users-settings
+        const usersTab = document.getElementById('users-settings');
+        if (usersTab) {
+            const buttons = usersTab.querySelectorAll('button');
+            buttons.forEach(btn => {
+                if (btn.textContent.includes('Save Changes')) {
+                    btn.onclick = saveProfileSettings;
+                } else if (btn.textContent.includes('Cancel')) {
+                    btn.onclick = () => loadProfileSettings(); // Reload to discard changes
+                }
+            });
+        }
+    }
+}
+
+// ================================================================================
+// EMAIL CONFIGURATION FUNCTIONS
+// ================================================================================
+
+/**
+ * Load email configuration from database and populate form
+ */
+async function loadEmailConfiguration() {
+    try {
+        const headers = getUserHeaders();
+        
+        console.log('📧 Loading email configuration...');
+        console.log('📧 Headers being sent:', headers);
+        console.log('📧 User Role:', headers['X-User-Role']);
+        
+        const response = await fetch('../api/email_config.php', {
+            method: 'GET',
+            headers: headers
+        });
+        
+        console.log('📧 Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('📧 Error response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        
+        console.log('📧 Response data:', result);
+        
+        if (result.success && result.data) {
+            const config = result.data;
+            
+            console.log('📧 Populating form with config:', config);
+            
+            // Populate form fields
+            const smtpHostElement = document.getElementById('smtpHost');
+            const smtpPortElement = document.getElementById('smtpPort');
+            const smtpUserElement = document.getElementById('smtpUser');
+            const smtpPasswordElement = document.getElementById('smtpPassword');
+            const fromNameElement = document.getElementById('fromName');
+            const fromEmailElement = document.getElementById('fromEmail');
+            
+            if (smtpHostElement) {
+                smtpHostElement.value = config.smtp_host || '';
+                console.log('✅ Set smtpHost to:', config.smtp_host);
+            }
+            if (smtpPortElement) {
+                smtpPortElement.value = config.smtp_port || 587;
+                console.log('✅ Set smtpPort to:', config.smtp_port);
+            }
+            if (smtpUserElement) {
+                smtpUserElement.value = config.smtp_user || '';
+                console.log('✅ Set smtpUser to:', config.smtp_user);
+            }
+            if (smtpPasswordElement) {
+                smtpPasswordElement.value = config.smtp_password || '';
+                console.log('✅ Set smtpPassword to:', config.smtp_password ? '(masked)' : '(empty)');
+            }
+            if (fromNameElement) {
+                fromNameElement.value = config.from_name || '';
+                console.log('✅ Set fromName to:', config.from_name);
+            }
+            if (fromEmailElement) {
+                fromEmailElement.value = config.from_email || '';
+                console.log('✅ Set fromEmail to:', config.from_email);
+            }
+            
+            // Populate checkboxes using type conversion to handle string/int from DB
+            const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
+            const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
+            const emailRemindersElement = document.getElementById('emailReminders');
+            
+            if (emailOnUserCreateElement) {
+                emailOnUserCreateElement.checked = config.email_on_user_create == 1;
+                console.log('✅ Set emailOnUserCreate to:', config.email_on_user_create == 1);
+            }
+            if (emailOnEventCreateElement) {
+                emailOnEventCreateElement.checked = config.email_on_event_create == 1;
+                console.log('✅ Set emailOnEventCreate to:', config.email_on_event_create == 1);
+            }
+            if (emailRemindersElement) {
+                emailRemindersElement.checked = config.email_reminders == 1;
+                console.log('✅ Set emailReminders to:', config.email_reminders == 1);
+            }
+            
+            console.log('✅ Email configuration loaded successfully');
+            showEmailStatus('success', 'Email configuration loaded successfully');
+        } else {
+            console.warn('⚠️ No data in response:', result);
+            showEmailStatus('error', result.message || 'Failed to load configuration');
+        }
+    } catch (error) {
+        console.error('❌ Error loading email configuration:', error);
+        showEmailStatus('error', 'Error loading configuration: ' + error.message);
+    }
+}
+
+/**
+ * Save email configuration to database
+ */
+async function saveEmailConfiguration() {
+    try {
+        // Get form values - with null checks for checkboxes
+        const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
+        const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
+        const emailRemindersElement = document.getElementById('emailReminders');
+        
+        const formData = {
+            smtp_host: document.getElementById('smtpHost').value.trim(),
+            smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
+            smtp_user: document.getElementById('smtpUser').value.trim(),
+            smtp_password: document.getElementById('smtpPassword').value.trim(),
+            from_name: document.getElementById('fromName').value.trim(),
+            from_email: document.getElementById('fromEmail').value.trim(),
+            email_on_user_create: emailOnUserCreateElement ? (emailOnUserCreateElement.checked ? 1 : 0) : 1,
+            email_on_event_create: emailOnEventCreateElement ? (emailOnEventCreateElement.checked ? 1 : 0) : 1,
+            email_reminders: emailRemindersElement ? (emailRemindersElement.checked ? 1 : 0) : 1
+        };
+        
+        console.log('📧 Saving configuration:', formData);
+        
+        // Validate required fields
+        const errors = [];
+        if (!formData.smtp_host) errors.push('SMTP Host is required');
+        if (!formData.smtp_user) errors.push('SMTP Username is required');
+        if (!formData.smtp_password) errors.push('SMTP Password is required');
+        if (!formData.from_name) errors.push('From Name is required');
+        if (!isValidEmail(formData.from_email)) errors.push('Valid From Email is required');
+        
+        if (errors.length > 0) {
+            showEmailStatus('error', 'Validation failed: ' + errors.join(', '));
+            console.error('📧 Validation errors:', errors);
+            return;
+        }
+        
+        // Show loading status
+        const statusDiv = document.getElementById('emailStatusMessage');
+        if (statusDiv) {
+            statusDiv.innerHTML = '⏳ Saving configuration...';
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.borderLeft = '4px solid #f59e0b';
+            statusDiv.style.color = '#92400e';
+        }
+        
+        const headers = getUserHeaders();
+        headers['Content-Type'] = 'application/json';
+        
+        console.log('📧 Sending request with headers:', headers);
+        
+        const response = await fetch('../api/email_config.php', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(formData)
+        });
+        
+        console.log('📧 Save response status:', response.status);
+        
+        const result = await response.json();
+        
+        console.log('📧 Save response data:', result);
+        
+        if (result.success) {
+            showEmailStatus('success', '✅ Email configuration saved successfully!');
+            // Reload to show saved values
+            setTimeout(() => {
+                loadEmailConfiguration();
+            }, 1000);
+        } else {
+            const errorMsg = result.errors ? result.errors.join(', ') : result.message;
+            showEmailStatus('error', '❌ Failed to save: ' + errorMsg);
+            console.error('📧 Save failed:', result);
+        }
+    } catch (error) {
+        console.error('Error saving email configuration:', error);
+        showEmailStatus('error', '❌ Error saving configuration: ' + error.message);
+    }
+}
+
+/**
+ * Test SMTP connection
+ */
+async function testEmailConnection() {
+    try {
+        const smtpHost = document.getElementById('smtpHost').value.trim();
+        const smtpPort = parseInt(document.getElementById('smtpPort').value) || 587;
+        const smtpUser = document.getElementById('smtpUser').value.trim();
+        const smtpPassword = document.getElementById('smtpPassword').value.trim();
+        
+        console.log('🧪 Testing SMTP connection with:', {
+            smtpHost,
+            smtpPort,
+            smtpUser,
+            passwordLength: smtpPassword.length
+        });
+        
+        if (!smtpHost || !smtpUser || !smtpPassword) {
+            showEmailStatus('error', '❌ Please fill in SMTP Host, Username, and Password before testing');
+            console.warn('🧪 Missing required fields for test');
+            return;
+        }
+        
+        showEmailStatus('pending', '⏳ Testing SMTP connection...');
+        
+        const headers = getUserHeaders();
+        headers['Content-Type'] = 'application/json';
+        
+        const testData = {
+            smtp_host: smtpHost,
+            smtp_port: smtpPort,
+            smtp_user: smtpUser,
+            smtp_password: smtpPassword
+        };
+        
+        console.log('🧪 Sending test request with headers:', headers);
+        console.log('🧪 Request body:', testData);
+        
+        const response = await fetch('../api/email_config.php?action=test', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(testData)
+        });
+        
+        console.log('🧪 Test response status:', response.status);
+        console.log('🧪 Test response headers:', response.headers);
+        
+        const result = await response.json();
+        
+        console.log('🧪 Test result:', result);
+        
+        if (result.success) {
+            showEmailStatus('success', `✅ ${result.message} (Connecting to ${result.host}:${result.port})`);
+            console.log('🧪 ✅ SMTP connection successful');
+        } else {
+            let errorMsg = result.message || 'Connection failed';
+            if (result.provider_help) {
+                errorMsg += ' - ' + result.provider_help.help;
+            }
+            showEmailStatus('error', '❌ ' + errorMsg);
+            console.error('🧪 SMTP connection failed:', result);
+        }
+    } catch (error) {
+        console.error('Error testing SMTP connection:', error);
+        console.error('🧪 Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        showEmailStatus('error', '❌ Error testing connection: ' + error.message);
+    }
+}
+
+/**
+ * Display status message for email configuration
+ */
+function showEmailStatus(type, message) {
+    const statusDiv = document.getElementById('emailStatusMessage');
+    if (!statusDiv) return;
+    
+    statusDiv.style.display = 'block';
+    statusDiv.textContent = message;
+    
+    switch (type) {
+        case 'success':
+            statusDiv.style.backgroundColor = '#d1fae5';
+            statusDiv.style.borderLeft = '4px solid #10b981';
+            statusDiv.style.color = '#065f46';
+            break;
+        case 'error':
+            statusDiv.style.backgroundColor = '#fee2e2';
+            statusDiv.style.borderLeft = '4px solid #ef4444';
+            statusDiv.style.color = '#7f1d1d';
+            break;
+        case 'pending':
+            statusDiv.style.backgroundColor = '#fef3c7';
+            statusDiv.style.borderLeft = '4px solid #f59e0b';
+            statusDiv.style.color = '#92400e';
+            break;
+    }
+}
+
+/**
+ * Validate email format
+ */
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+/**
+ * Initialize email configuration settings
+ */
+function initializeEmailConfiguration() {
+    console.log('🔧 Initializing Email Configuration...');
+    loadEmailConfiguration();
+    
+    // Set up button handlers
+    const emailConfigTab = document.getElementById('email-config');
+    if (emailConfigTab) {
+        // Find all buttons and attach appropriate handlers
+        const buttons = emailConfigTab.querySelectorAll('button');
+        console.log('📍 Found buttons:', buttons.length);
+        buttons.forEach(btn => {
+            const btnText = btn.textContent.trim();
+            console.log('📍 Button text:', btnText);
+            if (btnText.includes('Test Connection') || btnText.includes('🔍')) {
+                btn.onclick = testEmailConnection;
+                console.log('✅ Attached testEmailConnection to button');
+            } else if (btnText.includes('Save') || btnText.includes('💾')) {
+                btn.onclick = saveEmailConfiguration;
+                console.log('✅ Attached saveEmailConfiguration to button');
+            } else if (btnText.includes('Reload') || btnText.includes('Update') || btnText.includes('🔄')) {
+                btn.onclick = loadEmailConfiguration;
+                console.log('✅ Attached loadEmailConfiguration to button');
+            }
+        });
+    }
+}
 
 function loadSidebarNavigation() {
     return new Promise((resolve, reject) => {
@@ -595,6 +1370,18 @@ function setupNavigation() {
             createEventBtn.style.display = 'none';
             console.log('setupNavigation: Hiding Create New Event button for coordinator');
         }
+        
+        // Hide Email Configuration tab for coordinators
+        const emailConfigBtn = document.querySelector('[data-tab="email-config"]');
+        if (emailConfigBtn) {
+            emailConfigBtn.style.display = 'none';
+            console.log('setupNavigation: Hiding Email Configuration tab for coordinator');
+        }
+        
+        const emailConfigContent = document.getElementById('email-config');
+        if (emailConfigContent) {
+            emailConfigContent.style.display = 'none';
+        }
     } else {
         console.log('setupNavigation: User is ADMIN - showing all pages');
         navLinks.forEach(link => {
@@ -605,6 +1392,12 @@ function setupNavigation() {
         const createEventBtn = document.getElementById('createEventBtn');
         if (createEventBtn) {
             createEventBtn.style.display = '';
+        }
+        
+        // Show Email Configuration tab for admins
+        const emailConfigBtn = document.querySelector('[data-tab="email-config"]');
+        if (emailConfigBtn) {
+            emailConfigBtn.style.display = '';
         }
     }
     
@@ -678,13 +1471,13 @@ function navigateToPage(page) {
     
     localStorage.setItem('adminLastPage', page);
     
-    // Update active nav link
-    const navLinks = document.querySelectorAll('#adminNav a, .sidebar-menu a');
-    navLinks.forEach(l => {
-        if (l.getAttribute('data-page') === page) {
-            l.classList.add('active');
+    // Update active nav link (includes buttons with data-page attribute)
+    const navElements = document.querySelectorAll('[data-page]');
+    navElements.forEach(el => {
+        if (el.getAttribute('data-page') === page) {
+            el.classList.add('active');
         } else {
-            l.classList.remove('active');
+            el.classList.remove('active');
         }
     });
     
@@ -724,6 +1517,11 @@ function navigateToPage(page) {
         else if (page === 'logs') {
             loadActivityLogs();
             loadActionTypes();
+        }
+        else if (page === 'settings') {
+            // Load settings page - default to users-settings tab (profile)
+            switchTab('users-settings');
+            initializeProfileSettings();
         }
     } else {
         console.error('Target page not found:', page);
@@ -10090,6 +10888,69 @@ function convert24To12Hour(timeStr) {
 
 // Switch between dashboard, details, attendees, tasks tabs
 function switchTab(tabName) {
+    
+    // Prevent coordinators from accessing email configuration
+    if (tabName === 'email-config') {
+        let admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        let user = JSON.parse(localStorage.getItem('user') || '{}');
+        let userInfo = (admin && admin.email) ? admin : user;
+        let userRole = userInfo.role || userInfo.role_name || 'GUEST';
+        
+        if (userRole === 'COORDINATOR' || userRole === 'coordinator') {
+            console.log('switchTab: DENIED - Coordinator cannot access Email Configuration');
+            alert('Email Configuration is only available for Administrators.');
+            return;
+        }
+    }
+    
+    // Check if this is a settings tab or event tab
+    const settingsTab = document.getElementById(`${tabName}-settings`) || document.getElementById(tabName.replace('-settings', ''));
+    const isSettingsTab = settingsTab && settingsTab.classList.contains('settings-tab-content');
+    
+    if (isSettingsTab || tabName.includes('-settings') || tabName === 'users-settings' || tabName === 'logs-settings' || tabName === 'email-config') {
+        // Handle settings tabs
+        document.querySelectorAll('.settings-tab-content').forEach(tab => {
+            tab.classList.remove('active');
+            tab.style.display = 'none';
+        });
+        
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const tabElement = document.getElementById(tabName);
+        if (tabElement) {
+            tabElement.classList.add('active');
+            tabElement.style.display = 'block';
+        }
+        
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabName) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Load data for settings tabs
+        if (tabName === 'users-settings') {
+            // Load profile settings editor
+            if (typeof initializeProfileSettings === 'function') {
+                initializeProfileSettings();
+            }
+        }
+        else if (tabName === 'logs-settings') {
+            // Load activity logs
+            if (typeof loadActivityLogs === 'function') {
+                loadActivityLogs();
+            }
+        }
+        else if (tabName === 'email-config') {
+            // Load email configuration
+            if (typeof initializeEmailConfiguration === 'function') {
+                initializeEmailConfiguration();
+            }
+        }
+        return;
+    }
     
     // Update tab visibility based on user role
     if (typeof updateTabVisibility === 'function') {

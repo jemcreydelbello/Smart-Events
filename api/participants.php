@@ -14,12 +14,31 @@ require_once '../includes/SMTPMailer.php';
 
 // Helper function to check if coordinator has access to an event
 function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
+    // Check if assigned directly via coordinator_id column
     $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('ii', $event_id, $coordinator_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    return $result->num_rows > 0;
+    if ($result->num_rows > 0) {
+        return true;
+    }
+    
+    // Check if event_coordinators junction table exists
+    $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+    if ($junctionTableExists && $junctionTableExists->num_rows > 0) {
+        // Check if assigned via junction table
+        $junctionQuery = "SELECT event_id FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+        $junctionStmt = $conn->prepare($junctionQuery);
+        $junctionStmt->bind_param('ii', $event_id, $coordinator_id);
+        $junctionStmt->execute();
+        $junctionResult = $junctionStmt->get_result();
+        $hasAccess = $junctionResult->num_rows > 0;
+        $junctionStmt->close();
+        return $hasAccess;
+    }
+    
+    return false;
 }
 
 // Helper function to get user role and info from request headers
@@ -530,21 +549,26 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 EMAIL_FROM_NAME
             );
             
-            $email_sent = $mailer->sendRegistrationConfirmation(
-                $participant_email,
-                $participant_name,
-                $event_data['event_name'] ?? 'Event',
-                $registration_code,
-                $event_date_str,
-                $event_data['location'] ?? '',
-                $event_data['is_private'] == 1
-            );
-            
-            if ($email_sent) {
-                error_log('✓ Registration confirmation email sent to: ' . $participant_email);
+            // 📧 Check if user registration emails are enabled
+            if (SMTPMailer::shouldSendEmail('user_registration', null)) {
+                $email_sent = $mailer->sendRegistrationConfirmation(
+                    $participant_email,
+                    $participant_name,
+                    $event_data['event_name'] ?? 'Event',
+                    $registration_code,
+                    $event_date_str,
+                    $event_data['location'] ?? '',
+                    $event_data['is_private'] == 1
+                );
+                
+                if ($email_sent) {
+                    error_log('✓ Registration confirmation email sent to: ' . $participant_email);
+                } else {
+                    error_log('⚠ Email sending returned false for: ' . $participant_email);
+                    error_log('✓ But registration still successful - check email configuration');
+                }
             } else {
-                error_log('⚠ Email sending returned false for: ' . $participant_email);
-                error_log('✓ But registration still successful - check email configuration');
+                error_log('📧 User registration emails are DISABLED - skipping email to: ' . $participant_email);
             }
         } catch (Exception $email_error) {
             error_log('⚠ Email sending error: ' . $email_error->getMessage());

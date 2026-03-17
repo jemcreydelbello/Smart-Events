@@ -29,6 +29,7 @@ function checkEventAccess($conn, $event_id, $userInfo) {
         return true;
     }
     
+    // Check if assigned directly via coordinator_id column
     $query = "SELECT coordinator_id FROM events WHERE event_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('i', $event_id);
@@ -36,7 +37,28 @@ function checkEventAccess($conn, $event_id, $userInfo) {
     $result = $stmt->get_result();
     $event = $result->fetch_assoc();
     
-    return $event && $event['coordinator_id'] == $userInfo['coordinator_id'];
+    if ($event && $event['coordinator_id'] == $userInfo['coordinator_id']) {
+        return true;
+    }
+    
+    // Check if event_coordinators junction table exists
+    $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+    if ($junctionTableExists && $junctionTableExists->num_rows > 0) {
+        // Check if assigned via junction table
+        $junctionQuery = "SELECT event_id FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+        $junctionStmt = $conn->prepare($junctionQuery);
+        if ($junctionStmt) {
+            $coord_id = $userInfo['coordinator_id'];
+            $junctionStmt->bind_param('ii', $event_id, $coord_id);
+            $junctionStmt->execute();
+            $junctionResult = $junctionStmt->get_result();
+            $hasAccess = $junctionResult->num_rows > 0;
+            $junctionStmt->close();
+            return $hasAccess;
+        }
+    }
+    
+    return false;
 }
 
 // Create postmortem table if it doesn't exist

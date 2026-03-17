@@ -244,7 +244,7 @@ function initializeLayoutManager() {
     }
     
     // Fallback: Also try to patch displayEventDetails (event-details.js)
-    if (window.displayEventDetails && !window.displayEventDetails.__layoutPatched && !window.displayEventDetailsData.__layoutPatched) {
+    if (window.displayEventDetails && !window.displayEventDetails.__layoutPatched && (!window.displayEventDetailsData || !window.displayEventDetailsData.__layoutPatched)) {
         const originalDisplayEventDetails = window.displayEventDetails;
         
         window.displayEventDetails = function(eventData) {

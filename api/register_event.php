@@ -150,14 +150,21 @@ try {
             EMAIL_FROM,
             EMAIL_FROM_NAME
         );
-        $smtpMailer->sendRegistrationConfirmation(
-            $email,
-            $fullName,
-            $eventName,
-            $registrationCode,
-            $eventDate,
-            $eventLocation
-        );
+        
+        // 📧 Check if user registration emails are enabled
+        if (SMTPMailer::shouldSendEmail('user_registration', null)) {
+            $smtpMailer->sendRegistrationConfirmation(
+                $email,
+                $fullName,
+                $eventName,
+                $registrationCode,
+                $eventDate,
+                $eventLocation
+            );
+            error_log('✓ Registration confirmation email sent to: ' . $email);
+        } else {
+            error_log('📧 User registration emails are DISABLED - skipping email to: ' . $email);
+        }
     } catch (Exception $e) {
         error_log('Email error: ' . $e->getMessage());
         // Don't fail registration if email fails

@@ -42,6 +42,7 @@ function checkEventAccess($conn, $event_id, $userInfo) {
     
     // Coordinators can only access their own events
     if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
+        // Check if assigned directly via coordinator_id column
         $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
         $stmt = $conn->prepare($query);
         if (!$stmt) {
@@ -50,7 +51,25 @@ function checkEventAccess($conn, $event_id, $userInfo) {
         $stmt->bind_param('ii', $event_id, $userInfo['coordinator_id']);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->num_rows > 0;
+        if ($result->num_rows > 0) {
+            return true;
+        }
+        
+        // Check if event_coordinators junction table exists
+        $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+        if ($junctionTableExists && $junctionTableExists->num_rows > 0) {
+            // Check if assigned via junction table
+            $junctionQuery = "SELECT event_id FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+            $junctionStmt = $conn->prepare($junctionQuery);
+            if ($junctionStmt) {
+                $junctionStmt->bind_param('ii', $event_id, $userInfo['coordinator_id']);
+                $junctionStmt->execute();
+                $junctionResult = $junctionStmt->get_result();
+                $hasAccess = $junctionResult->num_rows > 0;
+                $junctionStmt->close();
+                return $hasAccess;
+            }
+        }
     }
     
     return false;

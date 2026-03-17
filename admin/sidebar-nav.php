@@ -12,19 +12,14 @@
   }
 
   .sign-out-btn {
-    background: linear-gradient(
-      90deg,
-      #559CDA 0%,
-      #7BADFF 27%,
-      #FFB58D 76%,
-      #ED8028 100%
-    ) !important;
+    background-color: #1E73BB !important;
     color: white !important;
     border: none !important;
   }
 
   .sign-out-btn:hover {
-    opacity: 0.9;
+    background-color: #1560a3 !important;
+    opacity: 1;
   }
 
   .nav-item svg {
@@ -33,6 +28,33 @@
     height: 20px;
     margin-right: 10px;
     vertical-align: middle;
+  }
+
+  .settings-nav-btn {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  .settings-nav-btn:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  .settings-nav-btn.active {
+    background: linear-gradient(
+      90deg,
+      #559CDA 0%,
+      #7BADFF 27%,
+      #FFB58D 76%,
+      #ED8028 100%
+    ) !important;
+    color: white !important;
+    border-color: transparent !important;
+  }
+
+  .settings-nav-btn.active svg {
+    fill: white;
+    color: white;
   }
 </style>
 
@@ -51,17 +73,32 @@
     <a href="#" data-page="catalogue" style="margin-bottom: 5px;" class="nav-item w-full text-left px-6 py-2 rounded-lg border-0 bg-transparent transition-colors text-sm font-medium flex items-center" onclick="navigateTo(event, 'catalogue')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14.5 17.5v-10h-7c-2.357 0-3.535 0-4.268.732S2.5 10.142 2.5 12.5v4c0 2.357 0 3.535.732 4.268s1.911.732 4.268.732h3c1.886 0 2.828 0 3.414-.586s.586-1.528.586-3.414"/><path d="M14.5 16.5h2c2.357 0 3.535 0 4.268-.732s.732-1.911.732-4.268v-4c0-2.357 0-3.536-.732-4.268C20.035 2.5 18.857 2.5 16.5 2.5h-7v5m-4 5H9m-3.5 4h6m-2-14l5 5"/></g></svg> Catalogue</a>
     <a href="#" data-page="qr-scanner" style="margin-bottom: 5px;" class="nav-item w-full text-left px-6 py-2 rounded-lg border-0 bg-transparent transition-colors text-sm font-medium flex items-center" onclick="navigateTo(event, 'qr-scanner')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 10H6V6h4zm8 0h-4V6h4zm-8 8H6v-4h4zM2 9V2h7M2 15v7h7m6-20h7v7m-7 13h7v-7"/><path d="M19.25 18H14v-5m3.996 1.254v-.504h.504v.504z"/></g></svg> QR Scanner</a>
     <a href="#" data-page="users" style="margin-bottom: 5px;" class="nav-item w-full text-left px-6 py-2 rounded-lg border-0 bg-transparent transition-colors text-sm font-medium flex items-center" onclick="navigateTo(event, 'users')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M8.5 4.5a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0m2.4 7.506c.11.542-.348.994-.9.994H2c-.553 0-1.01-.452-.902-.994a5.002 5.002 0 0 1 9.803 0M14.002 12h-1.59a3 3 0 0 0-.04-.29a6.5 6.5 0 0 0-1.167-2.603a3 3 0 0 1 3.633 1.911c.18.522-.283.982-.836.982M12 8a2 2 0 1 0 0-4a2 2 0 0 0 0 4"/></svg> Users</a>
-    <a href="#" data-page="logs" style="margin-bottom: 5px;" class="nav-item w-full text-left px-6 py-2 rounded-lg border-0 bg-transparent transition-colors text-sm font-medium flex items-center" onclick="navigateTo(event, 'logs')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="4"><path stroke-linejoin="round" d="M24 44H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h28a2 2 0 0 1 2 2v18m-4.5 20V31"/><path stroke-linejoin="round" d="m31 34.5l1.5-1.5l3-3l3 3l1.5 1.5"/><path d="M16 16h16m-16 8h8"/></g></svg> Activity Logs</a>
+</div>
 </div>
   
-  <div id="adminIdentityArea" class="mt-auto pt-5 px-5 border-t border-slate-200">
-    <div id="adminSessionCard" class="text-xs text-slate-600 space-y-2 text-center">
-      <p id="userNameDisplay" class="session-name font-semibold text-slate-900">Admin User</p>
-      <p id="userEmail" class="session-meta text-slate-600">admin@smartevents.com</p>
-      <p id="userAccountType" class="session-meta text-blue-600 font-semibold">Admin</p>
+  <div id="adminIdentityArea" class="mt-auto pt-4 px-4 border-t border-slate-200 space-y-3">
+    <!-- User Profile Card -->
+    <div id="adminSessionCard" class="bg-white rounded-lg p-4 space-y-3 text-center border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white mx-auto text-lg font-bold shadow-md" style="border: 3px solid white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);">
+        <span id="userInitials">AD</span>
+      </div>
+      <div style="padding-top: 2px;">
+        <p id="userNameDisplay" class="font-semibold text-slate-900 text-sm">Admin User</p>
+        <p id="userEmail" class="text-slate-500 text-xs truncate mt-1">admin@smartevents.com</p>
+      </div>
+      <div style="padding-top: 4px; border-top: 1px solid #e2e8f0;">
+        <p id="userAccountType" class="text-blue-600 font-semibold text-xs uppercase tracking-wider">Admin</p>
+      </div>
     </div>
 
-    <button onclick="logout(event)" class="mt-4 w-[calc(100%+40px)] -ml-3 -mr-5 px-4 py-2 rounded-x sign-out-btn text-sm font-medium transition-colors">Sign out</button>
+    <!-- Settings Button -->
+    <button onclick="navigateTo(event, 'settings')" data-page="settings" class="w-full px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 group settings-nav-btn" id="settingsNavBtn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m10.135 21l-.362-2.892q-.479-.145-1.035-.454q-.557-.31-.947-.664l-2.668 1.135l-1.865-3.25l2.306-1.739q-.045-.27-.073-.558q-.03-.288-.03-.559q0-.252.03-.53q.028-.278.073-.626L3.258 9.126l1.865-3.212L7.771 7.03q.448-.373.97-.673q.52-.3 1.013-.464L10.134 3h3.732l.361 2.912q.575.202 1.016.463t.909.654l2.725-1.115l1.865 3.211l-2.382 1.796q.082.31.092.569t.01.51q0 .233-.02.491q-.019.259-.088.626l2.344 1.758l-1.865 3.25l-2.681-1.154q-.467.393-.94.673t-.985.445L13.866 21zM11 20h1.956l.369-2.708q.756-.2 1.36-.549q.606-.349 1.232-.956l2.495 1.063l.994-1.7l-2.189-1.644q.125-.427.166-.786q.04-.358.04-.72q0-.38-.04-.72t-.166-.747l2.227-1.683l-.994-1.7l-2.552 1.07q-.454-.499-1.193-.935q-.74-.435-1.4-.577L13 4h-1.994l-.312 2.689q-.756.161-1.39.52q-.633.358-1.26.985L5.55 7.15l-.994 1.7l2.169 1.62q-.125.336-.175.73t-.05.82q0 .38.05.755t.156.73l-2.15 1.645l.994 1.7l2.475-1.05q.589.594 1.222.953q.634.359 1.428.559zm.973-5.5q1.046 0 1.773-.727T14.473 12t-.727-1.773t-1.773-.727q-1.052 0-1.776.727T9.473 12t.724 1.773t1.776.727M12 12"/></svg>
+      Settings
+    </button>
+
+    <!-- Sign Out Button -->
+    <button onclick="logout(event)" class="w-full px-4 py-2 rounded-lg sign-out-btn text-white text-sm font-medium transition-all hover:opacity-90">Sign out</button>
   </div>
 </aside>
 

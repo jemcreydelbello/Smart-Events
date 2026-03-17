@@ -64,7 +64,8 @@ function isUserAdmin() {
 function updateTabVisibility() {
     console.log('[TAB-VISIBILITY] Updating tab visibility...');
     const isAdmin = isUserAdmin();
-    const adminOnlyTabs = ['finance', 'postmortem'];
+    // Coordinators now have access to finance and postmortem tabs
+    const adminOnlyTabs = [];
     
     adminOnlyTabs.forEach(tabName => {
         const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
@@ -225,13 +226,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (userRole === 'COORDINATOR' || userRole === 'coordinator') {
         const hasAccess = await checkAccessToEvent(currentEventId, userRole, userId, coordinatorId);
         if (!hasAccess) {
-            document.querySelector('.tab-content-wrapper').innerHTML = `
-                <div style="padding: 40px; text-align: center;">
-                    <h2 style="color: #c41e3a; margin-bottom: 20px;">Access Denied</h2>
-                    <p style="color: #666; margin-bottom: 30px;">You do not have permission to access this event. As a coordinator, you can only manage events assigned to you.</p>
-                    <button onclick="window.location.href='index.html?page=events'" style="background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500;">Back to Events</button>
-                </div>
-            `;
+            const wrapper = document.querySelector('.tab-content-wrapper');
+            if (wrapper) {
+                wrapper.innerHTML = `
+                    <div style="padding: 40px; text-align: center;">
+                        <h2 style="color: #c41e3a; margin-bottom: 20px;">Access Denied</h2>
+                        <p style="color: #666; margin-bottom: 30px;">You do not have permission to access this event. As a coordinator, you can only manage events assigned to you.</p>
+                        <button onclick="window.location.href='index.html?page=events'" style="background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500;">Back to Events</button>
+                    </div>
+                `;
+            }
             return;
         }
     }
@@ -5483,7 +5487,170 @@ console.log('✅ event-details.js fully loaded - switchTab function available:',
         console.error('❌ [WINDOW SETUP] selectCoordinatorForTask function not found!');
     }
     
-    // Defer coordinator function assignment until after admin.js has loaded
+});
+
+/**
+ * Toggle coordinator selection for tasks
+ * @param {number} coordinatorId - The coordinator's ID
+ * @param {string} coordinatorName - The coordinator's name
+ * @param {Event} event - The event object (can be null for direct calls)
+ * @param {string} coordDataJson - JSON string of coordinator data
+ */
+function toggleCoordinatorSelection(coordinatorId, coordinatorName, event, coordDataJson) {
+    try {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        console.log(`🔄 Toggling coordinator ${coordinatorId} (${coordinatorName})`);
+        
+        // Initialize selectedCoordinatorsForTask if needed
+        if (!window.selectedCoordinatorsForTask) {
+            window.selectedCoordinatorsForTask = new Map();
+        }
+        
+        // Parse coordinator data
+        let coordinatorData = null;
+        if (coordDataJson) {
+            try {
+                coordinatorData = JSON.parse(coordDataJson.replace(/&quot;/g, '"'));
+            } catch (e) {
+                console.warn('⚠️ Could not parse coordinator data:', e);
+                coordinatorData = {
+                    coordinator_id: coordinatorId,
+                    coordinator_name: coordinatorName
+                };
+            }
+        }
+        
+        // Toggle selection
+        if (window.selectedCoordinatorsForTask.has(coordinatorId)) {
+            window.selectedCoordinatorsForTask.delete(coordinatorId);
+            console.log(`✖️ Deselected coordinator ${coordinatorId}`);
+        } else {
+            if (!coordinatorData) {
+                coordinatorData = {
+                    coordinator_id: coordinatorId,
+                    coordinator_name: coordinatorName
+                };
+            }
+            window.selectedCoordinatorsForTask.set(coordinatorId, coordinatorData);
+            console.log(`✅ Selected coordinator ${coordinatorId}`);
+        }
+        
+        console.log(`📊 Total selected: ${window.selectedCoordinatorsForTask.size}`);
+        
+        // Update checkbox state
+        const checkbox = document.querySelector(`input[type="checkbox"][data-coordinator-id="${coordinatorId}"]`);
+        if (checkbox) {
+            checkbox.checked = window.selectedCoordinatorsForTask.has(coordinatorId);
+        }
+        
+        // Update display
+        displaySelectedCoordinatorsPreview();
+        updateTaskResponsibleField();
+        updateConfirmButtonState();
+        
+    } catch (error) {
+        console.error('❌ Error toggling coordinator selection:', error);
+    }
+}
+
+/**
+ * Update the state of the confirm button based on selections
+ */
+function updateConfirmButtonState() {
+    try {
+        const confirmBtn = document.getElementById('confirmCoordinatorSelectionBtn');
+        if (!confirmBtn) return;
+        
+        const hasSelections = window.selectedCoordinatorsForTask && window.selectedCoordinatorsForTask.size > 0;
+        
+        if (hasSelections) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+            console.log('✅ Confirm button enabled');
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.style.cursor = 'not-allowed';
+            console.log('⚠️ Confirm button disabled (no selections)');
+        }
+    } catch (error) {
+        console.error('❌ Error updating confirm button state:', error);
+    }
+}
+
+/**
+ * Confirm coordinator selection and close dialog
+ */
+function confirmCoordinatorSelection() {
+    try {
+        console.log('✅ Confirming coordinator selection');
+        
+        // Update the task responsible field
+        updateTaskResponsibleField();
+        
+        // Close the coordinator selection modal if it exists
+        const modal = document.getElementById('coordinatorSelectionModal');
+        if (modal) {
+            // Try standard close methods
+            const closeBtn = modal.querySelector('[data-dismiss="modal"], .close-modal, [onclick*="closeModal"]');
+            if (closeBtn) {
+                closeBtn.click();
+            } else {
+                // Fallback: hide the modal
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+            console.log('✓ Closed coordinator selection modal');
+        }
+        
+        console.log(`✅ Confirmed ${window.selectedCoordinatorsForTask.size} selected coordinators`);
+        
+    } catch (error) {
+        console.error('❌ Error confirming coordinator selection:', error);
+    }
+}
+
+/**
+ * Initialize coordinator selection UI on page load
+ */
+function initializeCoordinatorSelection() {
+    try {
+        // Initialize selectedCoordinatorsForTask if needed
+        if (!window.selectedCoordinatorsForTask) {
+            window.selectedCoordinatorsForTask = new Map();
+        }
+        
+        // Set initial button state
+        updateConfirmButtonState();
+        
+        console.log('✅ Coordinator selection initialized');
+    } catch (error) {
+        console.error('❌ Error initializing coordinator selection:', error);
+    }
+}
+
+// Initialize on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeCoordinatorSelection);
+} else {
+    initializeCoordinatorSelection();
+}
+
+// ========================================
+// WINDOW SETUP - IMMEDIATE ASSIGNMENTS
+// ========================================
+
+// Assign immediate functions to window object
+if (typeof getUserRole === 'function') {
+    window.getUserRole = getUserRole;
+}
+
+// Defer coordinator function assignment until after admin.js has loaded
+(function() {
     setTimeout(() => {
         if (typeof toggleCoordinatorSelection === 'function') {
             window.toggleCoordinatorSelection = toggleCoordinatorSelection;

@@ -23,6 +23,89 @@ class SMTPMailer {
     }
     
     /**
+     * Get email configuration from database
+     * @return array|null Configuration array or null if not found
+     */
+    public static function getEmailConfiguration($conn = null) {
+        // If no connection provided, try to use global or create one
+        if (!$conn) {
+            // Try to get database connection from globals
+            if (isset($GLOBALS['conn'])) {
+                $conn = $GLOBALS['conn'];
+            } else {
+                // Try to include config and create connection
+                $config_file = dirname(__DIR__) . '/config/db.php';
+                if (file_exists($config_file)) {
+                    require_once $config_file;
+                    $conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+                    if ($conn->connect_error) {
+                        error_log('📧 Failed to connect to database for email config: ' . $conn->connect_error);
+                        return null;
+                    }
+                } else {
+                    error_log('📧 Config file not found: ' . $config_file);
+                    return null;
+                }
+            }
+        }
+        
+        try {
+            $result = $conn->query("SELECT * FROM email_configurations LIMIT 1");
+            if ($result && $result->num_rows > 0) {
+                $config = $result->fetch_assoc();
+                error_log('📧 Email configuration loaded from database');
+                return $config;
+            } else {
+                error_log('📧 No email configuration found in database');
+                return null;
+            }
+        } catch (Exception $e) {
+            error_log('📧 Error loading email configuration: ' . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Check if emails of a specific type should be sent
+     * @param string $type Type of email: 'user_registration', 'event_creation', 'event_reminder'
+     * @param array|null $config Email configuration (fetched from DB if not provided)
+     * @return bool True if emails of this type should be sent
+     */
+    public static function shouldSendEmail($type, $config = null) {
+        // If no config provided, fetch it
+        if (!$config) {
+            $config = self::getEmailConfiguration();
+        }
+        
+        // If no config exists, default to NOT sending (safe mode)
+        if (!$config) {
+            error_log('📧 No email config found - defaulting to NOT send ' . $type);
+            return false;
+        }
+        
+        switch ($type) {
+            case 'user_registration':
+                $should_send = isset($config['email_on_user_create']) && $config['email_on_user_create'] == 1;
+                error_log('📧 User registration email: ' . ($should_send ? 'ENABLED ✅' : 'DISABLED ❌'));
+                return $should_send;
+                
+            case 'event_creation':
+                $should_send = isset($config['email_on_event_create']) && $config['email_on_event_create'] == 1;
+                error_log('📧 Event creation email: ' . ($should_send ? 'ENABLED ✅' : 'DISABLED ❌'));
+                return $should_send;
+                
+            case 'event_reminder':
+                $should_send = isset($config['email_reminders']) && $config['email_reminders'] == 1;
+                error_log('📧 Event reminder email: ' . ($should_send ? 'ENABLED ✅' : 'DISABLED ❌'));
+                return $should_send;
+                
+            default:
+                error_log('📧 Unknown email type: ' . $type . ' - defaulting to send');
+                return true;
+        }
+    }
+    
+    /**
      * Send email with SMTP
      */
     public function sendRegistrationConfirmation($to_email, $to_name, $event_name, $registration_code, $event_date = '', $event_location = '', $is_private = false) {

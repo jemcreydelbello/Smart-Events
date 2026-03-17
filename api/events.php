@@ -132,12 +132,31 @@ function getUserInfo() {
 
 // Helper function to check if coordinator has access to an event
 function coordinatorHasAccessToEvent($conn, $event_id, $coordinator_id) {
+    // Check if assigned directly via coordinator_id column
     $query = "SELECT event_id FROM events WHERE event_id = ? AND coordinator_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('ii', $event_id, $coordinator_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    return $result->num_rows > 0;
+    if ($result->num_rows > 0) {
+        return true;
+    }
+    
+    // Check if event_coordinators junction table exists
+    $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+    if ($junctionTableExists && $junctionTableExists->num_rows > 0) {
+        // Check if assigned via junction table
+        $junctionQuery = "SELECT event_id FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+        $junctionStmt = $conn->prepare($junctionQuery);
+        $junctionStmt->bind_param('ii', $event_id, $coordinator_id);
+        $junctionStmt->execute();
+        $junctionResult = $junctionStmt->get_result();
+        $hasAccess = $junctionResult->num_rows > 0;
+        $junctionStmt->close();
+        return $hasAccess;
+    }
+    
+    return false;
 }
 
 // Helper function to check event access based on role
@@ -213,19 +232,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $tablesExist = $conn->query("SHOW TABLES LIKE 'coordinators'");
         $hasCoordinators = $tablesExist && $tablesExist->num_rows > 0;
         
+        // Check if event_coordinators junction table exists
+        $junctionTableExists = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+        $hasJunctionTable = $junctionTableExists && $junctionTableExists->num_rows > 0;
+        
         if ($hasCoordinators) {
-            $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
-                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
-                      COUNT(DISTINCT r.registration_id) as total_registrations,
-                      SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
-                      (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
-                      FROM events e
-                      LEFT JOIN users u ON e.created_by = u.user_id
-                      LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
-                      LEFT JOIN registrations r ON e.event_id = r.event_id
-                      WHERE e.archived = 0
-                      GROUP BY e.event_id
-                      ORDER BY e.start_event DESC";
+            // If junction table exists, also fetch from there for many-to-many coordinator assignments
+            if ($hasJunctionTable) {
+                $query = "SELECT DISTINCT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+                          c.coordinator_id, c.coordinator_name, c.email as coordinator_email, c.contact_number as coordinator_contact,
+                          COUNT(DISTINCT r.registration_id) as total_registrations,
+                          SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                          (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                          FROM events e
+                          LEFT JOIN users u ON e.created_by = u.user_id
+                          LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                          LEFT JOIN event_coordinators ec ON e.event_id = ec.event_id
+                          LEFT JOIN registrations r ON e.event_id = r.event_id
+                          WHERE e.archived = 0
+                          GROUP BY e.event_id
+                          ORDER BY e.start_event DESC";
+            } else {
+                $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
+                          c.coordinator_id, c.coordinator_name, c.email as coordinator_email, c.contact_number as coordinator_contact,
+                          COUNT(DISTINCT r.registration_id) as total_registrations,
+                          SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,
+                          (e.capacity - COUNT(DISTINCT CASE WHEN r.status IN ('REGISTERED', 'ATTENDED') THEN r.registration_id END)) as available_spots
+                          FROM events e
+                          LEFT JOIN users u ON e.created_by = u.user_id
+                          LEFT JOIN coordinators c ON e.coordinator_id = c.coordinator_id
+                          LEFT JOIN registrations r ON e.event_id = r.event_id
+                          WHERE e.archived = 0
+                          GROUP BY e.event_id
+                          ORDER BY e.start_event DESC";
+            }
         } else {
             $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
                       NULL as coordinator_id, NULL as coordinator_name, NULL as coordinator_email, NULL as coordinator_contact,
@@ -247,6 +287,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         while ($row = $result->fetch_assoc()) {
             $events[] = $row;
+        }
+        
+        // Filter events based on user role - if coordinator, only show their assigned events
+        $userInfo = getUserInfo();
+        if ($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') {
+            $coordinatorId = $userInfo['coordinator_id'];
+            $filteredEvents = [];
+            
+            foreach ($events as $event) {
+                $isAssigned = false;
+                
+                // Check if coordinator is assigned via direct coordinator_id column
+                if (intval($event['coordinator_id']) === intval($coordinatorId)) {
+                    $isAssigned = true;
+                } else if ($hasJunctionTable) {
+                    // Check if coordinator is assigned via junction table
+                    $junctionQuery = "SELECT 1 FROM event_coordinators WHERE event_id = ? AND coordinator_id = ? LIMIT 1";
+                    $junctionStmt = $conn->prepare($junctionQuery);
+                    $junctionStmt->bind_param('ii', $event['event_id'], $coordinatorId);
+                    $junctionStmt->execute();
+                    $junctionResult = $junctionStmt->get_result();
+                    $isAssigned = $junctionResult->num_rows > 0;
+                    $junctionStmt->close();
+                }
+                
+                if ($isAssigned) {
+                    // Ensure coordinator_id is set to the viewing coordinator (for filtering compatibility)
+                    $event['coordinator_id'] = $coordinatorId;
+                    $filteredEvents[] = $event;
+                }
+            }
+            
+            $events = $filteredEvents;
         }
         
         // Normalize data types for JSON response
@@ -318,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         if ($hasCoordinators) {
             $query = "SELECT e.event_id, e.event_name, e.description, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, DATE(e.end_event) as end_date, TIME(e.end_event) as end_time, e.location, e.capacity, e.is_private, e.image_url, e.registration_start, e.registration_end, e.registration_link, e.website, e.created_by, e.created_at, e.coordinator_id, MAX(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as created_by_name,
-                      MAX(c.coordinator_id) as coordinator_id, MAX(c.coordinator_name) as coordinator_name, MAX(c.email) as coordinator_email, MAX(c.contact_number) as coordinator_contact,
+                      c.coordinator_id, c.coordinator_name, c.email as coordinator_email, c.contact_number as coordinator_contact,
                       MAX(eac.access_code) as access_code,
                       COUNT(DISTINCT r.registration_id) as total_registrations,
                       SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) as attended_count,

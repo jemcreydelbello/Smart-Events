@@ -717,6 +717,59 @@
       color: #2563eb;
     }
 
+    /* Settings Tab Styling */
+    .settings-tab-btn {
+      padding: 3px 5px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: #999;
+      font-size: 9px;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: -2px;
+      transition: all 0.3s;
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .settings-tab-btn.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+
+    .settings-tab-btn:hover {
+      color: #2563eb;
+    }
+
+    .settings-tab-content {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    /* Settings Button Styling */
+    #adminIdentityArea button {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #adminIdentityArea button:active {
+      transform: scale(0.98);
+    }
+
+    #adminSessionCard {
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    #adminSessionCard:hover {
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+      transform: translateY(-1px);
+    }
+
+    #userInitials {
+      font-size: 14px;
+      letter-spacing: -0.5px;
+    }
+
     .event-tab-content {
       animation: fadeIn 0.3s ease-in;
     }
@@ -2993,113 +3046,372 @@ try {
         </div>
 
         <!-- Activity Logs Page -->
-        <div id="logs" class="page">
-          <h2 class="font-semibold" style="color: #000000; font-size: 32px; margin-top: -10px; margin-bottom: 24px;">Activity Logs</h2>
-          <p class="text-gray-600" style="margin-bottom: 40px; margin-top: -25px; font-size: 14px;">Records and tracks user and system activities (login, updates, actions) for monitoring, security, and auditing purposes.</p>
-          
-          <!-- Search Bar Section -->
-          <div class="mb-6" style="display: flex; gap: 12px; align-items: center;">
-            <div style="flex: 0 0 300px; position: relative;">
-              <input 
-                type="text" 
-                id="logsSearchInput" 
-                placeholder="Search by User or Action..."
-                style="
-                  width: 100%; 
-                  padding: 8px 10px 8px 32px; 
-                  border: 1px solid #ddd; 
-                  border-radius: 6px; 
-                  font-size: 13px; 
-                  font-family: inherit;
-                  color: #1f2937;
-                  transition: all 0.2s ease;
-                "
-                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
-              >
-              <svg 
-                style="
-                  position: absolute; 
-                  left: 8px; 
-                  top: 50%; 
-                  transform: translateY(-50%); 
-                  width: 14px; 
-                  height: 14px; 
-                  color: #999;
-                  pointer-events: none;
-                " 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <!-- Search Suggestions Dropdown -->
-              <div 
-                id="logsSuggestionsDropdown" 
-                style="
-                  display: none;
-                  position: absolute;
-                  top: 100%;
-                  left: 0;
-                  right: 0;
-                  margin-top: 4px;
-                  background: white;
-                  border: 1px solid #ddd;
-                  border-radius: 6px;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                  max-height: 300px;
-                  overflow-y: auto;
-                  z-index: 10;
-                  width: 100%;
-                "
-              >
-                <!-- Suggestions will be populated here -->
+        <div id="settings" class="page">
+          <!-- Settings Header -->
+          <div style="margin-bottom: 28px;">
+            <h2 class="font-semibold" style="color: #000000; font-size: 32px; margin-bottom: 8px;">
+              Settings & Configuration
+            </h2>
+            <p class="text-gray-600" style="font-size: 14px;">Manage users, activity logs, and email configurations for your Smart Events platform.</p>
+          </div>
+
+          <!-- Settings Tab Navigation -->
+          <div style="margin-bottom: 20px;" class="bg-white rounded-lg shadow-sm mb-6 border border-gray-200">
+            <div style="display: flex; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 15px 15px; gap: 15px; width: 100%;" class="border-b border-gray-200">
+              <div style="display: flex; flex-wrap: nowrap; gap: 15px; min-width: min-content;">
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium settings-tab-btn active" onclick="switchTab('users-settings')" data-tab="users-settings">Profile</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium settings-tab-btn" onclick="switchTab('logs-settings')" data-tab="logs-settings">Activity Logs</button>
+                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium settings-tab-btn" onclick="switchTab('email-config')" data-tab="email-config">Email Configuration</button>
               </div>
             </div>
-            
-            <!-- Filter Action Type Dropdown -->
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <label style="font-size: 13px; color: #374151; font-weight: 500; margin-left: 2px; margin-top: 5px; white-space: nowrap;">Action Type:</label>
-              <select 
-                id="actionTypeFilter" 
-                style="
-                  padding: 8px 10px;
-                  border: 1px solid #ddd;
-                  border-radius: 6px;
-                  font-size: 13px;
-                  font-family: inherit;
-                  background: white;
-                  cursor: pointer;
-                  transition: all 0.2s ease;
-                  color: #374151;
-                  width: 200px;
-                "
-                onchange="applyActionTypeFilter(this.value)"
-                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
-              >
-                <option value="">Select Action Type</option>
-              </select>
-            </div>
           </div>
-          
-          <div class="bg-white rounded-lg p-6 border border-gray-200">
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm" style="table-layout: fixed;">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">User</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Action</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Date & Time</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Details</th>
-                  </tr>
-                </thead>
-                <tbody id="logsTable" class="divide-y divide-gray-200">
-                  <!-- Logs will be loaded here -->
-                </tbody>
-              </table>
+
+          <!-- Tab Content Container -->
+          <div style="width: 100%; padding: 32px;" class="bg-white rounded-lg shadow-sm border border-gray-200">
+            
+            <!-- Users Tab - Profile Editor -->
+            <div id="users-settings" class="settings-tab-content active">
+              <div class="space-y-6">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900">My Profile</h3>
+                  <p class="text-sm text-gray-600 mt-1">Edit your personal information and account details.</p>
+                </div>
+
+                <!-- Profile Card -->
+                <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
+                  <div class="grid grid-cols-3 gap-8">
+                    <!-- Profile Picture Section -->
+                    <div class="flex flex-col items-center">
+                      <div class="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-5xl font-bold mb-4 border-4 border-blue-100" id="profileAvatarPreview">
+                        <span id="profileInitials">AD</span>
+                      </div>
+                      <input type="file" id="profileImageInput" accept="image/*" style="display: none;">
+                      <button onclick="document.getElementById('profileImageInput').click()" style="padding: 8px 16px; border: 1px solid #3b82f6; color: #3b82f6; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; margin-bottom: 8px;"
+                              onmouseover="this.style.backgroundColor='#eff6ff';"
+                              onmouseout="this.style.backgroundColor='white';">Change Photo</button>
+                      <p style="font-size: 12px; color: #999; text-align: center;">JPG, PNG or GIF<br>(Max 5MB)</p>
+                    </div>
+
+                    <!-- Profile Form -->
+                    <div class="col-span-2 space-y-6">
+                      <!-- Name Row -->
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">First Name</label>
+                          <input type="text" id="profileFirstName" placeholder="John"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                        <div>
+                          <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Last Name</label>
+                          <input type="text" id="profileLastName" placeholder="Doe"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                      </div>
+
+                      <!-- Email Row -->
+                      <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Email Address</label>
+                        <input type="email" id="profileEmail" placeholder="john@example.com"
+                               style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                               onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                               onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                      </div>
+
+                      <!-- Company & Contact -->
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Company</label>
+                          <input type="text" id="profileCompany" placeholder="Smart Events Inc."
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                        <div>
+                          <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Contact Number</label>
+                          <input type="tel" id="profileContact" placeholder="+1 (555) 123-4567"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                      </div>
+
+                      <!-- Address -->
+                      <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Address</label>
+                        <textarea id="profileAddress" placeholder="123 Main Street, City, State 12345" rows="3"
+                                  style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s; resize: vertical;"
+                                  onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                  onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"></textarea>
+                      </div>
+
+                      <!-- Save Button -->
+                      <div style="display: flex; gap: 8px; padding-top: 8px;">
+                        <button style="padding: 8px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;"
+                                onmouseover="this.style.opacity='0.9';"
+                                onmouseout="this.style.opacity='1';">Save Changes</button>
+                        <button style="padding: 8px 24px; border: 1px solid #ddd; color: #374151; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;"
+                                onmouseover="this.style.backgroundColor='#f9fafb';"
+                                onmouseout="this.style.backgroundColor='white';">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Activity Logs Tab -->
+            <div id="logs-settings" class="settings-tab-content" style="display: none;">
+              <div class="space-y-6">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900">Activity Logs</h3>
+                  <p class="text-sm text-gray-600 mt-1">Track user and system activities for monitoring, security, and auditing purposes.</p>
+                </div>
+
+                <!-- Search & Filter Section -->
+                <div class="mb-6" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                  <div style="flex: 0 0 300px; position: relative;">
+                    <input 
+                      type="text" 
+                      id="logsSearchInput" 
+                      placeholder="Search by User or Action..."
+                      style="
+                        width: 100%; 
+                        padding: 8px 10px 8px 32px; 
+                        border: 1px solid #ddd; 
+                        border-radius: 6px; 
+                        font-size: 13px; 
+                        font-family: inherit;
+                        color: #1f2937;
+                        transition: all 0.2s ease;
+                      "
+                      onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                      onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
+                    >
+                    <svg 
+                      style="
+                        position: absolute; 
+                        left: 8px; 
+                        top: 50%; 
+                        transform: translateY(-50%); 
+                        width: 14px; 
+                        height: 14px; 
+                        color: #999;
+                        pointer-events: none;
+                      " 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="font-size: 13px; color: #374151; font-weight: 500; white-space: nowrap;">Action Type:</label>
+                    <select 
+                      id="actionTypeFilter" 
+                      style="
+                        padding: 8px 10px;
+                        border: 1px solid #ddd;
+                        border-radius: 6px;
+                        font-size: 13px;
+                        font-family: inherit;
+                        background: white;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        color: #374151;
+                        width: 200px;
+                      "
+                      onchange="applyActionTypeFilter(this.value)"
+                      onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                      onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
+                    >
+                      <option value="">Select Action Type</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="bg-white rounded-lg p-6 border border-gray-200">
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm" style="table-layout: fixed;">
+                      <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">User</th>
+                          <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Action</th>
+                          <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Date & Time</th>
+                          <th class="px-4 py-3 text-left font-semibold text-gray-900" style="width: 25%;">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody id="logsTable" class="divide-y divide-gray-200">
+                        <!-- Logs will be loaded here -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Email Configuration Tab -->
+            <div id="email-config" class="settings-tab-content" style="display: none;">
+              <div class="space-y-6">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900">Email Configuration</h3>
+                  <p class="text-sm text-gray-600 mt-1">Configure SMTP settings for sending registration emails, password resets, and notifications.</p>
+                </div>
+
+                <!-- Email Configuration Form -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div class="space-y-8">
+                    
+                    <!-- SMTP Server Settings -->
+                    <div class="border-b border-gray-100 pb-8">
+                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#3b82f6" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                        SMTP Server Settings
+                      </h4>
+                      
+                      <!-- Help Alert -->
+                      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                        <p style="font-size: 13px; color: #1e40af; margin: 0;">
+                          <strong>Quick Guide:</strong> Enter your email provider's SMTP details. Most common providers (Gmail, Outlook, etc.) have standard settings.
+                        </p>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">SMTP Host</label>
+                            <span title="Enter your email provider's SMTP server address. Example: smtp.gmail.com" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="text" id="smtpHost" placeholder="smtp.gmail.com"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Gmail: <strong>smtp.gmail.com</strong> | Outlook: <strong>smtp-mail.outlook.com</strong></p>
+                        </div>
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Port</label>
+                            <span title="Port number for SMTP connection. Usually 587 (TLS) or 465 (SSL)" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="number" id="smtpPort" placeholder="587"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;"><strong>587</strong> (TLS) or <strong>465</strong> (SSL)</p>
+                        </div>
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Username/Email</label>
+                            <span title="Your email account username. Usually your full email address." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="email" id="smtpUser" placeholder="your-email@gmail.com"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Password/App Password</label>
+                            <span title="Your email password or app-specific password. For Gmail, use App Password if 2FA is enabled." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="password" id="smtpPassword" placeholder="••••••••"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">For Gmail: Generate <strong>App Password</strong> if 2FA is enabled</p>
+                        </div>
+                      </div>
+                      
+                      <div style="margin-top: 16px; display: flex; gap: 8px;">
+                        <button onclick="testEmailConnection()" style="padding: 9px 16px; border: 1px solid #3b82f6; color: #3b82f6; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;"
+                                onmouseover="this.style.backgroundColor='#eff6ff';"
+                                onmouseout="this.style.backgroundColor='white';">Test Connection</button>
+                      </div>
+                    </div>
+
+                    <!-- Email Sender Settings -->
+                    <div class="border-b border-gray-100 pb-8">
+                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#10b981" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                        Email Sender Details
+                      </h4>
+                      
+                      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #10b981; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                        <p style="font-size: 13px; color: #065f46; margin: 0;">
+                          <strong>Tip:</strong> The "From Name" will appear in recipients' inboxes. Use something recognizable like "Smart Events Team".
+                        </p>
+                      </div>
+                      
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">From Name</label>
+                            <span title="The name that will appear when recipients receive your emails" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="text" id="fromName" placeholder="Smart Events Team"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <label style="font-size: 13px; font-weight: 600; color: #374151;">From Email</label>
+                            <span title="The email address that emails will be sent from. Usually your SMTP email." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
+                          </div>
+                          <input type="email" id="fromEmail" placeholder="noreply@smartevents.com"
+                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
+                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Delivery Preferences -->
+                    <div class="border-b border-gray-100 pb-8">
+                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#8b5cf6" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                        Delivery Preferences
+                      </h4>
+                      
+                      <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
+                          <input type="checkbox" id="emailOnUserCreate" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
+                          <span>Send welcome email when new users register</span>
+                        </label>
+                        
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
+                          <input type="checkbox" id="emailOnEventCreate" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
+                          <span>Send notification when new events are created</span>
+                        </label>
+                        
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
+                          <input type="checkbox" id="emailReminders" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
+                          <span>Send event reminders to attendees before event date</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <!-- Save Buttons -->
+                    <div style="display: flex; gap: 8px; padding-top: 8px;">
+                      <button onclick="saveEmailConfiguration()" style="padding: 9px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;"
+                              onmouseover="this.style.opacity='0.9';"
+                              onmouseout="this.style.opacity='1';">Save Email Configuration</button>
+                      <button onclick="loadEmailConfiguration()" style="padding: 9px 24px; border: 1px solid #cbd5e1; color: #475569; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;"
+                              onmouseover="this.style.backgroundColor='#f8fafc';"
+                              onmouseout="this.style.backgroundColor='white';">Reload</button>
+                    </div>
+                    
+                    <!-- Status Message -->
+                    <div id="emailStatusMessage" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px; margin-top: 16px;"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
