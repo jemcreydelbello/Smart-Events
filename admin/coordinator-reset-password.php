@@ -38,80 +38,135 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Set Password - Coordinator</title>
-    <link rel="stylesheet" href="css/login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Poppins', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-image: url('../assets/back.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f3f4f6;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
         }
 
-        .container {
+        .reset-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: white;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+        }
+
+        .video-section {
+            flex: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-section video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 60px;
+            overflow-y: auto;
+        }
+
+        .reset-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .reset-header h1 {
+            color: #1F4CC4;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .reset-header p {
+            color: #6b7280;
+            font-size: 18px;
+        }
+
+        #resetForm {
             width: 100%;
             max-width: 500px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .container h2 {
-            color: #667eea;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 24px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 28px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
+            margin-bottom: 12px;
+            color: #374151;
+            font-weight: 600;
+            font-size: 16px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+            border-color: #1F4CC4;
+            box-shadow: 0 0 0 3px rgba(31, 76, 196, 0.1);
         }
 
         .password-requirements {
-            background: #f0f4ff;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-            font-size: 13px;
-            color: #555;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #065f46;
         }
 
         .password-requirements h4 {
-            margin-bottom: 10px;
-            color: #667eea;
+            margin-bottom: 12px;
+            color: #10b981;
+            font-weight: 600;
         }
 
         .password-requirements ul {
@@ -120,50 +175,122 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
         }
 
         .password-requirements li {
-            padding: 4px 0;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
         }
 
         .password-requirements li.valid {
-            color: #27ae60;
+            color: #10b981;
+        }
+
+        .password-requirements li.valid::before {
+            content: '✓ ';
+            font-weight: 700;
+            margin-right: 6px;
         }
 
         .password-requirements li.invalid {
-            color: #e74c3c;
+            color: #dc2626;
+        }
+
+        .password-requirements li.invalid::before {
+            content: '✗ ';
+            font-weight: 700;
+            margin-right: 6px;
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
+            padding: 14px;
+            background: linear-gradient(135deg, #1F4CC4 0%, #1538A0 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            margin-top: 12px;
         }
 
-        button:hover {
-            background: #5568d3;
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(31, 76, 196, 0.3);
         }
 
         button:disabled {
-            background: #ccc;
+            opacity: 0.7;
             cursor: not-allowed;
+            transform: none;
         }
 
         .success-message {
-            color: #27ae60;
+            color: #10b981;
             text-align: center;
             margin-top: 20px;
             display: none;
+            font-weight: 600;
+        }
+
+        .alert {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        @media (max-width: 768px) {
+            .reset-wrapper {
+                flex-direction: column;
+                height: auto;
+                max-width: 100%;
+            }
+
+            .video-section {
+                display: none;
+            }
+
+            .reset-container {
+                padding: 30px 20px;
+                min-height: 100vh;
+            }
+
+            .reset-header h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Set Your Password</h2>
+    <div class="reset-wrapper">
+        <!-- Video Section (Left) -->
+        <div class="video-section">
+            <video autoplay muted loop playsinline>
+                <source src="../assets/background.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-overlay"></div>
+        </div>
+
+        <!-- Reset Section (Right) -->
+        <div class="reset-container">
+            <div class="reset-header">
+                <h1>Set Password</h1>
+                <p>Create a secure password for your account</p>
+            </div>
         <form id="resetForm" onsubmit="handlePasswordReset(event)">
             <div class="form-group">
                 <label for="password">Password:</label>
@@ -200,6 +327,7 @@ if ($reset_expire < date('Y-m-d H:i:s')) {
                 Password set successfully! Redirecting...
             </div>
         </form>
+        </div>
     </div>
 
     <script>

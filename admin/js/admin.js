@@ -9115,18 +9115,20 @@ function displayUsers(users) {
         const isActiveValue = user.is_active;
         const isActive = isActiveValue === 1 || isActiveValue === '1' || isActiveValue === true;
         
-        // Determine status: "Pending Setup" if coordinator has reset_token, else Active/Inactive
-        // NOTE: When a "Pending Setup" user is deactivated, they become "Inactive"
-        // (is_active = 0). The reset_token is preserved, so if reactivated, they remain "Pending Setup"
+        // Determine status: "Pending Setup" if coordinator has reset_token AND is_active
+        // "Inactive" if is_active is false
+        // "Active" if is_active and no reset_token
         let status = 'Inactive';
         let statusColor = '#ef4444';
         let statusBgColor = '#fee2e2';
+        let isPendingSetup = false;
         
-        // Check if coordinator has pending reset token (hasn't reset password yet)
-        if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
+        // Check if coordinator has pending reset token and is active (hasn't reset password yet)
+        if (isActive && user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
             status = 'Pending Setup';
             statusColor = '#f59e0b';
             statusBgColor = '#fffbeb';
+            isPendingSetup = true;
         } else if (isActive) {
             status = 'Active';
             statusColor = '#10b981';
@@ -9180,9 +9182,8 @@ function displayUsers(users) {
                         ${isActive ? `<button class="deactivate-user-btn action-btn" data-user-id="${user.id}" data-user-name="${(user.full_name || user.username || 'User').replace(/"/g, '&quot;')}" data-user-role="${user.role_name || user.role}" title="Deactivate User" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
                         </button>` : `<button class="reactivate-user-btn action-btn" data-user-id="${user.id}" data-user-name="${(user.full_name || user.username || 'User').replace(/"/g, '&quot;')}" data-user-role="${user.role_name || user.role}" title="Activate User" style="padding: 6px; background: white; border: 1px solid #10b981; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#10b981" d="M10.5 16a1.5 1.5 0 1 1 3 0a1.5 1.5 0 0 1-3 0"/><path fill="#10b981" fill-rule="evenodd" d="M9.81 4.005a3.2 3.2 0 0 1 4.164 1.808l.075.192q.14.359.198.738l.217 1.423l1.483-.226l-.217-1.423a5 5 0 0 0-.283-1.057l-.075-.193a4.7 4.7 0 0 0-9.024 2.418l.03.204q.084.545.284 1.058l.655 1.675l-.382.03a2.36 2.36 0 0 0-2.142 1.972a20.9 20.9 0 0 0 0 6.752a2.36 2.36 0 0 0 2.142 1.972l1.496.12c2.376.19 4.762.19 7.138 0l1.496-.12a2.36 2.36 0 0 0 2.142-1.972a20.9 20.9 0 0 0 0-6.752a2.36 2.36 0 0 0-2.142-1.972l-1.496-.12a45 45 0 0 0-6.69-.033l-.82-2.098a3.5 3.5 0 0 1-.197-.738L7.83 7.46a3.2 3.2 0 0 1 1.98-3.455m5.64 8.023a43.4 43.4 0 0 0-6.9 0l-1.496.12a.86.86 0 0 0-.781.719a19.4 19.4 0 0 0 0 6.266a.86.86 0 0 0 .781.72l1.497.12c2.296.183 4.602.183 6.898 0l1.496-.12a.86.86 0 0 0 .782-.72a19.4 19.4 0 0 0 0-6.266a.86.86 0 0 0-.782-.72z" clip-rule="evenodd"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#10b981" d="M12 4c-1.648 0-3 1.352-3 3v3h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1V7c0-2.752 2.248-5 5-5s5 2.248 5 5a1 1 0 1 1-2 0c0-1.648-1.352-3-3-3m-6 8v8h12v-8z"/></svg>
                         </button>`}
-                        
                         <button class="resend-link-btn action-btn" data-user-id="${user.id}" data-user-name="${(user.full_name || user.username || 'User').replace(/"/g, '&quot;')}" data-user-email="${user.email}" data-user-role="${user.role_name || user.role}" title="Resend Setup Link" style="padding: 6px; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; ${user.role_name === 'Admin' ? 'pointer-events: none; opacity: 0.5;' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="#5a5f68" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14L21 3m0 0l-6.5 18a.55.55 0 0 1-1 0L10 14l-7-3.5a.55.55 0 0 1 0-1z"/></svg>
                         </button>
@@ -9320,10 +9321,10 @@ function filterUsersTable() {
         const isActive = isActiveValue === 1 || isActiveValue === '1' || isActiveValue === true;
         let currentStatus = 'Inactive';
         
-        // "Pending Setup" only applies when: has reset_token (regardless of is_active value)
+        // "Pending Setup" only applies when: isActive AND has reset_token
         // When deactivated, is_active becomes 0 → status becomes "Inactive"
         // reset_token is preserved, so reactivation restores "Pending Setup"
-        if (user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
+        if (isActive && user.reset_token && user.reset_token.trim() !== '' && user.role_name === 'Coordinator') {
             currentStatus = 'Pending Setup';
         } else if (isActive) {
             currentStatus = 'Active';
@@ -9403,6 +9404,39 @@ function closeCreateAccountModal() {
   document.getElementById('createAccountModal').classList.remove('active');
   document.getElementById('coordinatorForm').reset();
   document.getElementById('adminForm').reset();
+}
+
+function openSuccessModal(userName, userRole = 'Coordinator') {
+  document.getElementById('successUserName').textContent = userName;
+  
+  // Update title and subtitle based on role
+  if (userRole === 'Admin') {
+    document.getElementById('successTitle').textContent = 'Admin Account Created';
+    document.getElementById('successSubtitle').textContent = 'Account is ready to use';
+    document.getElementById('successInfoBox').style.background = '#ecfdf5';
+    document.getElementById('successInfoBox').style.borderColor = '#10b981';
+    document.getElementById('successInfoTitle').textContent = 'Account Status:';
+    document.getElementById('successInfoTitle').style.color = '#10b981';
+    document.getElementById('successInfoText').textContent = 'The admin account is active and ready to use immediately.';
+    document.getElementById('successInfoBox').style.color = '#065f46';
+  } else {
+    document.getElementById('successTitle').textContent = 'Coordinator Account Created';
+    document.getElementById('successSubtitle').textContent = 'Setup link sent successfully';
+    document.getElementById('successInfoBox').style.background = '#ecfdf5';
+    document.getElementById('successInfoBox').style.borderColor = '#10b981';
+    document.getElementById('successInfoTitle').textContent = 'Account Status:';
+    document.getElementById('successInfoTitle').style.color = '#10b981';
+    document.getElementById('successInfoText').textContent = 'A password setup link has been sent to complete account setup.';
+    document.getElementById('successInfoBox').style.color = '#065f46';
+  }
+  
+  document.getElementById('successModal').classList.add('active');
+}
+
+function closeSuccessModal() {
+  document.getElementById('successModal').classList.remove('active');
+  loadAllUsers();
+  updateUserStatistics();
 }
 
 async function submitCreateAccount() {
@@ -9490,10 +9524,8 @@ async function createCoordinatorAccount() {
     }
     
     if (data.success) {
-      alert(`Coordinator Account Created Successfully!\n\nName: ${name}\nEmail: ${email}\n\nAccount Status: Pending Setup ⏳\n\n📧 A password setup link has been sent to ${email}\n\nThe coordinator can use this link to set their password and complete their account setup.`);
       closeCreateAccountModal();
-      loadAllUsers(); // Refresh users list
-      updateUserStatistics(); // Update stats
+      openSuccessModal(name, 'Coordinator');
     } else {
       alert('Error: ' + (data.message || 'Failed to create coordinator account'));
     }
@@ -9557,10 +9589,8 @@ async function createAdminAccount() {
     }
     
     if (data.success) {
-      alert(`Admin Account Created Successfully! ✅\n\nName: ${fullName}\nEmail: ${email}\n\nAccount Status: Active ✓\n\nThe admin can now login immediately to the admin dashboard using their credentials.`);
       closeCreateAccountModal();
-      loadAllUsers(); // Refresh users list
-      updateUserStatistics(); // Update stats
+      openSuccessModal(fullName, 'Admin');
     } else {
       alert('Error: ' + (data.message || 'Failed to create admin account'));
     }
@@ -9625,8 +9655,8 @@ async function confirmResendSetupLink() {
     try {
         // Disable button and show loading state
         sendBtn.disabled = true;
-        btnText.style.display = 'none';
-        spinner.style.display = 'block';
+        btnText.textContent = 'Sending...';
+        spinner.style.display = 'none';
         
         let endpoint = '';
         if (currentActionUserRole === 'Coordinator') {
@@ -9677,7 +9707,7 @@ function resetSendLinkButton() {
     const spinner = document.getElementById('sendLinkLoadingSpinner');
     
     sendBtn.disabled = false;
-    btnText.style.display = 'inline';
+    btnText.textContent = 'Send Link';
     spinner.style.display = 'none';
 }
 
@@ -13805,12 +13835,12 @@ function openEditUserModal(userId, userRole, userName, userEmail, userCompany, u
     // Reset file input
     document.getElementById('editPreviewImageInput').value = '';
     
-    // Show modal
-    document.getElementById('editUserModal').style.display = 'flex';
+    // Show modal using class instead of inline style (to override CSS !important)
+    document.getElementById('editUserModal').classList.add('active');
 }
 
 function closeEditUserModal() {
-    document.getElementById('editUserModal').style.display = 'none';
+    document.getElementById('editUserModal').classList.remove('active');
     document.getElementById('editUserForm').reset();
 }
 

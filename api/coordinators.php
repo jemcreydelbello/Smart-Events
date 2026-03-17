@@ -524,8 +524,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reset_token = bin2hex(random_bytes(16));
             $reset_expire = date('Y-m-d H:i:s', strtotime('+24 hours'));
             
-            // INSERT with is_active = 0 for pending setup status
-            $query = "INSERT INTO coordinators (coordinator_name, email, contact_number, is_active, reset_token, reset_expire) VALUES (?, ?, ?, 0, ?, ?)";
+            // INSERT with is_active = 1 (true) - coordinator will show as "Pending Setup" because reset_token exists
+            $query = "INSERT INTO coordinators (coordinator_name, email, contact_number, is_active, reset_token, reset_expire) VALUES (?, ?, ?, 1, ?, ?)";
             
             $stmt = $conn->prepare($query);
             if (!$stmt) {
