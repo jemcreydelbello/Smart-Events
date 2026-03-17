@@ -4259,6 +4259,29 @@ function loadAttendees() {
     });
 }
 
+// Global helper function to render a single attendee row for both regular and search rendering
+function renderAttendeeRowHTML(attendee, index, showUnmarkBtn) {
+    const regCode = attendee.registration_code || '';
+    
+    return `
+        <tr style="border-bottom: 1px solid #e8e8e8; background: ${index % 2 === 0 ? 'white' : '#fafafa'}; height: 60px;">
+            <td style="padding: 15px; color: #333; font-size: 13px;">${index + 1}</td>
+            <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml((attendee.full_name || '').trim())}</td>
+            <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml((attendee.company || '').trim())}</td>
+            <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml((attendee.job_title || '').trim())}</td>
+            <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml((attendee.email || '').trim())}</td>
+            <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml((attendee.phone || '').trim())}</td>
+            <td style="padding: 15px; text-align: right;">
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">📱</button>
+                    ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">↩</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">✓</button>`}
+                    <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">🗑</button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
 function renderAttendees() {
     console.log('🎨 Rendering attendees...');
     
@@ -4291,38 +4314,6 @@ function renderAttendees() {
     
     console.log('✓ Updated counts: Initial=' + attendeesData.initial.length + ', Actual=' + attendeesData.actual.length);
     
-    // Helper function to get field value with fallback - ALWAYS returns string
-    const getField = (obj, field) => {
-        const val = obj[field];
-        // Convert to string, handle null/undefined/false/0
-        if (val === null || val === undefined) return '';
-        return String(val).trim();
-    };
-    
-    // Helper function to render attendee row
-    const renderAttendeeRow = (attendee, index, showUnmarkBtn) => {
-        const regId = attendee.registration_id || attendee.id;
-        const regCode = attendee.registration_code || '';
-        
-        return `
-            <tr style="border-bottom: 1px solid #e8e8e8; background: ${index % 2 === 0 ? 'white' : '#fafafa'}; height: 60px;">
-                <td style="padding: 15px; color: #333; font-size: 13px;">${index + 1}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'full_name'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'company'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'job_title'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'email'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'phone'))}</td>
-                <td style="padding: 15px; text-align: right;">
-                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">📱</button>
-                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">↩</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">✓</button>`}
-                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">🗑</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    };
-    
     // Render initial list
     if (attendeesData.initial.length === 0) {
         console.log('ℹ Initial list is empty');
@@ -4330,7 +4321,7 @@ function renderAttendees() {
     } else {
         console.log('✓ Rendering ' + attendeesData.initial.length + ' initial attendees');
         initialBody.innerHTML = attendeesData.initial.map((attendee, index) => {
-            return renderAttendeeRow(attendee, index, false);
+            return renderAttendeeRowHTML(attendee, index, false);
         }).join('');
     }
     
@@ -4341,7 +4332,7 @@ function renderAttendees() {
     } else {
         console.log('✓ Rendering ' + attendeesData.actual.length + ' actual attendees');
         actualBody.innerHTML = attendeesData.actual.map((attendee, index) => {
-            return renderAttendeeRow(attendee, index, true);
+            return renderAttendeeRowHTML(attendee, index, true);
         }).join('');
     }
     
@@ -4356,6 +4347,8 @@ function switchAttendeesTab(tab) {
     const actualBtn = document.getElementById('actualListTab');
     const initialContent = document.getElementById('initialListContent');
     const actualContent = document.getElementById('actualAttendeesContent');
+    const initialCount = document.getElementById('initialCount');
+    const actualCount = document.getElementById('actualCount');
     
     console.log('📋 switchAttendeesTab called with:', tab);
     console.log('Buttons found - initialBtn:', !!initialBtn, 'actualBtn:', !!actualBtn);
@@ -4372,7 +4365,7 @@ function switchAttendeesTab(tab) {
     
     if (tab === 'initial') {
         console.log('✓ Switching TO Initial List tab');
-        // Style Initial List button as active with gradient
+        // Style Initial List button as active with GRADIENT (stick on click)
         initialBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
         initialBtn.style.color = 'white';
         initialBtn.style.opacity = '1';
@@ -4380,6 +4373,12 @@ function switchAttendeesTab(tab) {
         actualBtn.style.background = 'white';
         actualBtn.style.color = '#4b5563';
         actualBtn.style.opacity = '1';
+        // Update count colors - white for initial (active with gradient), gray for actual
+        if (initialCount) initialCount.style.color = 'white';
+        if (actualCount) actualCount.style.color = '#4b5563';
+        // Store active state
+        initialBtn.setAttribute('data-active', 'true');
+        actualBtn.setAttribute('data-active', 'false');
         // Show Initial List content
         initialContent.style.display = 'block';
         actualContent.style.display = 'none';
@@ -4390,10 +4389,16 @@ function switchAttendeesTab(tab) {
         initialBtn.style.background = 'white';
         initialBtn.style.color = '#4b5563';
         initialBtn.style.opacity = '1';
-        // Style Actual Attendees button as active with gradient
+        // Style Actual Attendees button as active with GRADIENT (stick on click)
         actualBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
         actualBtn.style.color = 'white';
         actualBtn.style.opacity = '1';
+        // Update count colors - gray for initial, white for actual (active with gradient)
+        if (initialCount) initialCount.style.color = '#4b5563';
+        if (actualCount) actualCount.style.color = 'white';
+        // Store active state
+        initialBtn.setAttribute('data-active', 'false');
+        actualBtn.setAttribute('data-active', 'true');
         // Show Actual Attendees content
         initialContent.style.display = 'none';
         actualContent.style.display = 'block';
@@ -4444,42 +4449,12 @@ function searchAttendees(query) {
         (a.email || '').toLowerCase().includes(q)
     );
     
-    // Helper function to get field value
-    const getField = (obj, field) => {
-        const val = obj[field];
-        if (val === null || val === undefined) return '';
-        return String(val).trim();
-    };
-    
-    // Helper function to render attendee row
-    const renderAttendeeRow = (attendee, index, showUnmarkBtn) => {
-        const regCode = attendee.registration_code || '';
-        
-        return `
-            <tr style="border-bottom: 1px solid #e8e8e8; background: ${index % 2 === 0 ? 'white' : '#fafafa'}; height: 60px;">
-                <td style="padding: 15px; color: #333; font-size: 13px;">${index + 1}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'full_name'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'company'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'job_title'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'email'))}</td>
-                <td style="padding: 15px; color: #333; font-size: 13px;">${escapeHtml(getField(attendee, 'phone'))}</td>
-                <td style="padding: 15px; text-align: right;">
-                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button onclick="showQRCode('${escapeHtml(regCode)}')" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px;" title="View QR Code">📱</button>
-                        ${showUnmarkBtn ? `<button onclick="markAttendeeAsInitial('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #FF9800;" title="Mark as Initial">↩</button>` : `<button onclick="markAttendeeAsAttended('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4CAF50;" title="Mark as Attended">✓</button>`}
-                        <button onclick="deleteAttendee('${escapeHtml(regCode)}', ${index})" style="background: transparent; border: 1px solid #ddd; width: 36px; height: 36px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f44336;" title="Delete">🗑</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    };
-    
     // Render filtered results
     if (filteredInitial.length === 0) {
         initialBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999; font-size: 14px;">No attendees found</td></tr>';
     } else {
         initialBody.innerHTML = filteredInitial.map((attendee, index) => {
-            return renderAttendeeRow(attendee, index, false);
+            return renderAttendeeRowHTML(attendee, index, false);
         }).join('');
     }
     
@@ -4487,7 +4462,7 @@ function searchAttendees(query) {
         actualBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999; font-size: 14px;">No attendees found</td></tr>';
     } else {
         actualBody.innerHTML = filteredActual.map((attendee, index) => {
-            return renderAttendeeRow(attendee, index, true);
+            return renderAttendeeRowHTML(attendee, index, true);
         }).join('');
     }
     
@@ -4513,24 +4488,120 @@ function exportAttendees() {
         }
         
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         
         // Get event name
         const eventName = window.currentEventData?.title || window.selectedEventTitle || 'Event Attendees';
         
-        // Title
-        doc.setFontSize(18);
+        // ========== PAGE 1: HEADER & SUMMARY ==========
+        
+        // Professional gradient background (simulate with rectangles)
+        doc.setFillColor(30, 115, 187);
+        doc.rect(0, 0, pageWidth, 50, 'F');
+        
+        // Add decorative accent bar
+        doc.setFillColor(237, 128, 40);
+        doc.rect(0, 48, pageWidth, 4, 'F');
+        
+        // Add logo placeholder area with text
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text('Event Attendees Report', 14, 20);
-        
-        // Event info
-        doc.setFontSize(12);
+        doc.text('Intellismart', 16, 15);
+        doc.setFontSize(8);
         doc.setFont(undefined, 'normal');
-        doc.text(`Event: ${eventName}`, 14, 30);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
-        doc.text(`Total Attendees: ${allAttendees.length}`, 14, 46);
+        doc.text('Event Management System', 16, 20);
         
-        // Create table
+        // Main heading
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.text('EVENT ATTENDEES REPORT', 70, 28);
+        
+        // Subheading
+        doc.setTextColor(230, 240, 250);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text('Professional Attendee Management & Documentation', 70, 35);
+        
+        // Event details line
+        doc.setFontSize(9);
+        doc.text(`Event: ${eventName}`, 70, 42);
+        
+        // ========== SUMMARY SECTION ==========
+        let yPos = 58;
+        
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('REPORT SUMMARY', 14, yPos);
+        
+        yPos += 8;
+        
+        // Summary boxes with modern styling
+        const summaryBoxWidth = 50;
+        const summaryBoxHeight = 16;
+        const summaryBoxGap = 5;
+        
+        const initialCount = attendeesData.initial.length;
+        const actualCount = attendeesData.actual.length;
+        
+        // Box 1: Initial List
+        doc.setFillColor(230, 240, 250);
+        doc.setDrawColor(30, 115, 187);
+        doc.setLineWidth(0.5);
+        doc.rect(14, yPos, summaryBoxWidth, summaryBoxHeight, 'FD');
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('INITIAL LIST', 17, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(initialCount), 17, yPos + 12);
+        
+        // Box 2: Attended
+        doc.setFillColor(230, 250, 240);
+        doc.setDrawColor(16, 185, 129);
+        doc.rect(14 + summaryBoxWidth + summaryBoxGap, yPos, summaryBoxWidth, summaryBoxHeight, 'FD');
+        doc.setTextColor(16, 185, 129);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('ATTENDED', 17 + summaryBoxWidth + summaryBoxGap, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(actualCount), 17 + summaryBoxWidth + summaryBoxGap, yPos + 12);
+        
+        // Box 3: Total
+        doc.setFillColor(250, 245, 230);
+        doc.setDrawColor(237, 128, 40);
+        doc.rect(14 + (summaryBoxWidth + summaryBoxGap) * 2, yPos, summaryBoxWidth, summaryBoxHeight, 'FD');
+        doc.setTextColor(237, 128, 40);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('TOTAL', 17 + (summaryBoxWidth + summaryBoxGap) * 2, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(allAttendees.length), 17 + (summaryBoxWidth + summaryBoxGap) * 2, yPos + 12);
+        
+        yPos += 22;
+        
+        // ========== REPORT INFO ==========
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        doc.text(`Generated: ${dateStr} at ${timeStr}`, 14, yPos);
+        
+        yPos += 5;
+        
+        // ========== ATTENDEES TABLE ==========
         const columns = ['No.', 'Full Name', 'Company', 'Job Title', 'Email', 'Phone', 'Status'];
         const rows = allAttendees.map((attendee, idx) => [
             idx + 1,
@@ -4542,32 +4613,72 @@ function exportAttendees() {
             attendeesData.actual.includes(attendee) ? 'ATTENDED' : 'INITIAL'
         ]);
         
-        // Apply table styling
+        // Modern table styling
         doc.autoTable({
-            startY: 55,
+            startY: yPos,
             head: [columns],
             body: rows,
             theme: 'grid',
-            styles: { fontSize: 9, cellPadding: 3 },
-            headStyles: { fillColor: [85, 156, 218], textColor: 255, fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [245, 247, 250] },
+            styles: {
+                fontSize: 8,
+                cellPadding: 3.5,
+                lineColor: [180, 190, 200],
+                lineWidth: 0.3,
+                font: 'helvetica',
+                textColor: [40, 40, 40]
+            },
+            headStyles: {
+                fillColor: [30, 115, 187],
+                textColor: 255,
+                fontStyle: 'bold',
+                font: 'helvetica',
+                halign: 'center',
+                valign: 'middle',
+                lineColor: [30, 115, 187]
+            },
+            bodyStyles: {
+                valign: 'middle',
+                font: 'helvetica',
+                minCellHeight: 7
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
             columnStyles: {
                 0: { halign: 'center', cellWidth: 12 },
-                6: { halign: 'center' }
+                6: { halign: 'center', cellWidth: 18 }
+            },
+            didDrawPage: function(data) {
+                // Footer for each page
+                let finalY = doc.lastAutoTable.finalY;
+                let pageSize = doc.internal.pageSize.getHeight();
+                
+                // Draw footer line
+                doc.setDrawColor(30, 115, 187);
+                doc.setLineWidth(0.5);
+                doc.line(14, pageSize - 15, pageWidth - 14, pageSize - 15);
+                
+                // Footer text
+                doc.setFontSize(8);
+                doc.setTextColor(120, 120, 120);
+                doc.setFont(undefined, 'normal');
+                doc.text('Intellismart Event Management System', 14, pageSize - 10);
+                
+                // Page number
+                const pageCount = doc.getNumberOfPages();
+                doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - 30, pageSize - 10);
+                
+                // Copyright
+                doc.setFontSize(7);
+                doc.text(`© ${now.getFullYear()} Intellismart. All rights reserved.`, 14, pageSize - 5);
             }
         });
         
-        // Footer with page numbers
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(10);
-            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
-        }
-        
-        // Download
+        // ========== DOWNLOAD ==========
         const filename = `attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(filename);
+        
+        console.log('✓ Professional PDF exported successfully');
     } catch (error) {
         console.error('Error exporting to PDF:', error);
         alert('Error exporting to PDF. Please try again.');

@@ -1311,11 +1311,11 @@
                 <div class="flex items-center justify-end gap-3" style="flex-wrap: nowrap; white-space: nowrap;">
                   <!-- Tab Navigation with Counts -->
                   <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                    <button id="initialListTab" onclick="switchAttendeesList('initial')" style="padding: 8px 16px; font-weight: 600; color: white; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; font-size: 13px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                      Initial List <span id="initialCount" style="color: #ffffff; font-size: 12px;">(0)</span>
+                    <button id="initialListTab" onclick="switchAttendeesList('initial')" style="padding: 8px 16px; font-weight: 600; color: white; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 13px;" data-active="true" onmouseover="" onmouseout="">
+                      Initial List <span id="initialCount" style="color: white; font-size: 12px;">(0)</span>
                     </button>
-                    <button id="actualListTab" onclick="switchAttendeesList('actual')" style="padding: 8px 16px; font-weight: 600; color: #4b5563; background: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 13px;">
-                      Actual Attendees <span id="actualCount" style="color: #999; font-size: 12px;">(0)</span>
+                    <button id="actualListTab" onclick="switchAttendeesList('actual')" style="padding: 8px 16px; font-weight: 600; color: #4b5563; background: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 13px;" data-active="false" onmouseover="if(this.getAttribute('data-active') === 'false') { this.style.background='linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)'; this.style.color='white'; document.getElementById('actualCount').style.color='white'; }" onmouseout="if(this.getAttribute('data-active') === 'false') { this.style.background='white'; this.style.color='#4b5563'; document.getElementById('actualCount').style.color='#4b5563'; }">
+                      Actual Attendees <span id="actualCount" style="color: #4b5563; font-size: 12px;">(0)</span>
                     </button>
                   </div>
                   
@@ -1323,12 +1323,12 @@
                   <input type="text" id="attendeesSearch" placeholder="Search..." onkeyup="searchAttendees(this.value)" class="px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 text-sm text-gray-900" style="width: 140px;">
                   
                   <!-- Export Button -->
-                  <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors whitespace-nowrap" onclick="exportAttendees()">
+                  <button style="padding: 8px 16px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="exportAttendees()">
                     Export
                   </button>
                   
                   <!-- Add Button -->
-                  <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors whitespace-nowrap" onclick="addAttendee()">
+                  <button style="padding: 8px 16px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="addAttendee()">
                     + Add
                   </button>
                 </div>
@@ -2568,11 +2568,11 @@ try {
               <div class="flex items-center gap-4">
                 <!-- Sub-tabs: Initial List vs Actual Attendees -->
                 <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                  <button id="participantsInitialTab" onclick="switchParticipantsTab('initial')" style="padding: 8px 24px; font-weight: 600; color: white; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                    Initial List <span id="participantsInitialCount" class="text-blue-100">(0)</span>
+                  <button id="participantsInitialTab" onclick="switchParticipantsTab('initial')" style="padding: 8px 24px; font-weight: 600; color: white; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s;" data-active="true" onmouseover="" onmouseout="">
+                    Initial List <span id="participantsInitialCount" style="color: white;">(0)</span>
                   </button>
-                  <button id="participantsActualTab" onclick="switchParticipantsTab('actual')" class="px-6 py-2 font-semibold text-gray-600 bg-white hover:bg-gray-50 rounded-md transition-colors whitespace-nowrap">
-                    Actual Attendees <span id="participantsActualCount" class="text-gray-400">(0)</span>
+                  <button id="participantsActualTab" onclick="switchParticipantsTab('actual')" style="padding: 8px 24px; font-weight: 600; color: #4b5563; background: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s;" data-active="false" onmouseover="if(this.getAttribute('data-active') === 'false') { this.style.background='linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)'; this.style.color='white'; document.getElementById('participantsActualCount').style.color='white'; }" onmouseout="if(this.getAttribute('data-active') === 'false') { this.style.background='white'; this.style.color='#4b5563'; document.getElementById('participantsActualCount').style.color='#4b5563'; }">
+                    Actual Attendees <span id="participantsActualCount" style="color: #4b5563;">(0)</span>
                   </button>
                 </div>
                 
@@ -2580,8 +2580,8 @@ try {
                 <input type="text" id="participantsSearch" placeholder="Search name, company, email..." onkeyup="searchParticipants(this.value)" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 w-64 text-gray-900">
                 
                 <!-- Export and Add Buttons -->
-                <button onclick="exportParticipants()" style="padding: 8px 16px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Export</button>
-                <button onclick="addParticipant()" style="padding: 8px 16px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">+ Add</button>
+                <button onclick="exportParticipants()" style="padding: 8px 16px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Export</button>
+                <button onclick="addParticipant()" style="padding: 8px 16px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">+ Add</button>
               </div>
             </div>
 
@@ -5897,36 +5897,6 @@ try {
       }
     }
 
-    // Participants Tab Switching Function
-    function switchParticipantsTab(tab) {
-      const initialBtn = document.getElementById('participantsInitialTab');
-      const actualBtn = document.getElementById('participantsActualTab');
-      const initialContent = document.getElementById('participantsInitialContent');
-      const actualContent = document.getElementById('participantsActualContent');
-      
-      if (tab === 'initial') {
-        // Show initial list
-        initialContent.style.display = 'block';
-        actualContent.style.display = 'none';
-        
-        // Update button styles
-        initialBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-50');
-        initialBtn.classList.add('bg-blue-600', 'text-white');
-        actualBtn.classList.remove('bg-blue-600', 'text-white');
-        actualBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-gray-50');
-      } else {
-        // Show actual attendees
-        initialContent.style.display = 'none';
-        actualContent.style.display = 'block';
-        
-        // Update button styles
-        initialBtn.classList.remove('bg-blue-600', 'text-white');
-        initialBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-gray-50');
-        actualBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-50');
-        actualBtn.classList.add('bg-blue-600', 'text-white');
-      }
-    }
-
     // Participants Search Function
     function searchParticipants(query) {
       const tables = [
@@ -6097,106 +6067,115 @@ try {
 
   <!-- Add Attendee Modal -->
   <div id="addAttendeeModal" class="modal" onclick="if(event.target.id === 'addAttendeeModal') closeAddAttendeeModal();">
-    <div class="modal-content" style="max-width: 550px; width: 95%; border-radius: 16px; box-shadow: 0 25px 75px rgba(0,0,0,0.25); background: white; padding: 32px;">
-      <div class="flex justify-between items-center mb-8">
-        <h2 style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">Add Attendee</h2>
-        <button type="button" onclick="closeAddAttendeeModal()" style="background: none; border: none; font-size: 32px; cursor: pointer; color: #d1d5db; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#6b7280'" onmouseout="this.style.color='#d1d5db'">×</button>
+    <div class="modal-content" style="max-width: 800px; width: 95%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; max-height: 85vh; overflow-y: auto;">
+      <!-- Gradient Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Attendee</h2>
+          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Register a new participant for the event.</p>
+        </div>
+        <button type="button" onclick="closeAddAttendeeModal()" style="background: none; border: none; font-size: 32px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; transition: color 0.2s; padding: 0;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.8)'">×</button>
       </div>
 
-      <!-- Error and Success Messages -->
-      <div id="addAttendeeErrorMessage" style="display: none; padding: 14px 18px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; margin-bottom: 18px; font-size: 14px; font-weight: 500;"></div>
-      <div id="addAttendeeSuccessMessage" style="display: none; padding: 14px 18px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; color: #16a34a; margin-bottom: 18px; font-size: 14px; font-weight: 500;"></div>
+      <!-- Form Content with padding -->
+      <div style="padding: 24px;">
+        <!-- Error and Success Messages -->
+        <div id="addAttendeeErrorMessage" style="display: none; padding: 14px 18px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; margin-bottom: 18px; font-size: 14px; font-weight: 500;"></div>
+        <div id="addAttendeeSuccessMessage" style="display: none; padding: 14px 18px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; color: #16a34a; margin-bottom: 18px; font-size: 14px; font-weight: 500;"></div>
 
-      <form id="addAttendeeForm" style="display: flex; flex-direction: column; gap: 20px;" onsubmit="handleAddAttendeeSubmit(event)">
-        <input type="hidden" id="addAttendeeEventId" value="">
+        <form id="addAttendeeForm" style="display: grid; grid-template-columns: 1fr; gap: 0;" onsubmit="handleAddAttendeeSubmit(event)">
+          <div class="space-y-6" style="display: flex; flex-direction: column; gap: 20px;">
+            <input type="hidden" id="addAttendeeEventId" value="">
 
-        <!-- Event Selection -->
-        <div id="addAttendeeEventField" style="display: none;">
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Event *</label>
-          <select id="addAttendeeEventSelect" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%2306b6d4%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3e%3cpolyline points=%226 9 12 15 18 9%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 12px center; background-size: 20px; padding-right: 40px; cursor: pointer; transition: all 0.2s;" onchange="this.style.borderColor='#06b6d4'" onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-            <option value="">-- Select an event --</option>
-          </select>
-        </div>
+            <!-- Event Selection -->
+            <div id="addAttendeeEventField" style="display: none;">
+              <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event *</label>
+              <select id="addAttendeeEventSelect" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%233b82f6%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3e%3cpolyline points=%226 9 12 15 18 9%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 12px center; background-size: 20px; padding-right: 40px; cursor: pointer; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+                <option value="">-- Select an event --</option>
+              </select>
+            </div>
 
-        <!-- First Name -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">First Name *</label>
-          <input type="text" id="addAttendeeFirstName" required placeholder="Enter first name"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
+            <!-- First Name and Middle Name (2 columns) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">First Name *</label>
+                <input type="text" id="addAttendeeFirstName" required placeholder="John"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Middle Name</label>
+                <input type="text" id="addAttendeeMiddleName" placeholder="James (optional)"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+            </div>
 
-        <!-- Middle Name -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Middle Name</label>
-          <input type="text" id="addAttendeeMiddleName" placeholder="Enter middle name (optional)"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
+            <!-- Surname and Company (2 columns) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Surname *</label>
+                <input type="text" id="addAttendeeSurname" required placeholder="Doe"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Company *</label>
+                <input type="text" id="addAttendeeCompany" required placeholder="Acme Corp"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+            </div>
 
-        <!-- Surname -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Surname *</label>
-          <input type="text" id="addAttendeeSurname" required placeholder="Enter surname"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
+            <!-- Job Title and Email (2 columns) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Job Title *</label>
+                <input type="text" id="addAttendeeJobTitle" required placeholder="Manager"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+              <div>
+                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Email Address *</label>
+                <input type="email" id="addAttendeeEmail" required placeholder="john.doe@example.com"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                       onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+              </div>
+            </div>
 
-        <!-- Company -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Company *</label>
-          <input type="text" id="addAttendeeCompany" required placeholder="Enter company name"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
+            <!-- Contact Number (Full Width) -->
+            <div>
+              <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Contact Number *</label>
+              <input type="tel" id="addAttendeePhone" required placeholder="+1 (555) 000-0000"
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+            </div>
 
-        <!-- Job Title -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Job Title *</label>
-          <input type="text" id="addAttendeeJobTitle" required placeholder="Enter job title"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
-
-        <!-- Email -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Email Address *</label>
-          <input type="email" id="addAttendeeEmail" required placeholder="Enter email address"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
-
-        <!-- Contact Number -->
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Contact Number *</label>
-          <input type="tel" id="addAttendeePhone" required placeholder="Enter contact number"
-                 style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; background: white; transition: all 0.2s; box-sizing: border-box;"
-                 onfocus="this.style.borderColor='#06b6d4'; this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.1)'"
-                 onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-        </div>
-
-        <!-- Form Actions -->
-        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          <button type="button" onclick="closeAddAttendeeModal()"
-                  style="padding: 12px 32px; background: #f3f4f6; color: #6b7280; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;"
-                  onmouseover="this.style.backgroundColor='#e5e7eb'; this.style.color='#374151'"
-                  onmouseout="this.style.backgroundColor='#f3f4f6'; this.style.color='#6b7280'">
-            Cancel
-          </button>
-          <button type="submit" id="addAttendeeSubmitBtn"
-                  style="padding: 12px 36px; background: #06b6d4; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(6,182,212,0.3);"
-                  onmouseover="this.style.backgroundColor='#0891b2'; this.style.boxShadow='0 6px 16px rgba(6,182,212,0.4)'"
-                  onmouseout="this.style.backgroundColor='#06b6d4'; this.style.boxShadow='0 4px 12px rgba(6,182,212,0.3)'">
-            Create
-          </button>
-        </div>
-      </form>
+            <!-- Form Actions -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+              <button type="button" onclick="closeAddAttendeeModal()"
+                      style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s;"
+                      onmouseover="this.style.backgroundColor='#e0e0e0'"
+                      onmouseout="this.style.backgroundColor='#f0f0f0'">
+                Cancel
+              </button>
+              <button type="submit" id="addAttendeeSubmitBtn"
+                      style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);"
+                      onmouseover="this.style.background='#155a9b'; this.style.boxShadow='0 6px 16px rgba(30, 115, 187, 0.4)'"
+                      onmouseout="this.style.background='#1E73BB'; this.style.boxShadow='0 4px 12px rgba(30, 115, 187, 0.3)'">
+                Create
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 

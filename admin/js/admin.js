@@ -2129,7 +2129,7 @@ function renderEventAttendeesTab(event) {
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;">
             <!-- Sub-tabs with counts -->
             <div style="display: flex; gap: 8px; background: #f3f4f6; padding: 4px; border-radius: 8px; white-space: nowrap;">
-              <button id="eventAttendeesInitialTab" onclick="switchEventAttendeesTab('initial')" style="padding: 8px 16px; font-weight: 600; color: white; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; font-size: 13px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              <button id="eventAttendeesInitialTab" onclick="switchEventAttendeesTab('initial')" style="padding: 8px 16px; font-weight: 600; color: white; background: #1E73BB; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; font-size: 13px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                 Initial <span id="eventAttendeesInitialCount" style="color: #ffffff; font-size: 12px;">(0)</span>
               </button>
               <button id="eventAttendeesActualTab" onclick="switchEventAttendeesTab('actual')" style="padding: 8px 16px; font-weight: 600; color: #4b5563; background: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 13px;">
@@ -2141,10 +2141,10 @@ function renderEventAttendeesTab(event) {
             <input type="text" id="eventAttendeesSearch" placeholder="Search..." onkeyup="searchEventAttendees(this.value)" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-size: 12px; color: #111827; width: 140px;" />
             
             <!-- Export Button -->
-            <button onclick="exportEventAttendees('${event.event_id}')" style="padding: 8px 14px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Export</button>
+            <button onclick="exportEventAttendees('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Export</button>
             
             <!-- Add Button -->
-            <button onclick="addEventAttendee('${event.event_id}')" style="padding: 8px 14px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">+ Add</button>
+            <button onclick="addEventAttendee('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">+ Add</button>
           </div>
         </div>
 
@@ -2539,8 +2539,8 @@ function switchEventAttendeesTab(tab) {
     if (!initialTab || !actualTab) return;
     
     if (tab === 'initial') {
-        // Update Initial tab styling (active - gradient background)
-        initialTab.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
+        // Update Initial tab styling (active - #1E73BB background)
+        initialTab.style.background = '#1E73BB';
         initialTab.style.color = 'white';
         initialTab.style.padding = '8px 20px';
         initialTab.style.borderRadius = '6px';
@@ -2558,8 +2558,8 @@ function switchEventAttendeesTab(tab) {
             actualContent.style.display = 'none';
         }
     } else if (tab === 'actual') {
-        // Update Actual tab styling (active - gradient background)
-        actualTab.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
+        // Update Actual tab styling (active - #1E73BB background)
+        actualTab.style.background = '#1E73BB';
         actualTab.style.color = 'white';
         actualTab.style.padding = '8px 20px';
         actualTab.style.borderRadius = '6px';
@@ -2596,11 +2596,13 @@ function switchParticipantsTab(tab) {
     const actualTab = document.getElementById('participantsActualTab');
     const initialContent = document.getElementById('participantsInitialContent');
     const actualContent = document.getElementById('participantsActualContent');
+    const initialCount = document.getElementById('participantsInitialCount');
+    const actualCount = document.getElementById('participantsActualCount');
     
     if (!initialTab || !actualTab) return;
     
     if (tab === 'initial') {
-        // Update Initial tab styling (active - gradient background)
+        // Update Initial tab styling (active - GRADIENT background)
         initialTab.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
         initialTab.style.color = 'white';
         initialTab.style.padding = '8px 24px';
@@ -2614,12 +2616,20 @@ function switchParticipantsTab(tab) {
         actualTab.style.borderRadius = '6px';
         actualTab.style.border = 'none';
         
+        // Update count number colors - white when active, gray when inactive
+        if (initialCount) initialCount.style.color = 'white';
+        if (actualCount) actualCount.style.color = '#4b5563';
+        
+        // Store active state
+        initialTab.setAttribute('data-active', 'true');
+        actualTab.setAttribute('data-active', 'false');
+        
         if (initialContent && actualContent) {
             initialContent.style.display = 'block';
             actualContent.style.display = 'none';
         }
     } else if (tab === 'actual') {
-        // Update Actual tab styling (active - gradient background)
+        // Update Actual tab styling (active - GRADIENT background)
         actualTab.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
         actualTab.style.color = 'white';
         actualTab.style.padding = '8px 24px';
@@ -2632,6 +2642,14 @@ function switchParticipantsTab(tab) {
         initialTab.style.padding = '8px 24px';
         initialTab.style.borderRadius = '6px';
         initialTab.style.border = 'none';
+        
+        // Update count number colors - white when active, gray when inactive
+        if (initialCount) initialCount.style.color = '#4b5563';
+        if (actualCount) actualCount.style.color = 'white';
+        
+        // Store active state
+        initialTab.setAttribute('data-active', 'false');
+        actualTab.setAttribute('data-active', 'true');
         
         if (initialContent && actualContent) {
             initialContent.style.display = 'none';
@@ -3125,6 +3143,8 @@ function switchAttendeesList(tab) {
     const actualBtn = document.getElementById('actualListTab');
     const initialContent = document.getElementById('initialListContent');
     const actualContent = document.getElementById('actualAttendeesContent');
+    const initialCount = document.getElementById('initialCount');
+    const actualCount = document.getElementById('actualCount');
     
     if (!initialBtn || !actualBtn || !initialContent || !actualContent) {
         console.error('❌ Missing elements for tab switching!');
@@ -3132,18 +3152,22 @@ function switchAttendeesList(tab) {
     }
     
     if (tab === 'initial') {
-        initialBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
-        initialBtn.style.color = 'white';
+        initialBtn.style.background = 'white';
+        initialBtn.style.color = '#4b5563';
         actualBtn.style.background = 'white';
         actualBtn.style.color = '#4b5563';
+        if (initialCount) initialCount.style.color = '#4b5563';
+        if (actualCount) actualCount.style.color = '#4b5563';
         initialContent.style.display = 'block';
         actualContent.style.display = 'none';
         console.log('✓ Switched to Initial List tab');
     } else if (tab === 'actual') {
         initialBtn.style.background = 'white';
         initialBtn.style.color = '#4b5563';
-        actualBtn.style.background = 'linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%)';
+        actualBtn.style.background = '#1E73BB';
         actualBtn.style.color = 'white';
+        if (initialCount) initialCount.style.color = '#4b5563';
+        if (actualCount) actualCount.style.color = 'white';
         initialContent.style.display = 'none';
         actualContent.style.display = 'block';
         console.log('✓ Switched to Actual Attendees tab');
@@ -3263,86 +3287,6 @@ function createAttendeeRow(attendee, index, isActual) {
 }
 
 // Export attendees to CSV (delegates to event-details.js implementation)
-function exportAttendees() {
-    console.log('📥 exportAttendees called - exporting to PDF');
-    
-    const allAttendees = (window.attendeesData?.initial || []).concat(window.attendeesData?.actual || []);
-    
-    if (allAttendees.length === 0) {
-        alert('No attendees to export');
-        return;
-    }
-    
-    try {
-        if (typeof window.jspdf === 'undefined') {
-            alert('PDF library not available. Please try again.');
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Get event name
-        const eventName = window.currentEventData?.title || window.selectedEventTitle || 'Event Attendees';
-        
-        // Title
-        doc.setFontSize(18);
-        doc.setFont(undefined, 'bold');
-        doc.text('Event Attendees Report', 14, 20);
-        
-        // Event info
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Event: ${eventName}`, 14, 30);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 38);
-        doc.text(`Total Attendees: ${allAttendees.length}`, 14, 46);
-        
-        // Create table
-        const columns = ['No.', 'Full Name', 'Company', 'Job Title', 'Email', 'Phone', 'Status'];
-        const rows = allAttendees.map((attendee, idx) => [
-            idx + 1,
-            attendee.full_name || '-',
-            attendee.company || '-',
-            attendee.job_title || '-',
-            attendee.email || '-',
-            attendee.phone || '-',
-            (window.attendeesData?.actual || []).includes(attendee) ? 'ATTENDED' : 'INITIAL'
-        ]);
-        
-        // Apply table styling
-        doc.autoTable({
-            startY: 55,
-            head: [columns],
-            body: rows,
-            theme: 'grid',
-            styles: { fontSize: 9, cellPadding: 3 },
-            headStyles: { fillColor: [85, 156, 218], textColor: 255, fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [245, 247, 250] },
-            columnStyles: {
-                0: { halign: 'center', cellWidth: 12 },
-                6: { halign: 'center' }
-            }
-        });
-        
-        // Footer with page numbers
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(10);
-            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
-        }
-        
-        // Download
-        const filename = `attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(filename);
-        
-        console.log('✓ Export complete - PDF saved');
-    } catch (error) {
-        console.error('Error exporting to PDF:', error);
-        alert('Error exporting to PDF. Please try again.');
-    }
-}
-
 // Add new attendee (redirects to addEventAttendee for modal-based form)
 function addAttendee() {
     console.log('Opening add attendee modal...');
