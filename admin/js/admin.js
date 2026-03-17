@@ -10363,18 +10363,65 @@ function displayEventDetailsData(event) {
     const descValue = event.description && event.description.trim() && event.description !== 'undefined' && event.description !== 'null' ? event.description : '-';
     document.getElementById('detailsEventDescription').value = descValue;
     
-    // Event Image
+    // Event Image - Handle new layout with eventImageDisplay elements
     const imageContainer = document.getElementById('detailsEventImage');
+    const eventImageDisplay = document.getElementById('eventImageDisplay');
+    const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+    
     if (event.image_url) {
         const imageUrl = getImageUrl(event.image_url);
-        imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        
+        // Update new layout image elements
+        if (eventImageDisplay) {
+            eventImageDisplay.src = imageUrl;
+            eventImageDisplay.style.display = 'block';
+        }
+        if (eventImageDisplayPrivate) {
+            eventImageDisplayPrivate.src = imageUrl;
+            eventImageDisplayPrivate.style.display = 'block';
+        }
+        
+        // Fallback: Update old element if it exists
+        if (imageContainer) {
+            imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        }
     } else {
-        imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        // No image - show placeholders
+        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+        
+        if (eventImageDisplay) {
+            eventImageDisplay.style.display = 'none';
+        }
+        if (eventImageDisplayPrivate) {
+            eventImageDisplayPrivate.style.display = 'none';
+        }
+        if (eventImagePlaceholder) {
+            eventImagePlaceholder.style.display = 'flex';
+        }
+        if (eventImagePlaceholderPrivate) {
+            eventImagePlaceholderPrivate.style.display = 'flex';
+        }
+        
+        // Fallback: Update old element if it exists
+        if (imageContainer) {
+            imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        }
     }
     
     // ============ REGISTRATION & WEB LINKS ============
     document.getElementById('detailsRegistrationLink').value = event.registration_link || '-';
     document.getElementById('detailsWebsite').value = event.website || '-';
+    
+    // Also populate private event registration links
+    const privRegLink = document.getElementById('detailsRegistrationLinkPrivate');
+    const privWebsite = document.getElementById('detailsWebsitePrivate');
+    if (privRegLink) {
+        privRegLink.value = event.registration_link || '-';
+    }
+    if (privWebsite) {
+        privWebsite.value = event.website || '-';
+    }
     
     // ============ PRIVACY ACCESS ============
     const privateCheckbox = document.getElementById('detailsPrivateEvent');
@@ -10470,10 +10517,12 @@ function loadEventDetailsForTab() {
             // Display all collected event data
             displayEventDetailsForTab(event);
             
-            // Load related data
+            // Load related data - pass event data and ID
+            console.log('🔄 Loading related data for event ID:', currentEventId);
             loadEventPrivacyInfo();
-            loadEventCoordinators();
-            loadEventOtherInfo();
+            loadEventCoordinators(currentEventId);
+            loadEventOtherInfo(currentEventId);
+            console.log('✅ Queued all related data loads');
         } else {
             console.error('✗ Failed to load event details:', data.message);
         }
@@ -10516,18 +10565,65 @@ function displayEventDetailsForTab(event) {
     const descValue = event.description && event.description.trim() && event.description !== 'undefined' && event.description !== 'null' ? event.description : '-';
     document.getElementById('detailsEventDescription').value = descValue;
     
-    // Event Image
+    // Event Image - Handle new layout with eventImageDisplay elements
     const imageContainer = document.getElementById('detailsEventImage');
+    const eventImageDisplay = document.getElementById('eventImageDisplay');
+    const eventImageDisplayPrivate = document.getElementById('eventImageDisplayPrivate');
+    
     if (event.image_url) {
         const imageUrl = getImageUrl(event.image_url);
-        imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        
+        // Update new layout image elements
+        if (eventImageDisplay) {
+            eventImageDisplay.src = imageUrl;
+            eventImageDisplay.style.display = 'block';
+        }
+        if (eventImageDisplayPrivate) {
+            eventImageDisplayPrivate.src = imageUrl;
+            eventImageDisplayPrivate.style.display = 'block';
+        }
+        
+        // Fallback: Update old element if it exists
+        if (imageContainer) {
+            imageContainer.innerHTML = `<img src="${imageUrl}" alt="${event.event_name}" style="max-width: 100%; max-height: 400px; border-radius: 4px; object-fit: contain;">`;
+        }
     } else {
-        imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        // No image - show placeholders
+        const eventImagePlaceholder = document.getElementById('eventImagePlaceholder');
+        const eventImagePlaceholderPrivate = document.getElementById('eventImagePlaceholderPrivate');
+        
+        if (eventImageDisplay) {
+            eventImageDisplay.style.display = 'none';
+        }
+        if (eventImageDisplayPrivate) {
+            eventImageDisplayPrivate.style.display = 'none';
+        }
+        if (eventImagePlaceholder) {
+            eventImagePlaceholder.style.display = 'flex';
+        }
+        if (eventImagePlaceholderPrivate) {
+            eventImagePlaceholderPrivate.style.display = 'flex';
+        }
+        
+        // Fallback: Update old element if it exists
+        if (imageContainer) {
+            imageContainer.innerHTML = '<span class="text-gray-400">📷 No image available</span>';
+        }
     }
     
     // ============ REGISTRATION & WEB LINKS ============
     document.getElementById('detailsRegistrationLink').value = event.registration_link || '-';
     document.getElementById('detailsWebsite').value = event.website || '-';
+    
+    // Also populate private event registration links
+    const detailsRegistrationLinkPrivate = document.getElementById('detailsRegistrationLinkPrivate');
+    const detailsWebsitePrivate = document.getElementById('detailsWebsitePrivate');
+    if (detailsRegistrationLinkPrivate) {
+        detailsRegistrationLinkPrivate.value = event.registration_link || '-';
+    }
+    if (detailsWebsitePrivate) {
+        detailsWebsitePrivate.value = event.website || '-';
+    }
     
     // ============ PRIVACY ACCESS ============
     const privateCheckbox = document.getElementById('detailsPrivateEvent');
@@ -10602,13 +10698,17 @@ function loadEventPrivacyInfo() {
 }
 
 // Load event coordinators
-function loadEventCoordinators() {
-    if (!currentEventId) return;
+function loadEventCoordinators(eventId) {
+    const idToUse = eventId || currentEventId;
+    if (!idToUse) {
+        console.warn('⚠ No event ID available for loading coordinators');
+        return;
+    }
     
-    console.log('👥 Loading coordinators for event:', currentEventId);
+    console.log('👥 Loading coordinators for event:', idToUse);
     
     // Fetch all coordinators assigned to this event from the junction table
-    fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
+    fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${idToUse}`, {
         headers: getUserHeaders()
     })
     .then(response => {
@@ -10690,13 +10790,17 @@ function loadEventCoordinators() {
 }
 
 // Load event other info/custom fields
-function loadEventOtherInfo() {
-    if (!currentEventId) return;
+function loadEventOtherInfo(eventId) {
+    const idToUse = eventId || currentEventId;
+    if (!idToUse) {
+        console.warn('⚠ No event ID available for loading other info');
+        return;
+    }
     
-    console.log('📝 Loading other information for event:', currentEventId);
+    console.log('📝 Loading other information for event:', idToUse);
     
     // Fetch metadata from API
-    fetch(`${API_BASE}/metadata.php?action=list&event_id=${currentEventId}`, {
+    fetch(`${API_BASE}/metadata.php?action=list&event_id=${idToUse}`, {
         headers: getUserHeaders()
     })
     .then(response => {
@@ -10792,28 +10896,24 @@ function openEditOtherInfoModal(metadataId, fieldName, fieldValue) {
 
 // Delete other information
 function deleteOtherInfo(metadataId) {
-    console.log('🔍 deleteOtherInfo called:', { metadataId });
+    console.log('🔍 Removing other information:', { metadataId });
     
-    let modal = document.getElementById('deleteOtherInformationModal');
-    console.log('🔍 Modal found:', !!modal);
-    
-    if (!modal) {
-        console.log('🔍 Modal not found, creating modals...');
-        if (typeof createOtherInformationModals === 'function') {
-            createOtherInformationModals();
-            modal = document.getElementById('deleteOtherInformationModal');
-        }
-    }
-    
-    if (!modal) {
-        console.error('❌ Modal still not available');
-        showNotification('Error: Modal not available', 'error');
+    if (!currentEventId) {
+        showNotification('No event selected', 'error');
         return;
     }
     
-    console.log('✅ Showing modal for deletion');
-    window.pendingDeleteMetadataId = metadataId;
-    modal.classList.add('active');
+    let modal = document.getElementById('removeOtherInformationModal');
+    
+    if (modal) {
+        window.pendingRemoveMetadataId = metadataId;
+        window.pendingRemoveInfoEventId = currentEventId;
+        modal.classList.add('active');
+        console.log('✅ Remove information modal opened');
+    } else {
+        console.error('❌ Modal not found');
+        showNotification('Error: Modal not available', 'error');
+    }
 }
 
 // Copy access code to clipboard
@@ -11263,6 +11363,120 @@ function removeCoordinatorFromEvent(coordinatorId) {
         // Fallback if modal cannot be created
         showNotification('Modal not available', 'error');
     }
+}
+
+function confirmRemoveCoordinator() {
+    const coordinatorId = window.pendingRemoveCoordinatorId;
+    const eventId = window.pendingRemoveEventId;
+    
+    if (!coordinatorId || !eventId) {
+        showNotification('Missing information', 'error');
+        return;
+    }
+    
+    // Close modal
+    const modal = document.getElementById('removeCoordinatorModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    
+    console.log(`🔄 Removing coordinator ${coordinatorId} from event ${eventId}...`);
+    
+    // Make API call to remove coordinator
+    fetch(`${API_BASE}/events.php`, {
+        method: 'DELETE',
+        headers: {
+            ...getUserHeaders(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            event_id: eventId,
+            coordinator_id: coordinatorId,
+            action: 'remove_coordinator'
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log(`✓ Coordinator removed successfully`);
+            showNotification('Coordinator removed successfully!', 'success');
+            
+            // Reload the coordinators list
+            setTimeout(() => {
+                loadEventCoordinators(eventId);
+            }, 300);
+        } else {
+            throw new Error(data.message || 'Failed to remove coordinator');
+        }
+    })
+    .catch(error => {
+        console.error('✗ Error removing coordinator:', error);
+        showNotification('Error removing coordinator: ' + error.message, 'error');
+    });
+    
+    // Clear globals
+    window.pendingRemoveCoordinatorId = null;
+    window.pendingRemoveEventId = null;
+}
+
+function confirmRemoveOtherInformation() {
+    const metadataId = window.pendingRemoveMetadataId;
+    const eventId = window.pendingRemoveInfoEventId;
+    
+    if (!metadataId || !eventId) {
+        showNotification('Missing information', 'error');
+        return;
+    }
+    
+    // Close modal
+    const modal = document.getElementById('removeOtherInformationModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    
+    console.log(`🔄 Removing information ${metadataId} from event ${eventId}...`);
+    
+    // Make API call to remove metadata
+    fetch(`${API_BASE}/metadata.php`, {
+        method: 'DELETE',
+        headers: {
+            ...getUserHeaders(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            metadata_id: metadataId,
+            event_id: eventId,
+            action: 'delete_metadata'
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log(`✓ Information removed successfully`);
+            showNotification('Information removed successfully!', 'success');
+            
+            // Reload the other info list
+            setTimeout(() => {
+                loadEventOtherInfo(eventId);
+            }, 300);
+        } else {
+            throw new Error(data.message || 'Failed to remove information');
+        }
+    })
+    .catch(error => {
+        console.error('✗ Error removing information:', error);
+        showNotification('Error removing information: ' + error.message, 'error');
+    });
+    
+    // Clear globals
+    window.pendingRemoveMetadataId = null;
+    window.pendingRemoveInfoEventId = null;
 }
 
 // ============ PROGRAM MANAGEMENT ============

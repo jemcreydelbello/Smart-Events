@@ -622,6 +622,7 @@
   <script src="./js/admin.js?v=95"></script>
   <script src="./js/catalogue-lookup.js?v=11"></script>
   <script src="./js/edit-modal-v2.js"></script>
+  <script src="./js/event-layout-manager.js?v=1"></script>
   
   <!-- Define helper function for inline scripts -->
   <script>
@@ -1109,47 +1110,90 @@
                   </div>
                 </div>
 
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h3 class="text-lg font-semibold text-gray-900 mb-6">Event Image</h3>
-                  <div class="flex flex-col items-center gap-4">
-                    <div id="detailsEventImage" class="relative" style="width: 100%; max-width: 500px; aspect-ratio: 16/9; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: all 0.3s ease; cursor: default;" id="detailsEventImageContainer">
-                      <span class="text-gray-400" style="font-size: 48px; display: flex; flex-direction: column; align-items: center; gap: 8px;"><span style="font-size: 24px; line-height: 1;">📷 No image</span></span>
+                <!-- PUBLIC EVENT LAYOUT: Registration & Web Links + Event Image -->
+                <div id="publicEventLayout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; grid-auto-flow: dense;">
+                  <!-- Registration & Web Links (Left Side) -->
+                  <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Registration & Web Links</h3>
+                    <div class="space-y-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Registration Link</label>
+                        <input type="text" id="detailsRegistrationLink" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                        <input type="text" id="detailsWebsite" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                      </div>
                     </div>
                   </div>
-                  <input type="file" id="editEventImage" accept="image/*" style="display: none;" onchange="handleEditEventImage(event)">
+
+                  <!-- Event Image (Right Side) -->
+                  <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Event Image</h3>
+                    <div style="width: 100%; aspect-ratio: 16/9; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: all 0.3s ease;">
+                      <img id="eventImageDisplay" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                      <div id="eventImagePlaceholder" style="text-align: center; color: #9ca3af; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <span style="font-size: 48px;">📷</span>
+                        <span class="text-sm">No image</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h3 class="text-lg font-semibold text-gray-900 mb-6">Registration & Web Links</h3>
-                  <div class="grid grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-2">Registration Link</label>
-                      <input type="text" id="detailsRegistrationLink" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                <!-- PRIVATE EVENT LAYOUT: Private Access Code + Event Image -->
+                <div id="privateEventLayout" style="display: none; grid-template-columns: 1fr 1fr; gap: 24px; grid-auto-flow: dense;">
+                  <!-- Private Access Code (Left Side) -->
+                  <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Privacy Access</h3>
+                    <div class="space-y-4">
+                      <div>
+                        <div class="flex items-center gap-3 mb-4">
+                          <input type="checkbox" id="detailsPrivateEvent" readonly disabled class="w-4 h-4">
+                          <label for="detailsPrivateEvent" class="text-sm font-medium text-gray-700 uppercase">Private Event</label>
+                        </div>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Private Access Code</label>
+                        <div class="flex gap-2">
+                          <input type="text" id="detailsPrivateAccessCode" readonly class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600 cursor-not-allowed font-mono">
+                          <button class="px-4 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium" onclick="copyAccessCode()">Copy</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Code is locked after generation. Disable private event to deactivate access.</p>
+                      </div>
                     </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                      <input type="text" id="detailsWebsite" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                  </div>
+
+                  <!-- Event Image (Right Side) -->
+                  <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Event Image</h3>
+                    <div style="width: 100%; aspect-ratio: 16/9; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: all 0.3s ease;">
+                      <img id="eventImageDisplayPrivate" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                      <div id="eventImagePlaceholderPrivate" style="text-align: center; color: #9ca3af; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <span style="font-size: 48px;">📷</span>
+                        <span class="text-sm">No image</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div id="privacyAccessSection" class="bg-white rounded-lg p-6 shadow-sm border border-gray-200" style="display: none;">
-                  <h3 class="text-lg font-semibold text-gray-900 mb-6">Privacy Access</h3>
-                  <div class="mb-4">
-                    <div class="flex items-center gap-3">
-                      <input type="checkbox" id="detailsPrivateEvent" readonly disabled class="w-4 h-4">
-                      <label for="detailsPrivateEvent" class="text-sm font-medium text-gray-700 uppercase">Private Event</label>
+                <!-- Section for private event registration links (2 columns in 1 row) -->
+                <div id="privateEventRegistrationSection" style="display: none;">
+                  <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Registration & Web Links</h3>
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Registration Link</label>
+                        <input type="text" id="detailsRegistrationLinkPrivate" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                        <input type="text" id="detailsWebsitePrivate" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white cursor-not-allowed">
+                      </div>
                     </div>
-                  </div>
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Private Access Code</label>
-                    <div class="flex gap-2">
-                      <input type="text" id="detailsPrivateAccessCode" readonly class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600 cursor-not-allowed font-mono">
-                      <button class="px-4 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium" onclick="copyAccessCode()">📋 Copy</button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">Code is locked after generation. Disable private event to deactivate access.</p>
                   </div>
                 </div>
+
+                <input type="file" id="editEventImage" accept="image/*" style="display: none;" onchange="handleEditEventImage(event)">
 
                 <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                   <h3 class="text-lg font-semibold text-gray-900 mb-6">Notes</h3>
@@ -3852,6 +3896,58 @@ try {
       <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
         <button type="button" onclick="closeRemoveGalleryImageModal()" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
         <button type="button" onclick="confirmRemoveGalleryImage()" style="padding: 8px 16px; border-radius: 6px; background: #2563eb; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remove Coordinator Modal -->
+  <div id="removeCoordinatorModal" class="modal">
+    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Gradient Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Remove Coordinator</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Are you sure you want to remove this coordinator from the event?</p>
+        <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="color: #4b5563; font-size: 14px; margin: 0 0 24px 0;">This action cannot be undone.</p>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
+            Cancel
+          </button>
+          <button type="button" style="padding: 10px 24px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="confirmRemoveCoordinator()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remove Other Information Modal -->
+  <div id="removeOtherInformationModal" class="modal">
+    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Gradient Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Remove Information</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Are you sure you want to remove this information from the event?</p>
+        <button type="button" onclick="document.getElementById('removeOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="color: #4b5563; font-size: 14px; margin: 0 0 24px 0;">This action cannot be undone.</p>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('removeOtherInformationModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
+            Cancel
+          </button>
+          <button type="button" style="padding: 10px 24px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="confirmRemoveOtherInformation()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            Remove
+          </button>
+        </div>
       </div>
     </div>
   </div>
