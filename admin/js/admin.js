@@ -11046,66 +11046,104 @@ function openLookupCoordinatorModal() {
     // Show modal
     modal.classList.remove('hidden');
     
-    // Fetch and populate available coordinators
-    fetch(`${API_BASE}/coordinators.php?action=list`, {
-        headers: getUserHeaders()
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch coordinators');
-        return response.json();
-    })
-    .then(data => {
-        const list = document.getElementById('coordinatorsLookupList');
-        if (!list) return;
-        
-        if (data.success && Array.isArray(data.data)) {
-            list.innerHTML = data.data.map(coordinator => {
-                const profileImage = coordinator.profile_image || coordinator.coordinator_image;
+    // First, fetch already-assigned coordinators for this event
+    const assignedCoordinatorIds = new Set();
+    
+    const assignedPromise = !currentEventId ? Promise.resolve([]) :
+        fetch(`${API_BASE}/events.php?action=get_event_coordinators&event_id=${currentEventId}`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            if (!response.ok) return [];
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && Array.isArray(data.data)) {
+                data.data.forEach(coordinator => {
+                    assignedCoordinatorIds.add(coordinator.coordinator_id);
+                });
+                console.log('📌 Already assigned coordinators:', Array.from(assignedCoordinatorIds));
+            }
+            return data.data || [];
+        })
+        .catch(error => {
+            console.warn('⚠ Could not fetch assigned coordinators:', error);
+            return [];
+        });
+    
+    // Then fetch all available coordinators
+    assignedPromise.then(() => {
+        fetch(`${API_BASE}/coordinators.php?action=list`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch coordinators');
+            return response.json();
+        })
+        .then(data => {
+            const list = document.getElementById('coordinatorsLookupList');
+            if (!list) return;
+            
+            if (data.success && Array.isArray(data.data)) {
+                // Filter out already assigned coordinators
+                const availableCoordinators = data.data.filter(coordinator => 
+                    !assignedCoordinatorIds.has(coordinator.coordinator_id)
+                );
                 
-                let profileImageHtml;
-                if (profileImage) {
-                    let imgSrc = profileImage;
-                    if (!profileImage.includes('/')) {
-                        imgSrc = `../uploads/coordinators/${profileImage}`;
-                    }
-                    profileImageHtml = `
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
-                        </div>
-                    `;
-                } else {
-                    const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    profileImageHtml = `
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0;">
-                            ${initials}
-                        </div>
-                    `;
+                if (availableCoordinators.length === 0) {
+                    list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af;">All coordinators have been assigned to this event</div>';
+                    console.log('✓ All coordinators assigned');
+                    return;
                 }
                 
-                return `
-                    <div class="coordinator-item" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s; cursor: pointer;" onclick="toggleCoordinatorCheckbox(this, ${coordinator.coordinator_id})" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                        <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1E73BB;" onclick="event.stopPropagation()">
-                        ${profileImageHtml}
-                        <div style="flex: 1; min-width: 0;">
-                            <h4 style="margin: 0; font-weight: 600; color: #1f2937; font-size: 15px;">${coordinator.coordinator_name || '-'}</h4>
-                            <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${coordinator.email || '-'}</p>
-                            <p style="margin: 2px 0 0 0; font-size: 13px; color: #6b7280;">${coordinator.company || 'No company'}</p>
+                list.innerHTML = availableCoordinators.map(coordinator => {
+                    const profileImage = coordinator.profile_image || coordinator.coordinator_image;
+                    
+                    let profileImageHtml;
+                    if (profileImage) {
+                        let imgSrc = profileImage;
+                        if (!profileImage.includes('/')) {
+                            imgSrc = `../uploads/coordinators/${profileImage}`;
+                        }
+                        profileImageHtml = `
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background-image: url('${imgSrc}'); background-size: cover; background-position: center; background-color: #3b82f6; flex-shrink: 0;">
+                            </div>
+                        `;
+                    } else {
+                        const initials = (coordinator.coordinator_name || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                        profileImageHtml = `
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0;">
+                                ${initials}
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                        <div class="coordinator-item" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s; cursor: pointer;" onclick="toggleCoordinatorCheckbox(this, ${coordinator.coordinator_id})" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                            <input type="checkbox" class="coordinator-checkbox" data-coordinator-id="${coordinator.coordinator_id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1E73BB;" onclick="event.stopPropagation()">
+                            ${profileImageHtml}
+                            <div style="flex: 1; min-width: 0;">
+                                <h4 style="margin: 0; font-weight: 600; color: #1f2937; font-size: 15px;">${coordinator.coordinator_name || '-'}</h4>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${coordinator.email || '-'}</p>
+                                <p style="margin: 2px 0 0 0; font-size: 13px; color: #6b7280;">${coordinator.company || 'No company'}</p>
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
-            console.log('✓ Coordinators loaded:', data.data.length);
-        } else {
-            list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af;">No coordinators found</div>';
-            console.warn('⚠ No coordinators found or invalid response');
-        }
-    })
-    .catch(error => {
-        console.error('✗ Error fetching coordinators:', error);
-        const list = document.getElementById('coordinatorsLookupList');
-        if (list) {
-            list.innerHTML = '<div style="padding: 32px; text-align: center; color: #ef4444;">Error loading coordinators</div>';
-        }
-        showNotification('Error loading coordinators', 'error');
+                    `;
+                }).join('');
+                console.log(`✓ Available coordinators loaded: ${availableCoordinators.length}/${data.data.length}`);
+            } else {
+                list.innerHTML = '<div style="padding: 32px; text-align: center; color: #9ca3af;">No coordinators found</div>';
+                console.warn('⚠ No coordinators found or invalid response');
+            }
+        })
+        .catch(error => {
+            console.error('✗ Error fetching coordinators:', error);
+            const list = document.getElementById('coordinatorsLookupList');
+            if (list) {
+                list.innerHTML = '<div style="padding: 32px; text-align: center; color: #ef4444;">Error loading coordinators</div>';
+            }
+            showNotification('Error loading coordinators', 'error');
+        });
     });
 }
 

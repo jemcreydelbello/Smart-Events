@@ -486,3 +486,61 @@ POST data:
   [private_code] = 8RUUG5
 CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryX6Ay8kkfLq25HOQu
 ---
+[2026-03-17 08:42:38] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private, private_code
+POST data:
+  [action] = update_event
+  [event_id] = 87
+  [event_name] = HR Software All-Hands Meeting
+  [location] = Meeting Room B
+  [start_event] = 2026-03-18 10:00:00
+  [end_event] = 2026-03-20 12:00:00
+  [registration_start] = 2026-03-18 08:00:00
+  [registration_end] = 2026-03-20 11:00:00
+  [capacity] = 100
+  [description] = Join leadership for quarterly business updates, fi...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 1
+  [private_code] = 1G46Q1
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundarydlfTm7M5RYQXE7CD
+---
+[2026-03-17 08:43:52] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary6IN7eyC0EaGiGsWG
+---
+[2026-03-17 08:51:02] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 111
+  [event_name] = New Hire Orientation
+  [location] = Meeting Room B
+  [start_event] = 2026-03-25 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-25 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Mandatory half-day session for all new hires. Cove...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary8ABnRIwl1HiYVogB
+---
