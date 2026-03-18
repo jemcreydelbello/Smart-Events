@@ -14833,19 +14833,24 @@ function loadExpenses() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                console.log('[Finance] Expenses loaded:', data.data);
                 renderExpensesTable(data.data);
                 updateGrandTotal(data.grand_total || 0);
                 updateBudgetDisplay(data.budget || 0, data.grand_total || 0, data.balance || 0);
                 updateModalBudgetDisplay(data.budget || 0, data.balance || 0);
             } else {
                 console.error('[Finance] Error:', data.message);
+                const tableBody = document.getElementById('expensesTableBody');
+                if (tableBody) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No expenses recorded</td></tr>';
+                }
             }
         })
         .catch(error => {
             console.error('[Finance] Error loading:', error);
             const tableBody = document.getElementById('expensesTableBody');
             if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Error loading expenses</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No expenses recorded</td></tr>';
             }
         });
     
@@ -14942,6 +14947,7 @@ function loadBudgetInput(eventId) {
                 const budgetInput = document.getElementById('budgetInput');
                 if (budgetInput) {
                     budgetInput.value = data.budget || 0;
+                    budgetInput.disabled = false;  // Enable the input
                 }
             }
         })
