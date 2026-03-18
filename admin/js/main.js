@@ -712,18 +712,24 @@ function drawCapacityUtilization(capacityData) {
 // ============ CALENDAR ============
 let calendarCurrentDate = new Date();
 let allEventsForCalendar = [];
+let allTasksForCalendar = [];
 
 function loadCalendar() {
     // Load all events (including past ones) for calendar view
-    fetch(`${API_BASE}/events.php?action=list_all`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                allEventsForCalendar = data.data || [];
-                renderCalendar();
-            }
-        })
-        .catch(error => console.error('Error loading calendar events:', error));
+    Promise.all([
+        fetch(`${API_BASE}/events.php?action=list_all`).then(r => r.json()),
+        fetch(`${API_BASE}/tasks-calendar.php?action=list_all`).then(r => r.json()).catch(() => ({ success: true, data: [] }))
+    ])
+    .then(([eventsData, tasksData]) => {
+        if (eventsData.success) {
+            allEventsForCalendar = eventsData.data || [];
+        }
+        if (tasksData.success) {
+            allTasksForCalendar = tasksData.data || [];
+        }
+        renderCalendar();
+    })
+    .catch(error => console.error('Error loading calendar:', error));
 }
 
 function renderCalendar() {
@@ -757,10 +763,16 @@ function renderCalendar() {
         const dateStr = formatDateForComparison(date);
         const isToday = (date.toDateString() === today.toDateString());
         
-        // Get events for this day
+        // Get events and tasks for this day
         const eventsThisDay = allEventsForCalendar.filter(event => {
             return event.event_date === dateStr;
         });
+        
+        const tasksThisDay = allTasksForCalendar.filter(task => {
+            return task.event_date === dateStr;
+        });
+        
+        const itemsThisDay = [...eventsThisDay, ...tasksThisDay];
         
         let dayClass = 'calendar-day';
         if (isToday) dayClass += ' today';
@@ -769,17 +781,29 @@ function renderCalendar() {
                     <span class="calendar-day-number">${day}</span>
                     <div class="calendar-events">`;
         
-        // Show first 2 events, indicate if there are more
-        if (eventsThisDay.length > 0) {
-            for (let i = 0; i < Math.min(2, eventsThisDay.length); i++) {
-                const event = eventsThisDay[i];
-                const eventType = event.is_private ? 'private' : 'public';
-                const eventName = event.event_name.length > 12 ? event.event_name.substring(0, 12) + '...' : event.event_name;
-                html += `<div class="calendar-event ${eventType}" title="${event.event_name}">${eventName}</div>`;
+        // Show first 2 items (events or tasks), indicate if there are more
+        if (itemsThisDay.length > 0) {
+            for (let i = 0; i < Math.min(2, itemsThisDay.length); i++) {
+                const item = itemsThisDay[i];
+                let itemClass = 'calendar-event';
+                let itemName = '';
+                
+                if (item.task_id) {
+                    // It's a task
+                    itemClass += ' task';
+                    itemName = item.task_name.length > 12 ? item.task_name.substring(0, 12) + '...' : item.task_name;
+                    html += `<div class="${itemClass}" title="${item.task_name} (${item.status})">📋 ${itemName}</div>`;
+                } else {
+                    // It's an event
+                    const eventType = item.is_private ? 'private' : 'public';
+                    itemClass += ' ' + eventType;
+                    itemName = item.event_name.length > 12 ? item.event_name.substring(0, 12) + '...' : item.event_name;
+                    html += `<div class="${itemClass}" title="${item.event_name}">📅 ${itemName}</div>`;
+                }
             }
             
-            if (eventsThisDay.length > 2) {
-                html += `<div class="calendar-event multiple" title="${eventsThisDay.length} events">+${eventsThisDay.length - 2}</div>`;
+            if (itemsThisDay.length > 2) {
+                html += `<div class="calendar-event multiple" title="${itemsThisDay.length} items">+${itemsThisDay.length - 2}</div>`;
             }
         }
         
@@ -819,10 +843,12 @@ function selectCalendarDate(dateStr, element) {
     // Add selection to clicked date
     element.classList.add('selected');
     
-    // Get events for this date
+    // Get events and tasks for this date
     const eventsThisDate = allEventsForCalendar.filter(event => event.event_date === dateStr);
+    const tasksThisDate = allTasksForCalendar.filter(task => task.event_date === dateStr);
+    const itemsThisDate = [...eventsThisDate, ...tasksThisDate];
     
-    if (eventsThisDate.length === 0) {
+    if (itemsThisDate.length === 0) {
         document.getElementById('selectedDateEvents').style.display = 'none';
         document.getElementById('noEventsMsg').style.display = 'block';
         document.getElementById('participantsSection').style.display = 'none';
@@ -836,16 +862,18 @@ function selectCalendarDate(dateStr, element) {
                        'July', 'August', 'September', 'October', 'November', 'December'];
     const displayDate = `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}`;
     
-    document.getElementById('selectedDateTitle').textContent = `Events on ${displayDate}`;
+    document.getElementById('selectedDateTitle').textContent = `Events & Tasks on ${displayDate}`;
     
-    let eventsHtml = '';
+    let itemsHtml = '';
+    
+    // Show events first
     eventsThisDate.forEach(event => {
         const eventType = event.is_private ? 'private' : 'public';
         const typeLabel = event.is_private ? 'Private' : 'Public';
         const timeDisplay = event.start_time ? event.start_time.substring(0, 5) : 'TBA';
         
-        eventsHtml += `<div class="event-in-calendar ${eventType}">
-                        <div class="event-in-calendar-name">${event.event_name}</div>
+        itemsHtml += `<div class="event-in-calendar ${eventType}">
+                        <div class="event-in-calendar-name">📅 ${event.event_name}</div>
                         <span class="event-in-calendar-type ${eventType}">${typeLabel}</span>
                         <div class="event-in-calendar-time"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="display: inline-block; margin-right: 6px; vertical-align: middle;"><path fill="currentColor" d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z"/><rect width="2" height="7" x="11" y="6" fill="currentColor" rx="1"><animateTransform attributeName="transform" dur="9s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/></rect><rect width="2" height="9" x="11" y="11" fill="currentColor" rx="1"><animateTransform attributeName="transform" dur="0.75s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/></rect></svg>${timeDisplay}</div>
                         <div class="event-in-calendar-location"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 512 512" style="display: inline-block; margin-right: 6px; vertical-align: middle;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 48c-79.5 0-144 61.39-144 137c0 87 96 224.87 131.25 272.49a15.77 15.77 0 0 0 25.5 0C304 409.89 400 272.07 400 185c0-75.61-64.5-137-144-137"/><circle cx="256" cy="192" r="48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/></svg>${event.location || 'Location TBA'}</div>
@@ -855,11 +883,27 @@ function selectCalendarDate(dateStr, element) {
                     </div>`;
     });
     
-    document.getElementById('selectedDateEvents').innerHTML = eventsHtml;
+    // Show tasks
+    tasksThisDate.forEach(task => {
+        const statusColor = {
+            'Pending': '#fbbf24',
+            'In Progress': '#60a5fa',
+            'Done': '#34d399'
+        }[task.status] || '#9ca3af';
+        
+        itemsHtml += `<div class="event-in-calendar task" style="border-left-color: ${statusColor};">
+                        <div class="event-in-calendar-name">📋 ${task.task_name}</div>
+                        <span class="event-in-calendar-type task" style="background-color: ${statusColor};">${task.status || 'Pending'}</span>
+                        <div class="event-in-calendar-location">${task.party_responsible || 'Unassigned'}</div>
+                        ${task.remarks ? `<div class="event-in-calendar-location">${task.remarks}</div>` : ''}
+                    </div>`;
+    });
+    
+    document.getElementById('selectedDateEvents').innerHTML = itemsHtml;
     document.getElementById('selectedDateEvents').style.display = 'block';
     document.getElementById('noEventsMsg').style.display = 'none';
     
-    // Load participants for first event in the list
+    // Load participants for first event in the list (if any)
     if (eventsThisDate.length > 0) {
         loadCalendarEventParticipants(eventsThisDate[0].event_id);
     }

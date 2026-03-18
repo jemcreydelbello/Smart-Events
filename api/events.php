@@ -292,7 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $events = normalizeEventsArray($events);
         
         echo json_encode(['success' => true, 'data' => $events]);
-    } 
+    }
     elseif ($action === 'detail') {
         $event_id = intval($_GET['event_id']);
         $userInfo = getUserInfo();
