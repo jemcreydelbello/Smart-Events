@@ -32,6 +32,22 @@ try {
     
     $conn->query($check_table);
     
+    // Create email_templates table if not exists
+    $templates_table = "CREATE TABLE IF NOT EXISTS email_templates (
+        template_id INT AUTO_INCREMENT PRIMARY KEY,
+        template_name VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        recipients VARCHAR(255),
+        body LONGTEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_template_name (template_name),
+        INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $conn->query($templates_table);
+    
 } catch (Exception $e) {
     error_log("Database connection error: " . $e->getMessage());
     http_response_code(500);
@@ -80,11 +96,26 @@ error_log('[EMAILS API]  - X-User-Role: "' . $user_role . '"');
 error_log('[EMAILS API]  - X-User-Id: "' . $user_id . '"');
 error_log('[EMAILS API]  - X-Coordinator-Id: "' . $coordinator_id . '"');
 error_log('[EMAILS API]  - Request method: ' . $_SERVER['REQUEST_METHOD']);
-error_log('[EMAILS API]  - Action: ' . ($_GET['action'] ?? $_POST['action'] ?? 'NONE'));
 
 header('Content-Type: application/json');
 
+// Parse request body once (for POST requests with JSON)
+$json_data = null;
+$request_body = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $request_body = file_get_contents("php://input");
+    if ($request_body) {
+        $json_data = json_decode($request_body, true);
+    }
+}
+
+// Get action from GET, POST variables, or JSON body
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+if (!$action && $json_data && isset($json_data['action'])) {
+    $action = $json_data['action'];
+}
+
+error_log('[EMAILS API]  - Action: ' . ($action ?? 'NONE'));
 
 try {
     switch ($action) {
@@ -470,10 +501,126 @@ try {
             }
             break;
             
+        // ========== EMAIL TEMPLATES ACTIONS ==========
+        
+        case 'save_template':
+            // Save a new email template
+            error_log('[TEMPLATES API] Save template action triggered');
+            
+            $data = $json_data ?? [];
+            $template_name = $data['template_name'] ?? '';
+            $subject = $data['subject'] ?? '';
+            $recipients = $data['recipients'] ?? '';
+            $body = $data['body'] ?? '';
+            $created_by = $data['created_by'] ?? 'admin';
+            
+            if (!$template_name || !$subject) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Template name and subject are required']);
+                exit;
+            }
+            
+            error_log('[TEMPLATES API] Saving template: ' . $template_name);
+            
+            $query = "INSERT INTO email_templates (template_name, subject, recipients, body, created_by) 
+                     VALUES (?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('sssss', $template_name, $subject, $recipients, $body, $created_by);
+            
+            if ($stmt->execute()) {
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Template saved successfully',
+                    'template_id' => $stmt->insert_id
+                ]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Failed to save template']);
+            }
+            break;
+            
+        case 'list_templates':
+            // Get all email templates
+            error_log('[TEMPLATES API] List templates action triggered');
+            
+            $query = "SELECT template_id, template_name, subject, recipients, body, created_at, created_by 
+                     FROM email_templates ORDER BY created_at DESC";
+            $stmt = $conn->prepare($query);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $templates = [];
+            while ($row = $result->fetch_assoc()) {
+                $templates[] = $row;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $templates,
+                'count' => count($templates)
+            ]);
+            break;
+            
+        case 'get_template':
+            // Get a specific email template
+            $template_id = intval($_GET['template_id'] ?? 0);
+            
+            if (!$template_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'template_id is required']);
+                exit;
+            }
+            
+            error_log('[TEMPLATES API] Get template #' . $template_id);
+            
+            $query = "SELECT template_id, template_name, subject, recipients, body, created_at, created_by 
+                     FROM email_templates WHERE template_id = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('i', $template_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($row = $result->fetch_assoc()) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => $row
+                ]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Template not found']);
+            }
+            break;
+            
+        case 'delete_template':
+            // Delete an email template
+            $data = $json_data ?? [];
+            $template_id = intval($data['template_id'] ?? 0);
+            
+            if (!$template_id) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'template_id is required']);
+                exit;
+            }
+            
+            error_log('[TEMPLATES API] Delete template #' . $template_id);
+            
+            $query = "DELETE FROM email_templates WHERE template_id = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('i', $template_id);
+            
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Template deleted successfully']);
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Failed to delete template']);
+            }
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }
+
     
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());
