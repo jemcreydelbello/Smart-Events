@@ -14165,28 +14165,40 @@ function renderGiveawaysTable(items) {
     const tbody = document.getElementById('giveawaysTableBody');
     
     if (!items || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No giveaways yet. Click "Add Giveaway" to create one.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No giveaways yet. Click "Add Giveaway" to create one.</td></tr>';
         return;
     }
     
     tbody.innerHTML = items.map(item => {
         return `
-        <tr style="border-bottom: 1px solid #e8e8e8;">
-            <td class="px-4 py-3 text-sm text-gray-900">${item.name || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${item.location || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${((item.bundle_inclusion || '').substring(0, 40)) || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${item.estimated_price ? '₱' + parseFloat(item.estimated_price).toFixed(2) : '-'}</td>
-            <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
-                <button onclick="editGiveaway(${item.giveaway_id})" 
-                        style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Edit giveaway">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
-                </button>
-                <button onclick="deleteGiveaway(${item.giveaway_id})" 
-                        style="background: transparent; border: none; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Delete giveaway">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
-                </button>
+        <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900">${item.name || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-700">${item.location || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-700">${((item.bundle_inclusion || '').substring(0, 40)) || '-'}</td>
+            <td class="px-6 py-4 text-sm font-semibold text-gray-900">${item.estimated_price ? '₱' + parseFloat(item.estimated_price).toFixed(2) : '-'}</td>
+            <td class="px-6 py-4 text-center">
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                    <button onclick="editGiveaway(${item.giveaway_id})" 
+                            style="padding: 8px 14px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.2s;" 
+                            onmouseover="this.style.background='#1560A3'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(30, 115, 187, 0.3)'"
+                            onmouseout="this.style.background='#1E73BB'; this.style.transform='translateY(0)'; this.style.boxShadow=''"
+                            title="Edit giveaway">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                    </button>
+                    <button onclick="deleteGiveaway(${item.giveaway_id})" 
+                            style="padding: 8px 14px; background: #EF5350; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.2s;" 
+                            onmouseover="this.style.background='#E53935'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239, 83, 80, 0.3)'"
+                            onmouseout="this.style.background='#EF5350'; this.style.transform='translateY(0)'; this.style.boxShadow=''"
+                            title="Delete giveaway">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
             </td>
         </tr>
     `}).join('');

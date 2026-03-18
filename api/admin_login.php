@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             exit;
         }
         
-        // Query admin by username or email (exclude admin_image blob for now)
-        $query = "SELECT admin_id, username, email, password_hash, full_name,
+        // Query admin by username or email
+        $query = "SELECT admin_id, username, email, password_hash, full_name, admin_image,
                          status, login_attempts, locked_until 
                   FROM admins 
                   WHERE (username = ? OR email = ?)";
@@ -150,6 +150,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'login') {
             'role_name' => 'ADMIN'
         ];
         
+        // Include admin_image filename if it exists (will be stored in localStorage and used by sidebar)
+        if ($admin['admin_image']) {
+            $adminData['admin_image'] = $admin['admin_image'];
+        }
+        
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
@@ -227,6 +232,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'coordinator_login') {
             'role_name' => 'COORDINATOR',
             'coordinator_id' => $coordinator['coordinator_id']
         ];
+        
+        // Include coordinator_image filename if it exists (will be stored in localStorage and used by sidebar)
+        if ($coordinator['coordinator_image']) {
+            $userData['coordinator_image'] = $coordinator['coordinator_image'];
+        }
         
         // Log activity - Coordinator Login
         $description = "Coordinator Login: " . $coordinator['coordinator_name'];

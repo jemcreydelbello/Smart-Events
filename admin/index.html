@@ -1968,77 +1968,98 @@
         </div>
 
         <div id="marketing" class="event-tab-content hidden space-y-6" style="display: none;">
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div class="flex justify-between items-center mb-6">
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-1">Marketing Collateral</h2>
-                <p class="text-sm text-gray-600 mt-1">Marketing assets and campaigns.</p>
-              </div>
-            </div>
+          <!-- Header Section -->
+          <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">Marketing Collateral</h2>
+            <p class="text-base text-gray-600">Manage your marketing assets, campaigns, and promotional materials.</p>
+          </div>
 
-            <!-- Marketing Assets Upload Section -->
-            <div class="mb-8">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Marketing Collateral Assets</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Poster Upload -->
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="font-semibold text-gray-900 mb-4">Poster Upload</h4>
-                  <label class="inline-block">
+          <!-- Marketing Assets Upload Section -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-6">Marketing Assets</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Poster Upload -->
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 2;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75-3.54c-.3-.38-.77-.62-1.3-.62-.93 0-1.69.76-1.69 1.69 0 .53.24 1 .62 1.3l2.75 3.54 1.37-1.37z"/>
+                  </svg>
+                  <h4 class="font-bold text-lg mb-2">Poster Upload</h4>
+                  <p class="text-sm opacity-90">Promotional posters and displays</p>
+                  <label style="cursor: pointer; margin-top: 16px; display: block;">
                     <input type="file" id="posterFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'poster')">
-                    <span class="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700 inline-block">Choose Files</span>
+                    <span style="display: inline-block; background: white; color: #667eea; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
                   </label>
-                  <span id="posterFileName" class="ml-3 text-gray-600">No file chosen</span>
-                  <div id="posterPreview" class="mt-4"></div>
+                  <p id="posterFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
+                  <div id="posterPreview" style="margin-top: 12px;"></div>
                 </div>
+              </div>
 
-                <!-- Banner Upload -->
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="font-semibold text-gray-900 mb-4">Banner Upload</h4>
-                  <label class="inline-block">
+              <!-- Banner Upload -->
+              <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 2;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-2-10h-8v2h8v-2z"/>
+                  </svg>
+                  <h4 class="font-bold text-lg mb-2">Banner Upload</h4>
+                  <p class="text-sm opacity-90">Website and event banners</p>
+                  <label style="cursor: pointer; margin-top: 16px; display: block;">
                     <input type="file" id="bannerFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'banner')">
-                    <span class="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700 inline-block">Choose Files</span>
+                    <span style="display: inline-block; background: white; color: #f5576c; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
                   </label>
-                  <span id="bannerFileName" class="ml-3 text-gray-600">No file chosen</span>
-                  <div id="bannerPreview" class="mt-4"></div>
+                  <p id="bannerFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
+                  <div id="bannerPreview" style="margin-top: 12px;"></div>
                 </div>
+              </div>
 
-                <!-- Social Pack Upload -->
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="font-semibold text-gray-900 mb-4">Social Pack Upload</h4>
-                  <label class="inline-block">
+              <!-- Social Pack Upload -->
+              <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 2;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-12h2v8h-2zm0 10h2v2h-2z"/>
+                  </svg>
+                  <h4 class="font-bold text-lg mb-2">Social Pack Upload</h4>
+                  <p class="text-sm opacity-90">Social media assets bundle</p>
+                  <label style="cursor: pointer; margin-top: 16px; display: block;">
                     <input type="file" id="socialFile" accept="image/*,.txt,.pdf,.zip" style="display: none;" onchange="handleMarketingUpload(event, 'social_pack')">
-                    <span class="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700 inline-block">Choose Files</span>
+                    <span style="display: inline-block; background: white; color: #00f2fe; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
                   </label>
-                  <span id="socialFileName" class="ml-3 text-gray-600">No file chosen</span>
-                  <div id="socialPreview" class="mt-4"></div>
+                  <p id="socialFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
+                  <div id="socialPreview" style="margin-top: 12px;"></div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Giveaway List Section -->
-            <div class="mt-6">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Giveaway List</h3>
-                <button onclick="openAddGiveawayModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-                  Add Giveaway
-                </button>
-              </div>
-              <div class="bg-white rounded border border-gray-200 overflow-hidden">
-                <table class="w-full">
-                  <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">NAME</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">LOCATION</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">BUNDLE & INCLUSION</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">ESTIMATED PRICE</th>
-                      <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody id="giveawaysTableBody" class="divide-y divide-gray-200">
-                    <tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">Loading giveaways...</td></tr>
-                  </tbody>
-                </table>
-              </div>
+          <!-- Giveaway List Section -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="text-xl font-bold text-gray-900">Giveaway List</h3>
+              <button onclick="openAddGiveawayModal()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+                </svg>
+                Add Giveaway
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Name</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Location</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Bundle & Inclusion</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Price</th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="giveawaysTableBody" class="divide-y divide-gray-200">
+                  <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading giveaways...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

@@ -62,7 +62,7 @@
 <aside class="w-[260px] bg-white border-r border-slate-200 pr-5 pl-0 py-6 flex flex-col admin-sidebar">
   <div class="flex items-center gap-2 mb-6 pl-5">
     <img src="../intellismart.jpg" alt="IntelliSmart" style="height: 35px; width: auto;">
-    <img src="../smart1.png" alt="Smart Events" style="margin-left: -10px; height: 35px; width: 180px;">
+    <img src="../assets/smart1.png" alt="Smart Events" style="margin-left: -10px; height: 35px; width: 180px;">
   </div>
   
   <div style="margin-top: 40px; margin-left: 5px;" id="adminNav" class="flex flex-col gap-8"> 
@@ -79,7 +79,7 @@
   <div id="adminIdentityArea" class="mt-auto pt-4 px-4 border-t border-slate-200 space-y-3">
     <!-- User Profile Card -->
     <div id="adminSessionCard" class="bg-white rounded-lg p-4 space-y-3 text-center border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-      <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white mx-auto text-lg font-bold shadow-md" style="border: 3px solid white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);">
+      <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white mx-auto text-lg font-bold shadow-md" style="border: 3px solid white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2); background-size: cover; background-position: center; overflow: hidden;" id="userProfileAvatar">
         <span id="userInitials">AD</span>
       </div>
       <div style="padding-top: 2px;">
