@@ -1113,46 +1113,37 @@
                 </div>
 
                 <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-4">Email Activity</h4>
-                  <div id="emailActivityList" class="space-y-3 text-sm">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600 min-w-20">Sent</span>
-                        <div class="flex-1 h-2 bg-blue-500 rounded-full"></div>
-                      </div>
-                      <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
+                  <h4 class="text-base font-semibold text-gray-900 mb-3">Finance Summary</h4>
+                  <div id="financeSummaryList" class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                      <span class="text-gray-600">Budget Allocated</span>
+                      <span class="font-semibold text-gray-900" id="dashFinanceBudget">₱0.00</span>
+                    </div>
+                    <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                      <span class="text-gray-600">Total Expense</span>
+                      <span class="font-semibold text-red-600" id="dashFinanceTotalExpense">₱0.00</span>
                     </div>
                     <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600 min-w-20">Scheduled</span>
-                        <div class="flex-1 h-2 bg-purple-500 rounded-full"></div>
-                      </div>
-                      <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3 flex-1">
-                        <span class="text-gray-600 min-w-20">Draft</span>
-                        <div class="flex-1 h-2 bg-gray-300 rounded-full"></div>
-                      </div>
-                      <span class="font-semibold text-gray-900 ml-2 min-w-8 text-right">0</span>
+                      <span class="text-gray-600 font-semibold">Balance</span>
+                      <span class="font-bold text-lg" id="dashFinanceBalance">₱0.00</span>
                     </div>
                   </div>
-                  <div class="text-right text-xs text-gray-500 mt-4" id="emailActivityTotal">0 total sends</div>
+                  <div class="text-right text-xs text-gray-500 mt-4" id="financeStatusNote">--</div>
                 </div>
               </div>
 
               <!-- Bottom Section: Top Cost Drivers & Program Coverage -->
               <div class="grid grid-cols-2 gap-6">
                 <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-4">Top Cost Drivers</h4>
-                  <div id="topCostDrivers" class="space-y-3 text-sm">
-                    <p class="text-gray-500">0 shown</p>
+                  <h4 class="text-base font-semibold text-gray-900 mb-4">Logistics Items</h4>
+                  <div id="logisticsItemsList" class="space-y-2 text-sm max-h-64 overflow-y-auto">
+                    <p class="text-gray-500">Loading...</p>
                   </div>
                 </div>
                 <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-4">Program Coverage</h4>
-                  <div id="programCoverage" class="space-y-3 text-sm">
-                    <p class="text-gray-500">0 entries</p>
+                  <h4 class="text-base font-semibold text-gray-900 mb-4">Timeline</h4>
+                  <div id="timelineList" class="space-y-2 text-sm max-h-64 overflow-y-auto">
+                    <p class="text-gray-500">Loading...</p>
                   </div>
                 </div>
               </div>
@@ -2586,36 +2577,24 @@
                   </div>
                 </div>
 
-                <!-- Communication Mix -->
+                <!-- Finance Summary -->
                 <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                  <h3 class="text-lg font-bold text-gray-900 mb-6">Communication Mix</h3>
-                  <div class="space-y-4">
-                    <div>
-                      <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Sent</span>
-                        <span id="commMixSent" class="text-lg font-bold text-gray-900">0</span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="commMixSentBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-                      </div>
+                  <h3 class="text-lg font-bold text-gray-900 mb-6">Finance Summary</h3>
+                  <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-medium text-gray-700">Budget Allocated</span>
+                      <span id="postmortemFinanceBudget" class="text-lg font-bold text-gray-900">₱0.00</span>
                     </div>
-                    <div>
-                      <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Scheduled</span>
-                        <span id="commMixScheduled" class="text-lg font-bold text-gray-900">0</span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="commMixScheduledBar" class="bg-blue-400 h-2 rounded-full" style="width: 0%"></div>
-                      </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-medium text-gray-700">Total Expense</span>
+                      <span id="postmortemFinanceTotalExpense" class="text-lg font-bold text-gray-900">₱0.00</span>
                     </div>
-                    <div>
-                      <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Draft</span>
-                        <span id="commMixDraft" class="text-lg font-bold text-gray-900">0</span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="commMixDraftBar" class="bg-gray-400 h-2 rounded-full" style="width: 0%"></div>
-                      </div>
+                    <div class="pt-2 border-t border-gray-300 flex justify-between items-center">
+                      <span class="text-sm font-medium text-gray-700">Balance</span>
+                      <span id="postmortemFinanceBalance" class="text-lg font-bold text-green-600">₱0.00</span>
+                    </div>
+                    <div class="pt-2">
+                      <p id="postmortemFinanceStatusNote" class="text-sm text-gray-600">Budget tracking ready</p>
                     </div>
                   </div>
                 </div>

@@ -5054,6 +5054,9 @@ function closeEventDetailsModal() {
         modal.classList.remove('active');
     }
     
+    // Stop dashboard auto-refresh when closing
+    stopDashboardAutoRefresh();
+    
     // Clear the current event ID
     currentEventId = null;
     window.currentEventId = null;  // Also clear from window object
@@ -12016,6 +12019,13 @@ function displayEventDetailsData(event) {
     
     // Load real data for dashboard from APIs
     loadDashboardTaskData();
+    loadDashboardBudgetData(currentEventId);
+    loadDashboardLogisticsData(currentEventId);
+    loadDashboardLogisticsItems(currentEventId);
+    loadDashboardTimeline(currentEventId, event);
+    
+    // Start auto-refresh of dashboard every 30 seconds
+    startDashboardAutoRefresh();
     
     // ============ BASIC INFORMATION ============
     document.getElementById('detailsEventTitle').value = event.event_name || '-';
@@ -14673,9 +14683,19 @@ function updateLogisticsStatus(logisticsId, newStatus) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            console.log('✅ Logistics status updated successfully');
             loadLogistics();
+            // Also refresh dashboard data to reflect the change
+            if (typeof loadDashboardLogisticsData === 'function') {
+                loadDashboardLogisticsData(eventId);
+            }
+            if (typeof loadDashboardLogisticsItems === 'function') {
+                loadDashboardLogisticsItems(eventId);
+            }
+            showNotification('Status updated successfully', 'success');
         } else {
-            showNotification('Error updating status', 'error');
+            console.error('Error updating status:', data.message);
+            showNotification('Error updating status: ' + (data.message || 'Unknown error'), 'error');
             loadLogistics();
         }
     })
@@ -15935,3 +15955,154 @@ if (!window.saveEventDetails) {
         console.warn('⚠️ saveEventDetails stub - event-details.js not loaded yet');
     };
 }
+
+
+// Load budget data for dashboard KPIs
+function loadDashboardBudgetData(eventId) {
+    if (!eventId) {
+        return;
+    }
+    
+    fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const budget = parseFloat(data.budget) || 0;
+            const grandTotal = parseFloat(data.grand_total) || 0;
+            const balance = budget - grandTotal;
+            const expenseCount = (data.data && Array.isArray(data.data)) ? data.data.length : 0;
+            
+            const formattedTotal = grandTotal.toFixed(2);
+            const formattedBudget = budget.toFixed(2);
+            const formattedBalance = balance.toFixed(2);
+            
+            // Update KPI Cards
+            const budgetEl = document.getElementById('dashBudget');
+            const budgetDetailEl = document.getElementById('dashBudgetDetail');
+            
+            if (budgetEl) {
+                budgetEl.textContent = '₱' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (budgetDetailEl) {
+                budgetDetailEl.textContent = expenseCount + ' EXPENSE LINE ITEMS';
+            }
+            
+            // Update Finance Summary Section
+            const financeBudgetEl = document.getElementById('dashFinanceBudget');
+            const financeTotalEl = document.getElementById('dashFinanceTotalExpense');
+            const financeBalanceEl = document.getElementById('dashFinanceBalance');
+            const financeNoteEl = document.getElementById('financeStatusNote');
+            
+            if (financeBudgetEl) {
+                financeBudgetEl.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (financeTotalEl) {
+                financeTotalEl.textContent = '₱' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (financeBalanceEl) {
+                const balanceAmount = '₱' + formattedBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                financeBalanceEl.textContent = balanceAmount;
+                if (balance < 0) {
+                    financeBalanceEl.style.color = '#dc2626';
+                } else if (balance === 0) {
+                    financeBalanceEl.style.color = '#f59e0b';
+                } else {
+                    financeBalanceEl.style.color = '#16a34a';
+                }
+            }
+            if (financeNoteEl) {
+                if (balance < 0) {
+                    financeNoteEl.textContent = '⚠️ Over Budget by ₱' + Math.abs(balance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    financeNoteEl.style.color = '#dc2626';
+                } else if (balance === 0) {
+                    financeNoteEl.textContent = '⚡ Budget fully utilized';
+                    financeNoteEl.style.color = '#f59e0b';
+                } else {
+                    financeNoteEl.textContent = '✓ ' + (budget > 0 ? Math.round((balance / budget) * 100) : 0) + '% budget remaining';
+                    financeNoteEl.style.color = '#16a34a';
+                }
+            }
+            
+            console.log('[Dashboard] Finance Summary updated - Budget: ₱' + formattedBudget + ' | Expense: ₱' + formattedTotal + ' | Balance: ₱' + formattedBalance);
+        }
+    })
+    .catch(error => {
+        console.error('[Dashboard] Error loading budget:', error);
+    });
+}
+
+// Load logistics data for dashboard KPIs
+function loadDashboardLogisticsData(eventId) {
+    if (!eventId) {
+        return;
+    }
+    
+    fetch(`${API_BASE}/logistics.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && Array.isArray(data.data)) {
+            const logisticsData = data.data;
+            const totalItems = logisticsData.length;
+            const deliveredItems = logisticsData.filter(item => {
+                const status = item.status ? item.status.toLowerCase() : '';
+                return status === 'delivered';
+            }).length;
+            
+            const readinessPercent = totalItems > 0 ? Math.round((deliveredItems / totalItems) * 100) : 0;
+            
+            const logisticsEl = document.getElementById('dashLogistics');
+            const logisticsDetailEl = document.getElementById('dashLogisticsDetail');
+            
+            if (logisticsEl) {
+                logisticsEl.textContent = readinessPercent + '%';
+            }
+            if (logisticsDetailEl) {
+                logisticsDetailEl.textContent = totalItems + ' LOGISTICS ITEMS TRACKED';
+            }
+            
+            console.log('[Dashboard] Logistics KPI updated to: ' + readinessPercent + '% (' + totalItems + ' items, ' + deliveredItems + ' delivered)');
+        }
+    })
+    .catch(error => {
+        console.error('[Dashboard] Error loading logistics:', error);
+    });
+}
+
+// Global variable to track dashboard refresh interval
+var dashboardRefreshInterval = null;
+
+// Auto-refresh Dashboard Data every 30 seconds
+function startDashboardAutoRefresh() {
+    console.log('🔄 Starting dashboard auto-refresh...');
+    
+    // Clear any existing interval
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+    }
+    
+    // Set up new interval to refresh every 8 seconds (8000ms) - truly automatic
+    dashboardRefreshInterval = setInterval(() => {
+        if (window.currentEventId) {
+            console.log('🔄 Auto-refreshing dashboard data...');
+            loadDashboardTaskData();
+            loadDashboardBudgetData(window.currentEventId);
+            loadDashboardLogisticsData(window.currentEventId);
+            loadDashboardLogisticsItems(window.currentEventId);
+            // Note: Timeline doesn't refresh as often since it changes less frequently
+        }
+    }, 8000); // 8 seconds - frequent automatic refresh
+}
+
+// Stop dashboard auto-refresh
+function stopDashboardAutoRefresh() {
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+        dashboardRefreshInterval = null;
+        console.log('⛔ Dashboard auto-refresh stopped');
+    }
+}
+

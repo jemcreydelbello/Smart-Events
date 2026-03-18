@@ -1151,14 +1151,96 @@ function openOtherInfoModal() {
     alert('Other info management coming soon');
 }
 
+// Load Dashboard Logistics Items
+function loadDashboardLogisticsItems(eventId) {
+    if (!eventId) {
+        console.warn('⚠️ loadDashboardLogisticsItems: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/logistics.php?action=list&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📦 Logistics items loaded:', data);
+            
+            const container = document.getElementById('logisticsItemsList');
+            if (!container) {
+                console.warn('⚠️ logisticsItemsList container not found');
+                return;
+            }
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const items = data.data;
+                let html = '';
+                
+                items.forEach(item => {
+                    const status = item.status || 'Pending';
+                    const statusClass = getStatusColor(status);
+                    const statusBadge = `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`;
+                    
+                    html += `
+                        <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-900">${item.item || '-'}</div>
+                                <div class="text-xs text-gray-600">${item.category || '-'} • Qty: ${item.quantity || 0}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                console.log('✅ Logistics items displayed:', items.length, 'items');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No logistics items yet</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading logistics items:', err);
+            const container = document.getElementById('logisticsItemsList');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading logistics</p>';
+            }
+        });
+}
+window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
+
+// Helper function to get status color
+function getStatusColor(status) {
+    const statusLower = (status || '').toLowerCase();
+    
+    if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
+        return 'bg-green-100 text-green-800';
+    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
+        return 'bg-blue-100 text-blue-800';
+    } else if (statusLower === 'pending') {
+        return 'bg-yellow-100 text-yellow-800';
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
+        return 'bg-red-100 text-red-800';
+    } else {
+        return 'bg-gray-100 text-gray-800';
+    }
+}
+window.getStatusColor = getStatusColor;
+
 // Load Dashboard Data
 function loadDashboard(eventId) {
     if (!eventId) {
         console.warn('❌ loadDashboard: No eventId provided');
-        return;
+        eventId = window.currentEventId;
+        if (!eventId) {
+            console.error('❌ FATAL: No eventId available');
+            return;
+        }
     }
     
     console.log('📊 Loading DASHBOARD for EVENT ID:', eventId);
+    console.log('[Dashboard] API_BASE:', API_BASE);
+    console.log('[Dashboard] Headers:', getUserHeaders());
     
     // Fetch attendees first for accurate registration stats
     fetch(`${API_BASE}/participants.php?action=list&event_id=${eventId}`, {
@@ -1187,6 +1269,50 @@ function loadDashboard(eventId) {
         })
         .catch(error => console.error('Error loading dashboard:', error));
     
+    // Fetch real budget and expenses data
+    fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('[Dashboard] Finance API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Dashboard] Finance API data:', data);
+            if (data.success) {
+                updateDashboardBudget(data);
+            } else {
+                console.warn('[Dashboard] Finance API error:', data.message);
+                updateDashboardBudget({ data: [], grand_total: 0, budget: 0, balance: 0 });
+            }
+        })
+        .catch(error => {
+            console.error('[Dashboard] Error loading budget:', error);
+            updateDashboardBudget({ data: [], grand_total: 0, budget: 0, balance: 0 });
+        });
+    
+    // Fetch real logistics data
+    fetch(`${API_BASE}/logistics.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('[Dashboard] Logistics API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Dashboard] Logistics API data:', data);
+            if (data.success && data.data) {
+                updateDashboardLogistics(data.data);
+            } else {
+                console.warn('[Dashboard] Logistics API error or no data:', data);
+                updateDashboardLogistics([]);
+            }
+        })
+        .catch(error => {
+            console.error('[Dashboard] Error loading logistics:', error);
+            updateDashboardLogistics([]);
+        });
+    
     // Fetch real tasks for the event
     fetch(`${API_BASE}/tasks.php?action=list&event_id=${eventId}`, {
         headers: getUserHeaders()
@@ -1206,20 +1332,82 @@ function loadDashboard(eventId) {
     
     // Initialize other dashboard sections with sample data for now
     updateDashboardEmails();
-    updateDashboardProgram();
+    loadDashboardTimeline(currentEventId);
 }
 
 function updateDashboardKPIs(event) {
     // Note: Registrations KPI is now updated by updateDashboardAttendees() with real attendee data
-    // This function handles other KPIs from the event data
+    // Budget and Logistics KPIs are now updated by their respective functions
+    // This function now just handles any event-level KPIs
+}
+
+function updateDashboardBudget(financeData) {
+    // Update Budget KPI with real expense data
+    console.log('[KPI] updateDashboardBudget called with:', financeData);
     
-    // Update Budget KPI (placeholder for now)
-    document.getElementById('dashBudget').textContent = '$0.00';
-    document.getElementById('dashBudgetDetail').textContent = '0 EXPENSE LINE ITEMS';
+    try {
+        const budgetAmount = parseFloat(financeData.budget) || 0;
+        const grandTotal = parseFloat(financeData.grand_total) || 0;
+        const balance = parseFloat(financeData.balance) || (budgetAmount - grandTotal);
+        const expenseCount = (financeData.data && Array.isArray(financeData.data)) ? financeData.data.length : 0;
+        
+        // Format as PHP currency
+        const formattedAmount = grandTotal.toFixed(2);
+        
+        const dashBudget = document.getElementById('dashBudget');
+        const dashBudgetDetail = document.getElementById('dashBudgetDetail');
+        
+        if (dashBudget) {
+            dashBudget.textContent = '₱' + formattedAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            console.log('[KPI] Budget amount updated to: ₱' + formattedAmount);
+        }
+        
+        if (dashBudgetDetail) {
+            dashBudgetDetail.textContent = expenseCount + ' EXPENSE LINE ITEMS';
+            console.log('[KPI] Budget detail updated to: ' + expenseCount + ' items');
+        }
+        
+        console.log('💰 Budget KPI Updated: ₱' + formattedAmount + ' (' + expenseCount + ' items)');
+    } catch (error) {
+        console.error('[KPI] Error updating budget:', error);
+    }
+}
+
+function updateDashboardLogistics(logisticsData) {
+    // Update Logistics Readiness KPI
+    console.log('[KPI] updateDashboardLogistics called with:', logisticsData);
     
-    // Update Logistics Readiness (placeholder)
-    document.getElementById('dashLogistics').textContent = '0%';
-    document.getElementById('dashLogisticsDetail').textContent = '0 LOGISTICS ITEMS TRACKED';
+    try {
+        if (!logisticsData || !Array.isArray(logisticsData)) {
+            logisticsData = [];
+        }
+        
+        const totalItems = logisticsData.length;
+        const completedItems = logisticsData.filter(item => {
+            const status = item.status ? item.status.toLowerCase() : '';
+            return status === 'completed' || status === 'done' || status === 'finished';
+        }).length;
+        
+        // Calculate percentage (0% if no items)
+        const readinessPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        
+        const dashLogistics = document.getElementById('dashLogistics');
+        const dashLogisticsDetail = document.getElementById('dashLogisticsDetail');
+        
+        if (dashLogistics) {
+            dashLogistics.textContent = readinessPercent + '%';
+            console.log('[KPI] Logistics percentage updated to: ' + readinessPercent + '%');
+        }
+        
+        if (dashLogisticsDetail) {
+            dashLogisticsDetail.textContent = totalItems + ' LOGISTICS ITEMS TRACKED';
+            console.log('[KPI] Logistics detail updated to: ' + totalItems + ' items');
+        }
+        
+        console.log('📦 Logistics KPI Updated: ' + readinessPercent + '% (' + totalItems + ' items, ' + completedItems + ' completed)');
+    } catch (error) {
+        console.error('[KPI] Error updating logistics:', error);
+    }
 }
 
 function updateDashboardAttendees(attendees) {
@@ -1305,23 +1493,8 @@ function updateDashboardTasks(tasks) {
     
     document.getElementById('taskStatusTotal').textContent = `${total} total tasks`;
     
-    // Top Cost Drivers (sample data for now - can be connected to a budget table later)
-    document.getElementById('costDriversList').innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <span>Hall Rental</span>
-            <span style="font-weight: 600;">₱4,200.00</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <span>Lunch Pack</span>
-            <span style="font-weight: 600;">₱3,960.00</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Badge Printing</span>
-            <span style="font-weight: 600;">₱420.00</span>
-        </div>
-    `;
-    
-    document.getElementById('costDriversTotal').textContent = '3 shown';
+    // Load Logistics Items for Dashboard
+    loadDashboardLogisticsItems(currentEventId);
 }
 
 function updateDashboardEmails() {
@@ -1435,34 +1608,100 @@ function updateDashboardEmails() {
     });
 }
 
-function updateDashboardProgram() {
-    // Sample program coverage data
-    const program = {
-        milestones: 3,
-        flowSlots: 4
+function loadDashboardTimeline(eventId, eventObj) {
+    if (!eventId) {
+        console.warn('⚠️ loadDashboardTimeline: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
     };
     
-    const total = program.milestones + program.flowSlots;
+    // Get event date from the eventObj parameter (passed from displayEventDetailsData)
+    let eventDate = new Date();
+    if (eventObj && eventObj.event_date) {
+        eventDate = new Date(eventObj.event_date);
+    }
     
-    document.getElementById('programCoverageList').innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                <span>Timeline Milestones</span>
-                <div style="height: 8px; background: #ff9800; border-radius: 4px; flex: 1;"></div>
-            </div>
-            <span style="font-weight: 600; min-width: 30px; text-align: right;">${program.milestones}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                <span>Program Flow Slots</span>
-                <div style="height: 8px; background: #00bcd4; border-radius: 4px; flex: 1;"></div>
-            </div>
-            <span style="font-weight: 600; min-width: 30px; text-align: right;">${program.flowSlots}</span>
-        </div>
-    `;
-    
-    document.getElementById('programCoverageTotal').textContent = `${total} entries`;
+    // Fetch timeline items
+    fetch(`${API_BASE || '../api'}/program.php?action=list-timeline&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📅 Timeline items loaded:', data);
+            
+            const container = document.getElementById('timelineList');
+            if (!container) {
+                console.warn('⚠️ timelineList container not found');
+                return;
+            }
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const items = data.data;
+                let html = '';
+                
+                items.forEach(item => {
+                    const weekNum = item.week_number || '-';
+                    const activity = item.activity || item.description || '-';
+                    const status = item.status || 'Pending';
+                    const statusClass = getTimelineStatusColor(status);
+                    
+                    // Only show status badge if it's NOT Pending
+                    const statusBadge = status.toLowerCase() !== 'pending' 
+                        ? `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`
+                        : '';
+                    
+                    // Calculate month and year based on event date
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                       'July', 'August', 'September', 'October', 'November', 'December'];
+                    const month = monthNames[eventDate.getMonth()];
+                    const year = eventDate.getFullYear();
+                    
+                    html += `
+                        <div class="flex justify-between items-start p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-900">Week ${weekNum} in Month of ${month} ${year}</div>
+                                <div class="text-sm text-gray-700 mt-1">${activity}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                console.log('✅ Timeline items displayed:', items.length, 'items');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No timeline items yet</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading timeline items:', err);
+            const container = document.getElementById('timelineList');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading timeline</p>';
+            }
+        });
 }
+window.loadDashboardTimeline = loadDashboardTimeline;
+
+// Helper function for timeline status color
+function getTimelineStatusColor(status) {
+    const statusLower = (status || '').toLowerCase();
+    
+    if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
+        return 'bg-green-100 text-green-800';
+    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
+        return 'bg-blue-100 text-blue-800';
+    } else if (statusLower === 'pending') {
+        return 'bg-yellow-100 text-yellow-800';
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
+        return 'bg-red-100 text-red-800';
+    } else {
+        return 'bg-gray-100 text-gray-800';
+    }
+}
+window.getTimelineStatusColor = getTimelineStatusColor;
+
 function editEvent() {
     // Load current event data into the form and open edit modal
     console.log('🔧 Opening edit modal for event ID:', currentEventId);
@@ -4266,23 +4505,8 @@ function loadPostmortemData(eventId) {
             const attendedBar = document.getElementById('eventDynamicsAttendedBar');
             if (attendedBar) attendedBar.style.width = ((pm.attended_count || 0) / Math.max(pm.registered_count || 1, pm.attended_count || 1) * 100) + '%';
             
-            // Update Communication Mix
-            const maxComm = Math.max(pm.communications_sent || 0, pm.communications_scheduled || 0, pm.communications_draft || 0, 1);
-            
-            const sentElem = document.getElementById('commMixSent');
-            if (sentElem) sentElem.textContent = pm.communications_sent || 0;
-            const sentBar = document.getElementById('commMixSentBar');
-            if (sentBar) sentBar.style.width = ((pm.communications_sent || 0) / maxComm * 100) + '%';
-            
-            const scheduledElem = document.getElementById('commMixScheduled');
-            if (scheduledElem) scheduledElem.textContent = pm.communications_scheduled || 0;
-            const scheduledBar = document.getElementById('commMixScheduledBar');
-            if (scheduledBar) scheduledBar.style.width = ((pm.communications_scheduled || 0) / maxComm * 100) + '%';
-            
-            const draftElem = document.getElementById('commMixDraft');
-            if (draftElem) draftElem.textContent = pm.communications_draft || 0;
-            const draftBar = document.getElementById('commMixDraftBar');
-            if (draftBar) draftBar.style.width = ((pm.communications_draft || 0) / maxComm * 100) + '%';
+            // Load Postmortem Finance Summary
+            loadPostmortemFinanceSummary(currentEventId);
             
             console.log('✅ All postmortem metrics updated successfully from source tables');
         } else {
@@ -6929,6 +7153,74 @@ console.log('  - closeAddEmailBlastModal:', typeof window.closeAddEmailBlastModa
 console.log('  - saveEmailBlast:', typeof window.saveEmailBlast);
 console.log('  - editEmailBlast:', typeof window.editEmailBlast);
 console.log('  - deleteEmailBlast:', typeof window.deleteEmailBlast);
+
+// ====== Postmortem Finance Summary Loader ======
+function loadPostmortemFinanceSummary(eventId) {
+    if (!eventId) {
+        console.warn('⚠️ loadPostmortemFinanceSummary: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/finance.php?action=list&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Finance Summary data loaded:', data);
+            
+            if (data.success) {
+                const budget = data.budget || 0;
+                const grandTotal = data.grand_total || 0;
+                const balance = budget - grandTotal;
+                
+                // Update Postmortem Finance Summary elements
+                const budgetElem = document.getElementById('postmortemFinanceBudget');
+                const expenseElem = document.getElementById('postmortemFinanceTotalExpense');
+                const balanceElem = document.getElementById('postmortemFinanceBalance');
+                const statusElem = document.getElementById('postmortemFinanceStatusNote');
+                
+                if (budgetElem) budgetElem.textContent = '₱' + budget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (expenseElem) expenseElem.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                if (balanceElem) {
+                    balanceElem.textContent = '₱' + Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    
+                    // Apply color coding
+                    if (balance > 0) {
+                        balanceElem.className = 'text-lg font-bold text-green-600';
+                    } else if (balance === 0) {
+                        balanceElem.className = 'text-lg font-bold text-orange-500';
+                    } else {
+                        balanceElem.className = 'text-lg font-bold text-red-600';
+                    }
+                }
+                
+                if (statusElem) {
+                    if (balance > 0) {
+                        const percentRemaining = ((balance / budget) * 100).toFixed(1);
+                        statusElem.textContent = `${percentRemaining}% of budget remaining - Good progress`;
+                        statusElem.className = 'text-sm text-green-600';
+                    } else if (balance === 0) {
+                        statusElem.textContent = 'Budget fully utilized';
+                        statusElem.className = 'text-sm text-orange-500';
+                    } else {
+                        const overBudgetAmount = Math.abs(balance);
+                        statusElem.textContent = `Over budget by ₱${overBudgetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - Action needed`;
+                        statusElem.className = 'text-sm text-red-600';
+                    }
+                }
+                
+                console.log('✅ Postmortem Finance Summary updated successfully');
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading postmortem finance summary:', err);
+        });
+}
+window.loadPostmortemFinanceSummary = loadPostmortemFinanceSummary;
+console.log('✅ [FUNCTION] window.loadPostmortemFinanceSummary assigned:', typeof window.loadPostmortemFinanceSummary);
 
 // ====== CRITICAL: Ensure Postmortem Functions Are Globally Accessible ======
 console.log('\n🔒 [SAFETY-WRAP] Ensuring postmortem functions are accessible...');
