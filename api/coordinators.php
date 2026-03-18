@@ -877,7 +877,14 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
     
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Coordinator updated successfully']);
+        $responseData = ['success' => true, 'message' => 'Coordinator updated successfully'];
+        
+        // Include the image filename if an image was uploaded
+        if ($coordinator_image && $update_image) {
+            $responseData['data'] = ['coordinator_image' => $coordinator_image];
+        }
+        
+        echo json_encode($responseData);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to update coordinator: ' . $stmt->error]);
     }

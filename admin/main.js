@@ -542,13 +542,27 @@ function openCreateEventModal() {
     }
 }
 
-function closeCreateEventModal() {
-    console.log('Closing create event modal');
+function _forceCloseCreateEventModal() {
+    console.log('Force closing create event modal (bypassing confirmation)');
     const modal = document.getElementById('createEventModal');
     if (modal) {
         modal.style.display = 'none';
         console.log('Modal closed');
     }
+}
+
+function requestCloseCreateEventModal() {
+    console.log('User clicked outside modal - showing confirmation');
+    showConfirmDialog('Are you sure you want to close this modal? Any unsaved changes will be lost.', (confirmed) => {
+        if (confirmed) {
+            _forceCloseCreateEventModal();
+        }
+    });
+}
+
+function closeCreateEventModal() {
+    console.log('Closing create event modal');
+    _forceCloseCreateEventModal();
 }
 
 function createEvent(e) {
@@ -668,12 +682,15 @@ function formatDate(dateString) {
 }
 
 function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        // Clear user data from localStorage
-        localStorage.removeItem('user');
-        // Redirect to login page
-        window.location.href = 'login.html';
-    }
+    showConfirmDialog('Are you sure you want to logout?', (confirmed) => {
+        if (confirmed) {
+            // Clear user data from localStorage
+            localStorage.removeItem('user');
+            localStorage.removeItem('admin');
+            // Redirect to login page
+            window.location.href = 'login.html';
+        }
+    });
 }
 
 function openEditEventModal(eventId) {
@@ -831,11 +848,15 @@ function deleteEvent(eventId, eventName) {
         return false;
     }
     
-    if (!confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
-        console.log('Delete cancelled by user');
-        return false;
-    }
-    
+    showConfirmDialog(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`, (confirmed) => {
+        if (confirmed) {
+            performDeleteEvent(numericEventId);
+        }
+    });
+    return false;
+}
+
+function performDeleteEvent(numericEventId) {
     console.log('Delete confirmed, sending request with event_id:', numericEventId);
     
     // Create request body

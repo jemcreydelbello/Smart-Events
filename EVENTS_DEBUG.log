@@ -238,3 +238,60 @@ $_POST['action'] length: 12
 $_POST['action'] === 'update_event': TRUE
 strcmp result: 0
 ✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 03:35:06 ===
+isset($_POST['action']): FALSE
+
+=== CREATE HANDLER CHECK ===
+Received action: NULL
+$received_action === null: TRUE
+$received_action === 'create': FALSE
+⚠️ CREATE HANDLER TRIGGERED
+
+=== POST CHECK 2026-03-18 04:51:59 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 04:52:20 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 04:52:31 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 04:53:07 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 06:27:32 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!
+
+=== POST CHECK 2026-03-18 07:40:32 ===
+isset($_POST['action']): TRUE
+$_POST['action'] value: "update_event"
+$_POST['action'] length: 12
+$_POST['action'] === 'update_event': TRUE
+strcmp result: 0
+✅ UPDATE_EVENT HANDLER MATCHED!

@@ -36,6 +36,11 @@
       display: flex !important;
       animation: fadeIn 0.3s ease-in;
     }
+
+    /* Prevent body scroll when modal is active */
+    body:has(.modal.active) {
+      overflow: hidden;
+    }
     
     .modal-content {
       background: white;
@@ -448,9 +453,9 @@
     };
     
     window.saveLogReport = function() { 
-      console.log('� saveLogReport called');
+      console.log('✓ saveLogReport called');
       if (!window.currentEventId) {
-        alert('Event ID is required');
+        showNotification('Event ID is required', 'error');
         return;
       }
       
@@ -492,7 +497,7 @@
           const data = JSON.parse(text);
           console.log('Parsed JSON:', data);
           if (data.success) {
-            alert('Log report saved successfully!');
+            showNotification('Log report saved successfully!', 'success');
             // Load and display the saved data
             setTimeout(() => {
               if (window.loadLogReportData) {
@@ -504,16 +509,16 @@
               }
             }, 500);
           } else {
-            alert('Error: ' + (data.message || 'Save failed'));
+            showNotification('Error: ' + (data.message || 'Save failed'), 'error');
           }
         } catch (e) {
           console.error('JSON parse error:', e);
-          alert('Server returned invalid data. Check console logs.');
+          showNotification('Server returned invalid data. Check console logs.', 'error');
         }
       })
       .catch(err => {
         console.error('Fetch error:', err);
-        alert('Error saving report: ' + err.message);
+        showNotification('Error saving report: ' + err.message, 'error');
       });
     };
     
@@ -524,7 +529,7 @@
     window.exportPostmortemReport = function(eventId) { 
       console.log('Exporting postmortem report for event:', eventId);
       if (!eventId) {
-        alert('Event ID is required');
+        showNotification('Event ID is required', 'error');
         return;
       }
       
@@ -605,12 +610,12 @@
           doc.save(`postmortem-report-${eventId}-${new Date().toISOString().split('T')[0]}.pdf`);
           console.log('Report exported as PDF successfully');
         } else {
-          alert('No report data found to export');
+          showNotification('No report data found to export', 'error');
         }
       })
       .catch(err => {
         console.error('Export error:', err);
-        alert('Error exporting report');
+        showNotification('Error exporting report', 'error');
       });
     };
     
@@ -1471,7 +1476,7 @@
                   </colgroup>
                   <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">DATE OF COMPLETION / DUE DATE</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">DATE OF COMPLETION</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">TASK</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">PARTY RESPONSIBLE</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">STATUS</th>
@@ -2886,7 +2891,7 @@ try {
           <div class="flex items-end justify-between mb-6">
             <div>
               <h1 style="font-size: 32px; font-weight: 700; color: #000000; margin-bottom: 8px; margin-top: 0;">Published Catalogue Events</h1>
-              <p class="text-gray-600 text-sm">Events visible to the public</p>
+              <p class="text-gray-600 text-sm">Manage and publish events that will appear in the catalogue carousel on the user interface.</p>
             </div>
             <div class="flex gap-3">
               <button class="btn btn-secondary" onclick="document.getElementById('lookupEventsModal').classList.add('active'); CatalogueManager.loadPastEvents();"><i class="bi bi-search"></i>&nbsp; Lookup Events</button>
@@ -2917,10 +2922,33 @@ try {
           </div>
 
           <!-- QR Scanner Notification Zone -->
-          <div id="qrNotificationContainer" style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 600px; display: none;">
-            <div id="qrNotificationMessage" style="padding: 16px 20px; border-radius: 8px; font-weight: 600; font-size: 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideDown 0.3s ease-out;">
+          <div id="qrNotificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10001; display: none;">
+            <div id="qrNotificationMessage" style="padding: 16px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; border-left: 4px solid #059669; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: qrSlideIn 0.3s ease-out; background: white; color: #1f2937; max-width: 420px;">
             </div>
           </div>
+
+          <style>
+            @keyframes qrSlideIn {
+              from {
+                transform: translateX(420px);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+            @keyframes qrSlideOut {
+              from {
+                transform: translateX(0);
+                opacity: 1;
+              }
+              to {
+                transform: translateX(420px);
+                opacity: 0;
+              }
+            }
+          </style>
 
           <div class="bg-white rounded-lg p-8 border border-gray-200">
 
@@ -3284,7 +3312,7 @@ try {
 
                       <div class="grid grid-cols-2 gap-4">
                         <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                          <div style="display: flex; align-items: center;">
                             <label style="font-size: 13px; font-weight: 600; color: #374151;">SMTP Host</label>
                             <span title="Enter your email provider's SMTP server address. Example: smtp.gmail.com" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
                           </div>
@@ -3372,31 +3400,6 @@ try {
                       </div>
                     </div>
 
-                    <!-- Delivery Preferences -->
-                    <div class="border-b border-gray-100 pb-8">
-                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#8b5cf6" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-                        Delivery Preferences
-                      </h4>
-                      
-                      <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
-                          <input type="checkbox" id="emailOnUserCreate" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
-                          <span>Send welcome email when new users register</span>
-                        </label>
-                        
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
-                          <input type="checkbox" id="emailOnEventCreate" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
-                          <span>Send notification when new events are created</span>
-                        </label>
-                        
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #374151;">
-                          <input type="checkbox" id="emailReminders" style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
-                          <span>Send event reminders to attendees before event date</span>
-                        </label>
-                      </div>
-                    </div>
-
                     <!-- Save Buttons -->
                     <div style="display: flex; gap: 8px; padding-top: 8px;">
                       <button onclick="saveEmailConfiguration()" style="padding: 9px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;"
@@ -3419,12 +3422,13 @@ try {
     </div>
 
   <!-- Create Event Modal -->
-  <div id="createEventModal" class="modal">
-    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+  <div id="createEventModal" class="modal" onclick="if(event.target.id === 'createEventModal') requestCloseCreateEventModal(); event.stopPropagation();">
+    <div class="modal-content" onclick="event.stopPropagation(); event.stopImmediatePropagation();" style="max-width: 700px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
       <!-- Blue Header Section -->
-      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0;">
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
         <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Create New Event</h2>
         <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Build a polished event listing for participants.</p>
+        <button type="button" onclick="_forceCloseCreateEventModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
       </div>
       
       <form id="createEventForm" class="space-y-0" style="display: grid; grid-template-columns: 1fr;">
@@ -3592,9 +3596,9 @@ try {
         </div>
 
         <!-- Submit Buttons -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
-          <button type="button" onclick="submitCreateEventForm()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b';" onmouseout="this.style.background='#1E73BB';">Create Event</button>
-          <button type="button" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onclick="closeCreateEventModal()">Cancel</button>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+          <button type="button" style="padding: 10px 24px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onclick="closeCreateEventModal()" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
+          <button type="button" onclick="submitCreateEventForm()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b';" onmouseout="this.style.background='#1E73BB';">Create Event</button>
         </div>
         </div>
       </form>
@@ -3714,92 +3718,111 @@ try {
 
   <!-- Add Past Event Modal -->
   <div id="addPastEventModal" class="modal">
-    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 mb-2">Add Past Event</h2>
-          <p class="text-sm text-gray-600">Publish a past event to the catalogue.</p>
-        </div>
-        <button type="button" onclick="document.getElementById('addPastEventModal').classList.remove('active')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink: 0;">×</button>
+    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Past Event</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Publish a past event to the catalogue.</p>
+        <button type="button" onclick="document.getElementById('addPastEventModal').classList.remove('active')" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)';" onmouseout="this.style.background='rgba(255,255,255,0.2)';">×</button>
       </div>
       
-      <form id="addPastEventForm" style="display: flex; flex-direction: column; gap: 16px;">
-        <!-- Event Title -->
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Event Title *</label>
-          <input type="text" id="pastEventTitle" required placeholder="Event Title"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900">
-        </div>
+      <form id="addPastEventForm" class="space-y-0" style="display: grid; grid-template-columns: 1fr;">
+        <!-- Form Content with padding -->
+        <div class="space-y-6" style="padding: 24px;">
+          <!-- Event Title, Location and Date Row -->
+          <div style="display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 12px;">
+            <!-- Event Title -->
+            <div>
+              <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event Title <span style="color: #e74c3c;">*</span></label>
+              <input type="text" id="pastEventTitle" required placeholder="Event Title"
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s, background-color 0.2s;"
+                     oninput="this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';">
+            </div>
 
-        <!-- Event Date -->
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Event Date *</label>
-          <input type="date" id="pastEventDate" required
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900">
-        </div>
+            <!-- Location -->
+            <div>
+              <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Location</label>
+              <input type="text" id="pastEventLocation" placeholder="Location"
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s, background-color 0.2s;"
+                     oninput="this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';">
+            </div>
 
-        <!-- Location -->
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Location</label>
-          <input type="text" id="pastEventLocation" placeholder="Location"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900">
-        </div>
-
-        <!-- Short Summary -->
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Event Description</label>
-          <textarea id="pastEventSummary" placeholder="Brief description of the event"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    rows="4" style="resize: vertical;"></textarea>
-        </div>
-
-        <!-- Attach Image -->
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-2">Event Cover Photo</label>
-          <p class="text-sm text-gray-600 mb-4">Upload a cover image for this event.</p>
-          
-          <!-- Image Preview (Clickable - Drag & Drop) -->
-          <div id="pastEventImagePreview" onclick="document.getElementById('pastEventImage').click()" style="width: 100%; height: 16rem; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';">
-            <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            <span>Click to upload or drag & drop</span>
+            <!-- Event Date -->
+            <div>
+              <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event Date <span style="color: #e74c3c;">*</span></label>
+              <input type="date" id="pastEventDate" required
+                     style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s, background-color 0.2s;"
+                     oninput="this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';"
+                     onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                     onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'; this.style.backgroundColor = this.value ? '#f0f9ff' : '#fff';">
+            </div>
           </div>
-          
-          <!-- Hidden File Input -->
-          <input type="file" id="pastEventImage" accept="image/*" onchange="previewPastEventImage(event)" style="display: none;">
-        </div>
 
-        <!-- Submit Button -->
-        <button type="button" onclick="submitAddPastEvent()" 
-                class="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
-                style="margin-top: 12px;">
-          Add to Catalogue
-        </button>
+          <!-- Event Description -->
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event Description</label>
+            <textarea id="pastEventSummary" placeholder="Brief description of the event"
+                      style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; background-color: #fff; transition: border-color 0.2s; resize: vertical;"
+                      rows="4"
+                      onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+                      onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"></textarea>
+          </div>
+
+          <!-- Event Cover Photo -->
+          <div>
+            <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Event Cover Photo</label>
+            <p style="font-size: 12px; color: #999; margin: 0 0 12px 0;">Upload a cover image for this event.</p>
+            
+            <!-- Image Preview (Clickable - Drag & Drop) -->
+            <div id="pastEventImagePreview" onclick="document.getElementById('pastEventImage').click()" style="width: 100%; height: 16rem; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; color: #64748b; font-size: 14px; font-weight: 500; flex-direction: column; gap: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f4f8';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)';">
+              <svg style="width: 48px; height: 48px; color: #94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span>Click to upload or drag & drop</span>
+            </div>
+            
+            <!-- Hidden File Input -->
+            <input type="file" id="pastEventImage" accept="image/*" onchange="previewPastEventImage(event)" style="display: none;">
+          </div>
+
+          <!-- Submit Button -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+            <button type="button" onclick="submitAddPastEvent()" 
+                    style="padding: 10px 32px; background: #1E73BB; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;"
+                    onmouseover="this.style.background='#155a9b';"
+                    onmouseout="this.style.background='#1E73BB';">
+              Add to Catalogue
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   </div>
 
   <!-- Lookup Events Modal -->
   <div id="lookupEventsModal" class="modal">
-    <div class="modal-content" style="max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
-      <!-- Header -->
-      <div class="flex justify-between items-start mb-6" style="padding: 24px; padding-bottom: 0; flex-shrink: 0;">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 mb-2">Lookup Events</h2>
-          <p class="text-sm text-gray-600">Search past events and add them to the catalogue.</p>
-        </div>
-        <button type="button" onclick="CatalogueManager.closeLookupModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; flex-shrink: 0;">×</button>
+    <div class="modal-content" style="max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative; flex-shrink: 0;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Lookup Events</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Search past events and add them to the catalogue.</p>
+        <button type="button" onclick="CatalogueManager.closeLookupModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)';" onmouseout="this.style.background='rgba(255,255,255,0.2)';">×</button>
       </div>
       
       <!-- Search Bar -->
-      <div style="padding: 0 24px 12px 24px; flex-shrink: 0;">
+      <div style="padding: 24px 24px 12px 24px; flex-shrink: 0;">
         <input 
           type="text" 
           id="eventSearchInput" 
           placeholder="Search by title, location, or date" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; color: #333; transition: border-color 0.2s; box-sizing: border-box;"
           onkeyup="CatalogueManager.filterPastEvents()"
+          onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+          onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';"
         >
       </div>
       
@@ -4101,9 +4124,9 @@ try {
       </div>
       
       <!-- Action Buttons -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 24px; border-top: 1px solid #eee;">
-        <button type="button" onclick="closeEditEventCoverModal()" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
-        <button type="button" onclick="submitEditEventCover()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b'" onmouseout="this.style.background='#1E73BB'">Update Cover</button>
+      <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #eee;">
+        <button type="button" onclick="closeEditEventCoverModal()" style="padding: 10px 24px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
+        <button type="button" onclick="submitEditEventCover()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b'" onmouseout="this.style.background='#1E73BB'">Update Cover</button>
       </div>
     </div>
   </div>
@@ -4155,9 +4178,9 @@ try {
       </div>
       
       <!-- Action Buttons -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 24px; border-top: 1px solid #eee;">
-        <button type="button" onclick="closeEditGalleryModal()" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
-        <button type="button" onclick="submitEditGalleryImages()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b'" onmouseout="this.style.background='#1E73BB'">Save Gallery</button>
+      <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #eee;">
+        <button type="button" onclick="closeEditGalleryModal()" style="padding: 10px 24px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
+        <button type="button" onclick="submitEditGalleryImages()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b'" onmouseout="this.style.background='#1E73BB'">Save Gallery</button>
       </div>
     </div>
   </div>
@@ -5999,6 +6022,7 @@ try {
         notificationMessage.style.background = success ? '#D4EDDA' : '#F8D7DA';
         notificationMessage.style.color = success ? '#155724' : '#721C24';
         notificationMessage.style.borderLeft = '4px solid ' + (success ? '#28A745' : '#F5365C');
+        notificationMessage.style.animation = 'qrSlideIn 0.3s ease-out';
         notificationMessage.textContent = message;
         
         // Show the notification
@@ -6006,7 +6030,10 @@ try {
         
         // Auto-hide after 4 seconds
         setTimeout(() => {
-          notificationContainer.style.display = 'none';
+          notificationMessage.style.animation = 'qrSlideOut 0.3s ease-out';
+          setTimeout(() => {
+            notificationContainer.style.display = 'none';
+          }, 300);
         }, 4000);
         return;
       }
@@ -6784,7 +6811,7 @@ try {
             console.log('[EMAIL] Status update response:', data);
             
             if (data.success) {
-              console.log('[EMAIL] ✓ Status updated successfully');
+              console.log('[EMAIL] Status updated successfully');
               // Hide dropdown
               const dropdown = document.getElementById('status-dropdown-' + emailId);
               if (dropdown) dropdown.classList.add('hidden');

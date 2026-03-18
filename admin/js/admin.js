@@ -103,6 +103,9 @@ function showToast(message, type = 'success', duration = 4000) {
     const backgroundColor = type === 'success' ? '#10b981' : 
                            type === 'error' ? '#ef4444' : 
                            type === 'warning' ? '#f59e0b' : '#3b82f6';
+    const borderColor = type === 'success' ? '#059669' : 
+                       type === 'error' ? '#dc2626' : 
+                       type === 'warning' ? '#d97706' : '#1e40af';
     const icon = type === 'success' ? '✓' : 
                 type === 'error' ? '✕' : 
                 type === 'warning' ? '⚠' : 'ℹ';
@@ -114,7 +117,7 @@ function showToast(message, type = 'success', duration = 4000) {
         style.textContent = `
             @keyframes slideInRight {
                 from {
-                    transform: translateX(400px);
+                    transform: translateX(420px);
                     opacity: 0;
                 }
                 to {
@@ -128,7 +131,7 @@ function showToast(message, type = 'success', duration = 4000) {
                     opacity: 1;
                 }
                 to {
-                    transform: translateX(400px);
+                    transform: translateX(420px);
                     opacity: 0;
                 }
             }
@@ -146,6 +149,7 @@ function showToast(message, type = 'success', duration = 4000) {
         color: white;
         padding: 16px 24px;
         border-radius: 8px;
+        border-left: 4px solid ${borderColor};
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         font-weight: 500;
         font-size: 14px;
@@ -155,7 +159,7 @@ function showToast(message, type = 'success', duration = 4000) {
         z-index: 9999;
         animation: slideInRight 0.3s ease-out;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        max-width: 400px;
+        max-width: 420px;
         word-wrap: break-word;
     `;
     
@@ -273,9 +277,10 @@ function showNotification(message, type = 'success') {
             right: 20px;
             z-index: 10000;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            flex-direction: column-reverse;
+            gap: 12px;
             pointer-events: none;
+            max-width: 420px;
         `;
         document.body.appendChild(notificationContainer);
     }
@@ -283,23 +288,21 @@ function showNotification(message, type = 'success') {
     // Create notification toast
     const toast = document.createElement('div');
     const isSuccess = type === 'success';
-    const bgColor = isSuccess ? '#1E73BB' : '#ef4444';
+    const bgColor = isSuccess ? '#10b981' : '#ef4444';
     
     toast.style.cssText = `
         background-color: ${bgColor};
         color: white;
-        padding: 16px 24px;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        padding: 14px 20px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         font-weight: 500;
         font-size: 14px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
         animation: slideIn 0.3s ease-out;
         pointer-events: auto;
-        min-width: 300px;
-        max-width: 400px;
+        max-width: 380px;
+        word-wrap: break-word;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
     
     toast.innerHTML = `<span>${message}</span>`;
@@ -311,7 +314,7 @@ function showNotification(message, type = 'success') {
         style.textContent = `
             @keyframes slideIn {
                 from {
-                    transform: translateX(400px);
+                    transform: translateX(420px);
                     opacity: 0;
                 }
                 to {
@@ -325,7 +328,7 @@ function showNotification(message, type = 'success') {
                     opacity: 1;
                 }
                 to {
-                    transform: translateX(400px);
+                    transform: translateX(420px);
                     opacity: 0;
                 }
             }
@@ -342,6 +345,101 @@ function showNotification(message, type = 'success') {
             toast.remove();
         }, 300);
     }, 4000);
+}
+
+// Custom Confirmation Dialog - replaces window.confirm()
+function showConfirmDialog(message, onConfirm, onCancel) {
+    // Remove existing dialog if any
+    const existing = document.getElementById('customConfirmDialog');
+    if (existing) existing.remove();
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'customConfirmDialogOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50000;
+        animation: fadeIn 0.2s ease-out;
+    `;
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.id = 'customConfirmDialog';
+    dialog.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 380px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        animation: slideUp 0.3s ease-out;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    dialog.innerHTML = `
+        <p style="margin: 0 0 20px 0; font-size: 15px; color: #1f2937; font-weight: 400; line-height: 1.6;">${escapeHtml(message)}</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirmCancel" style="padding: 8px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Cancel</button>
+            <button id="confirmOK" style="padding: 8px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">Confirm</button>
+        </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Add animation styles if not present
+    if (!document.getElementById('confirmDialogStyles')) {
+        const style = document.createElement('style');
+        style.id = 'confirmDialogStyles';
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { 
+                    transform: translateY(20px);
+                    opacity: 0;
+                }
+                to { 
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Event listeners
+    const closeDialog = () => {
+        overlay.style.animation = 'fadeIn 0.2s ease-out reverse';
+        setTimeout(() => overlay.remove(), 200);
+    };
+    
+    document.getElementById('confirmOK').addEventListener('click', () => {
+        closeDialog();
+        if (onConfirm) onConfirm(true);
+    });
+    
+    document.getElementById('confirmCancel').addEventListener('click', () => {
+        closeDialog();
+        if (onCancel) onCancel(false);
+    });
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            closeDialog();
+            if (onCancel) onCancel(false);
+        }
+    });
 }
 
 // Copy to clipboard helper
@@ -815,13 +913,13 @@ function setupProfileImageUpload() {
         
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB');
+            showNotification('File size must be less than 5MB', 'error');
             return;
         }
         
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert('Please select a valid image file');
+            showNotification('Please select a valid image file', 'error');
             return;
         }
         
@@ -857,7 +955,7 @@ async function saveProfileSettings() {
         // Get profile ID - handle both admin and coordinator
         const userId = profile?.id || profile?.admin_id || profile?.coordinator_id;
         if (!profile || !userId) {
-            alert('Error: Profile not found');
+            showNotification('Error: Profile not found', 'error');
             console.error('[PROFILE-SETTINGS] Profile missing:', { profile, userId });
             return;
         }
@@ -873,7 +971,7 @@ async function saveProfileSettings() {
         const address = document.getElementById('profileAddress').value.trim();
         
         if (!firstName || !email) {
-            alert('First name and email are required');
+            showNotification('First name and email are required', 'error');
             return;
         }
         
@@ -889,12 +987,12 @@ async function saveProfileSettings() {
         
         // Add image if user selected one
         if (window.profileImageFile) {
-            formData.append('profile_image', window.profileImageFile);
+            formData.append('image', window.profileImageFile);
             console.log('[PROFILE-SETTINGS] Image file attached for upload');
         }
         
         // Send to API
-        const endpoint = isAdmin ? 'admins.php' : 'coordinators.php';
+        const endpoint = isAdmin ? 'admins.php' : 'coordinators.php?action=update';
         const response = await fetch(`${API_BASE}/${endpoint}`, {
             method: 'POST',
             headers: {
@@ -948,15 +1046,15 @@ async function saveProfileSettings() {
             // Reload profile to show changes
             await loadProfileSettings();
             
-            alert('Profile updated successfully!');
+            showNotification('Profile updated successfully!', 'success');
             console.log('[PROFILE-SETTINGS] Profile update complete');
         } else {
-            alert('Error saving profile: ' + (data.message || 'Unknown error'));
+            showNotification('Error saving profile: ' + (data.message || 'Unknown error'), 'error');
             console.error('[PROFILE-SETTINGS] API returned false success:', data);
         }
     } catch (e) {
         console.error('[PROFILE-SETTINGS] Error saving profile:', e);
-        alert('Error saving profile: ' + e.message);
+        showNotification('Error saving profile: ' + e.message, 'error');
     }
 }
 
@@ -5690,10 +5788,14 @@ async function updateEventTaskStatus(taskId, newStatus) {
 async function deleteEventTask(taskId) {
     console.log('[Tasks] Deleting task:', taskId);
     
-    if (!confirm('Are you sure you want to delete this task?')) {
-        return;
-    }
-    
+    showConfirmDialog('Are you sure you want to delete this task?', (confirmed) => {
+        if (confirmed) {
+            performDeleteTask(taskId);
+        }
+    });
+}
+
+async function performDeleteTask(taskId) {
     try {
         const response = await fetch(`${API_BASE}/tasks.php?action=delete`, {
             method: 'POST',
@@ -5860,13 +5962,58 @@ function openCreateEventModal() {
     }
 }
 
-function closeCreateEventModal() {
-    console.log('Closing create event modal');
+function _forceCloseCreateEventModal() {
+    console.log('Force closing create event modal (bypassing confirmation)');
     const modal = document.getElementById('createEventModal');
     if (modal) {
+        modal.classList.remove('active');
         modal.style.display = 'none';
         console.log('Modal closed');
     }
+}
+
+function requestCloseCreateEventModal() {
+    console.log('User clicked outside modal - showing confirmation');
+    
+    // Check if confirmation modal already exists
+    if (document.getElementById('closeEventConfirmModal')) {
+        console.log('Confirmation modal already open');
+        return false;
+    }
+    
+    // Create modal HTML matching catalogue design with higher z-index
+    const modalHTML = `
+        <div id="closeEventConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button onclick="document.getElementById('closeEventConfirmModal')?.remove()" 
+                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button onclick="_forceCloseCreateEventModal(); document.getElementById('closeEventConfirmModal')?.remove()" 
+                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHTML;
+    document.body.appendChild(modalContainer.firstElementChild);
+    
+    return false;
+}
+
+function closeCreateEventModal() {
+    console.log('Closing create event modal');
+    _forceCloseCreateEventModal();
 }
 
 function submitCreateEventForm(e) {
@@ -9060,13 +9207,13 @@ function renderCatalogue(events) {
         const uniqueId = `menu-${event.catalogue_id}`;
         
         return `
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-200 hover:scale-[1.02] catalogue-event-card" 
-             style="cursor: default;">
-            <div class="h-40 bg-cover bg-center bg-gray-100 relative" style="${imageUrl ? `background-image:url('${imageUrl}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}">
-                <button class="absolute top-4 right-4 z-10 bg-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-slate-100 transition shadow-md" style="border: none; cursor: pointer; padding: 0;" onclick="event.stopPropagation(); toggleCatalogueMenu('${uniqueId}')" title="Menu">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: #374151;"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md catalogue-event-card" 
+             style="cursor: default; border: 1px solid #e5e7eb;">
+            <div class="h-32 bg-cover bg-center bg-gray-100 relative" style="${imageUrl ? `background-image:url('${imageUrl}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}">
+                <button class="absolute top-2 right-2 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-slate-100 transition shadow-md" style="border: none; cursor: pointer; padding: 0;" onclick="event.stopPropagation(); toggleCatalogueMenu('${uniqueId}')" title="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: #374151;"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
                 </button>
-                <div id="${uniqueId}" class="hidden absolute top-14 right-4 bg-white rounded-lg shadow-lg border border-gray-200 w-64 z-50" style="min-width: 240px;">
+                <div id="${uniqueId}" class="hidden absolute top-10 right-2 bg-white rounded-lg shadow-lg border border-gray-200 w-56 z-50" style="min-width: 240px;">
                     <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium text-gray-700 border-b border-gray-100" onclick="event.stopPropagation(); editEventCover(${event.catalogue_id}, '${event.event_name.replace(/'/g, "\\'") }'); setTimeout(() => closeCatalogueMenu('${uniqueId}'), 50);" style="border: none; text-decoration: none;">
                         <i class="bi bi-image" style="margin-right: 8px;"></i>Change Event cover
                     </button>
@@ -9078,13 +9225,13 @@ function renderCatalogue(events) {
                     </button>
                 </div>
             </div>
-            <div class="p-5 flex-1 flex flex-col">
-                <h3 class="text-lg font-semibold text-gray-900">${event.event_name}</h3>
-                <div class="mt-2 text-sm text-slate-500 space-y-1">
-                    <div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#64748b" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> ${formattedDate}</div>
-                    ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="#64748b" d="M16 10c0-2.21-1.79-4-4-4s-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4m-6 0c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2"/><path fill="#64748b" d="M11.42 21.81c.17.12.38.19.58.19s.41-.06.58-.19c.3-.22 7.45-5.37 7.42-11.82c0-4.41-3.59-8-8-8s-8 3.59-8 8c-.03 6.44 7.12 11.6 7.42 11.82M12 4c3.31 0 6 2.69 6 6c.02 4.44-4.39 8.43-6 9.74c-1.61-1.31-6.02-5.29-6-9.74c0-3.31 2.69-6 6-6"/></svg> ${event.location}</div>` : ''}
+            <div class="p-4 flex-1 flex flex-col">
+                <h3 class="text-base font-semibold text-gray-900 line-clamp-2">${event.event_name}</h3>
+                <div class="mt-2 text-xs text-slate-600 space-y-1">
+                    <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="none" stroke="#64748b" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${formattedDate}</span></div>
+                    ${event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? `<div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><path fill="#64748b" d="M16 10c0-2.21-1.79-4-4-4s-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4m-6 0c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2"/><path fill="#64748b" d="M11.42 21.81c.17.12.38.19.58.19s.41-.06.58-.19c.3-.22 7.45-5.37 7.42-11.82c0-4.41-3.59-8-8-8s-8 3.59-8 8c-.03 6.44 7.12 11.6 7.42 11.82M12 4c3.31 0 6 2.69 6 6c.02 4.44-4.39 8.43-6 9.74c-1.61-1.31-6.02-5.29-6-9.74c0-3.31 2.69-6 6-6"/></svg> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${event.location}</span></div>` : ''}
                 </div>
-                <p class="mt-3 text-sm text-slate-600 line-clamp-3">${event.description || 'No description provided'}</p>
+                ${event.description ? `<p class="mt-3 text-xs text-slate-600" style="word-break: break-word; white-space: normal;">${event.description}</p>` : ''}
             </div>
         </div>
         `;
@@ -9216,7 +9363,7 @@ const CatalogueManager = {
             }
             
             return `
-            <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; display: flex; gap: 16px; padding: 12px; background: white; transition: all 0.2s; align-items: center;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'" data-event-name="${event.event_name}" data-event-location="${event.location || ''}">
+            <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; display: flex; gap: 16px; padding: 12px; background: white; transition: all 0.2s; align-items: center; cursor: ${this.isAddManyMode ? 'pointer' : 'default'};" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'" onclick="${this.isAddManyMode ? `if(event.target.type !== 'checkbox') event.currentTarget.querySelector('input[type=checkbox]').click()` : ''}" data-event-name="${event.event_name}" data-event-location="${event.location || ''}">
                 <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 36px; overflow: hidden; background-image: ${eventImage ? `url('${eventImage}')` : 'none'}; background-size: cover; background-position: center;">${!eventImage ? '📷' : ''}</div>
                 <div style="flex: 1;">
                     <div style="font-weight: 700; color: #1f2937; margin-bottom: 4px; font-size: 14px;">${event.event_name}</div>
@@ -10150,14 +10297,18 @@ function markAttendeeAsAttended(registrationCode, index) {
 // Delete attendee (full-page view)
 function deleteAttendee(registrationCode, index) {
     if (!window.currentEventId) {
-        alert('No event selected');
+        showNotification('No event selected', 'error');
         return;
     }
     
-    if (!confirm('Are you sure you want to delete this attendee?')) {
-        return;
-    }
-    
+    showConfirmDialog('Are you sure you want to delete this attendee?', (confirmed) => {
+        if (confirmed) {
+            performDeleteAttendee(registrationCode);
+        }
+    });
+}
+
+function performDeleteAttendee(registrationCode) {
     fetch(`${API_BASE}/participants.php`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
@@ -10172,12 +10323,12 @@ function deleteAttendee(registrationCode, index) {
             // Reload attendees list
             loadEventAttendees({event_id: window.currentEventId}, false);
         } else {
-            alert(data.message || 'Failed to delete attendee');
+            showNotification(data.message || 'Failed to delete attendee', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error deleting attendee');
+        showNotification('Error deleting attendee', 'error');
     });
 }
 

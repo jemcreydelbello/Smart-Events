@@ -544,3 +544,117 @@ POST data:
   [is_private] = 0
 CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary8ABnRIwl1HiYVogB
 ---
+[2026-03-18 04:51:59] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryvjPsNJoSGmMnKXE2
+---
+[2026-03-18 04:52:20] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryupyGjNmmtTrdrPDc
+---
+[2026-03-18 04:52:31] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryXcKtWlB79VlGckMg
+---
+[2026-03-18 04:53:07] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryhzF0rcbxg7zzjQD9
+---
+[2026-03-18 06:27:32] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 120
+  [event_name] = 2024 Milestone Service Awards
+  [location] = Grand Ballroom
+  [start_event] = 2026-03-26 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-26 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 50
+  [description] = Celebrating employees reaching 5, 10, 15, 20+ year...
+  [registration_link] = registration.sample.com
+  [website_link] = https://example.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundary68BR3YiBONS3B1YC
+---
+[2026-03-18 07:40:32] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-20 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-17 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryokdWEsgZb96XXMw8
+---
