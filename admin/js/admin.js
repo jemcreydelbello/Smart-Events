@@ -4651,7 +4651,7 @@ function renderEventTasksTable(tasks, tableBody) {
             <td style="padding: 12px 16px; color: #111827; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.task_name || '-')}</td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.party_responsible || '-')}</td>
             <td style="padding: 12px 16px; word-break: break-word;">
-                <select onchange="updateEventTaskStatus(${task.task_id}, this.value)" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-weight: 500; width: 130px; ${statusStyle} cursor: pointer;">
+                <select data-task-id="${task.task_id}" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-weight: 500; width: 130px; ${statusStyle} cursor: pointer; position: relative; z-index: 1;">
                     <option value="Pending" ${statusText === 'Pending' ? 'selected' : ''}>Pending</option>
                     <option value="In Progress" ${statusText === 'In Progress' ? 'selected' : ''}>In Progress</option>
                     <option value="Done" ${statusText === 'Done' ? 'selected' : ''}>Done</option>
@@ -4671,6 +4671,21 @@ function renderEventTasksTable(tasks, tableBody) {
         tableBody.appendChild(row);
     });
     console.log('[Tasks] ✓ All rows rendered in table');
+    
+    // Attach event listeners to status dropdowns
+    console.log('[Tasks] Attaching change listeners to select elements...');
+    const selects = tableBody.querySelectorAll('select');
+    console.log('[Tasks] Found', selects.length, 'select elements');
+    
+    selects.forEach((select, index) => {
+        select.addEventListener('change', function(e) {
+            const taskId = parseInt(this.getAttribute('data-task-id'), 10);
+            const newStatus = this.value;
+            console.log('[Tasks] [' + index + '] Select changed - taskId:', taskId, 'status:', newStatus);
+            updateEventTaskStatus(taskId, newStatus);
+        });
+    });
+    console.log('[Tasks] ✓ Event listeners attached');
 }
 
 // Switch between List and Calendar views
@@ -4915,7 +4930,7 @@ function addEventTask(eventId) {
 
 // Update task status
 async function updateEventTaskStatus(taskId, newStatus) {
-    console.log('[Tasks] Updating task', taskId, 'status to:', newStatus);
+    console.log('[Tasks] updateEventTaskStatus called with taskId:', taskId, 'newStatus:', newStatus);
     
     // Store values globally for modal submission
     window.pendingTaskStatusUpdate = {
@@ -4928,11 +4943,42 @@ async function updateEventTaskStatus(taskId, newStatus) {
     const statusDisplay = document.getElementById('modalStatusDisplay');
     const remarksInput = document.getElementById('taskRemarksInput');
     
+    console.log('[Tasks] Modal elements check:', {
+        modal: !!modal,
+        statusDisplay: !!statusDisplay,
+        remarksInput: !!remarksInput
+    });
+    
     if (modal && statusDisplay && remarksInput) {
+        console.log('[Tasks] Setting modal content...');
         statusDisplay.textContent = newStatus;
         remarksInput.value = '';
-        remarksInput.focus();
+        
+        // Use both methods to ensure visibility
+        modal.classList.add('active');
         modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+        
+        console.log('[Tasks] Modal classList:', modal.className);
+        console.log('[Tasks] Modal display style:', modal.style.display);
+        console.log('[Tasks] Modal computed style:', window.getComputedStyle(modal).display);
+        
+        // Scroll modal into view
+        modal.scrollIntoView({ behavior: 'auto', block: 'center' });
+        
+        // Small delay before focus to ensure render
+        setTimeout(() => {
+            remarksInput.focus();
+            console.log('[Tasks] ✓ Modal displayed and focused');
+        }, 100);
+    } else {
+        console.error('[Tasks] ✗ Could not display modal - missing elements:', {
+            modal: !!modal,
+            statusDisplay: !!statusDisplay,
+            remarksInput: !!remarksInput
+        });
     }
 }
 
@@ -5021,9 +5067,13 @@ async function editEventTask(taskId) {
 
 // Modal functions for task status remarks
 function closeTaskStatusRemarksModal() {
+    console.log('[Tasks] Closing remarks modal');
     const modal = document.getElementById('taskStatusRemarksModal');
     if (modal) {
+        modal.classList.remove('active');
         modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
+        modal.style.opacity = '0';
     }
     window.pendingTaskStatusUpdate = null;
 }
@@ -10251,10 +10301,15 @@ function switchTab(tabName) {
     } else if (tabName === 'postmortem') {
         if (currentEventId) {
             window.currentEventId = currentEventId;
-            // Automatically generate the postmortem report when viewing this tab
-            if (typeof generateAutomatedReport === 'function') {
-                generateAutomatedReport();
+            console.log('[Postmortem] Loading postmortem data for event:', currentEventId);
+            // Load postmortem data
+            if (typeof loadPostmortemData === 'function') {
+                loadPostmortemData(currentEventId);
             }
+            // Initialize view to show Automated Report metrics by default
+            switchPostmortemView('automated');
+        } else {
+            console.warn('[Postmortem] currentEventId is not set');
         }
     } else if (tabName === 'kpi') {
         console.log('🎯 KPI TAB CLICKED - Loading KPI data for event:', currentEventId);
@@ -10292,6 +10347,127 @@ function switchTab(tabName) {
             }
         }
     }
+}
+
+// Switch between postmortem views (Automated Report or Log Report)
+function switchPostmortemView(viewType) {
+    console.log('📊 Switching postmortem view to:', viewType);
+    
+    const automatedBtn = document.getElementById('automatedReportBtn');
+    const logBtn = document.getElementById('logReportBtn');
+    const exportBtn = document.getElementById('exportReportBtn');
+    const createBtn = document.getElementById('createLogReportBtn');
+    const metricsView = document.getElementById('postmortemMetricsView');
+    const createView = document.getElementById('postmortemCreateReportView');
+    const logListView = document.getElementById('postmortemLogReportView');
+    
+    if (viewType === 'automated') {
+        // Show Automated Report view
+        if (metricsView) metricsView.style.display = 'block';
+        if (createView) createView.style.display = 'none';
+        if (logListView) logListView.style.display = 'none';
+        
+        // Show Export button, hide Create button
+        if (exportBtn) exportBtn.style.display = 'inline-block';
+        if (createBtn) createBtn.style.display = 'none';
+        
+        // Update button styling
+        if (automatedBtn) automatedBtn.classList.add('active');
+        if (logBtn) logBtn.classList.remove('active');
+    } else if (viewType === 'log') {
+        // Show Log Report list view
+        if (metricsView) metricsView.style.display = 'none';
+        if (createView) createView.style.display = 'none';
+        if (logListView) logListView.style.display = 'block';
+        
+        // Hide Export button, show Create button
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (createBtn) createBtn.style.display = 'inline-block';
+        
+        // Update button styling
+        if (automatedBtn) automatedBtn.classList.remove('active');
+        if (logBtn) logBtn.classList.add('active');
+        
+        // Load and display the log reports
+        console.log('📥 loadLogReportData() - loading reports for event:', currentEventId);
+        loadLogReportData(currentEventId);
+    } else if (viewType === 'createForm') {
+        // Show Log Report creation form view
+        if (metricsView) metricsView.style.display = 'none';
+        if (createView) createView.style.display = 'block';
+        if (logListView) logListView.style.display = 'none';
+        
+        // Hide Export button, show Create button
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (createBtn) createBtn.style.display = 'inline-block';
+        
+        // Update button styling  
+        if (automatedBtn) automatedBtn.classList.remove('active');
+        if (logBtn) logBtn.classList.add('active');
+    }
+}
+
+// Load and display log reports from API
+function loadLogReportData(eventId) {
+    console.log('📥 loadLogReportData() called for event:', eventId);
+    
+    if (!eventId) {
+        console.error('❌ Event ID is missing');
+        const listContainer = document.getElementById('logReportsList');
+        if (listContainer) listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Event ID not found</p>';
+        return;
+    }
+    
+    const headers = getUserHeaders();
+    const apiUrl = `${API_BASE}/postmortem.php?action=get&event_id=${eventId}`;
+    
+    console.log('🌐 API URL:', apiUrl);
+    
+    fetch(apiUrl, { headers })
+        .then(r => {
+            console.log('📩 API Response Status:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('📦 API Response Data:', data);
+            
+            const listContainer = document.getElementById('logReportsList');
+            if (!listContainer) {
+                console.error('❌ logReportsList container not found');
+                return;
+            }
+            
+            // Check if we have report data
+            if (data.success && data.data && (data.data.log_report_created || data.data.log_title_introduction)) {
+                const pm = data.data;
+                console.log('✅ Log report found, title:', pm.log_title_introduction);
+                
+                let html = `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h4 class="text-base font-semibold text-gray-900">${pm.log_title_introduction || 'Log Report'}</h4>
+                                <p class="text-sm text-gray-500 mt-1">Created: ${pm.created_at ? new Date(pm.created_at).toLocaleString() : 'N/A'}</p>
+                            </div>
+                            <button onclick="window.exportLogReport && window.exportLogReport(${eventId})" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors ml-4">
+                                📥 Export
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                listContainer.innerHTML = html;
+                console.log('🎨 HTML updated with report');
+            } else {
+                console.log('ℹ️ No log report found');
+                listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No log reports created yet. Click "Create" to add one.</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading log reports:', err);
+            const listContainer = document.getElementById('logReportsList');
+            if (listContainer) listContainer.innerHTML = '<p class="text-red-500 text-center py-8">Error loading reports</p>';
+        });
 }
 
 // Load event details from API
