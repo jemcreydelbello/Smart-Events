@@ -13946,21 +13946,6 @@ function handleMarketingUpload(event, assetType) {
     const file = event.target.files[0];
     if (!file || !window.currentEventId) return;
     
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    const previewMap = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    
-    // Show file info while uploading
-    const nameDisplay = document.getElementById(fileNameMap[assetType]);
-    nameDisplay.textContent = `Uploading ${file.name}...`;
-    
     // Upload the file
     const formData = new FormData();
     formData.append('action', 'upload');
@@ -13974,7 +13959,7 @@ function handleMarketingUpload(event, assetType) {
         body: formData
     };
     
-    // Add custom headers for authorization (don't set Content-Type - browser will handle it for FormData)
+    // Add custom headers for authorization
     const customHeaders = {};
     if (headers['X-User-Role']) customHeaders['X-User-Role'] = headers['X-User-Role'];
     if (headers['X-User-Id']) customHeaders['X-User-Id'] = headers['X-User-Id'];
@@ -13990,175 +13975,97 @@ function handleMarketingUpload(event, assetType) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show file info
-            const typeLabel = getFileTypeLabel(data.mime_type);
-            const fileInfo = `
-                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 8px;">
-                    <p style="margin: 0; color: #1f2937; font-weight: 500; font-size: 14px;">${file.name}</p>
-                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 12px;">${typeLabel}</p>
-                    <div style="margin-top: 8px;">
-                        <a href="../${data.file_path}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px; font-weight: 500;">Preview</a>
-                    </div>
-                </div>
-            `;
-            document.getElementById(previewMap[assetType]).innerHTML = fileInfo;
-            nameDisplay.textContent = file.name;
-            showNotification(`${assetType.replace('_', ' ').toUpperCase()} uploaded successfully`, 'success');
+            showNotification(`${assetType.replace('_', ' ')} uploaded successfully`, 'success');
             // Reload assets from database to ensure consistency
             loadMarketingAssets();
         } else {
-            nameDisplay.textContent = 'Error uploading file';
             showNotification('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Upload error:', error);
-        nameDisplay.textContent = 'Upload failed';
         showNotification('Upload failed', 'error');
     });
-}
-
-function getFileTypeLabel(mimeType) {
-    const typeMap = {
-        'image/svg+xml': 'image/svg+xml',
-        'image/png': 'image/png',
-        'image/jpeg': 'image/jpeg',
-        'image/jpg': 'image/jpeg',
-        'image/gif': 'image/gif',
-        'image/webp': 'image/webp',
-        'application/pdf': 'application/pdf',
-        'text/plain': 'text/plain'
-    };
-    return typeMap[mimeType] || mimeType;
-}
-
-function deleteMarketingAsset(assetType) {
-    if (!confirm('Delete this asset?')) return;
     
-    const previewMap = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    
-    // TODO: Implement delete via API
-    document.getElementById(previewMap[assetType]).innerHTML = '';
-    document.getElementById(fileNameMap[assetType]).textContent = 'No file chosen';
+    // Reset the input
+    event.target.value = '';
 }
 
 function loadMarketingAssets() {
     if (!window.currentEventId) return;
     
     const headers = getUserHeaders ? getUserHeaders() : {};
-    headers['Content-Type'] = 'application/json';
+    const fetchOptions = { headers };
     
-    fetch(`${API_BASE}/marketing-assets.php?action=list&event_id=${window.currentEventId}`, { headers })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayMarketingAssets(data.data);
-            }
-        })
-        .catch(error => console.error('Error loading assets:', error));
-}
-
-function displayMarketingAssets(assets) {
-    const mapType = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    
-    // Clear all previews first
-    for (const type of ['poster', 'banner', 'social_pack']) {
-        document.getElementById(mapType[type]).innerHTML = '';
-        document.getElementById(fileNameMap[type]).textContent = '';
-    }
-    
-    // Group assets by type and get the most recent
-    const assetsByType = {};
-    for (const asset of assets) {
-        if (!assetsByType[asset.asset_type]) {
-            assetsByType[asset.asset_type] = asset;
-        }
-    }
-    
-    // Display the most recent asset for each type
-    for (const type of ['poster', 'banner', 'social_pack']) {
-        const asset = assetsByType[type];
-        if (asset) {
-            const typeLabel = getFileTypeLabel(asset.mime_type);
-            const isImage = asset.mime_type && asset.mime_type.startsWith('image/');
-            const fileInfo = `
-                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 8px; cursor: ${isImage ? 'pointer' : 'default'};" 
-                     onclick="${isImage ? `openImagePreviewModal('${asset.file_path}', '${asset.filename.replace(/'/g, "\\'")}')` : ''}">
-                    <p style="margin: 0; color: #1f2937; font-weight: 500; font-size: 14px;">${asset.filename}</p>
-                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 12px;">${typeLabel}</p>
-                    <div style="margin-top: 8px;">
-                        ${isImage ? '<span style="color: #3b82f6; text-decoration: none; font-size: 12px; font-weight: 500; cursor: pointer;">Preview</span>' : '<span style="color: #6b7280; font-size: 12px;">📄 Non-image file</span>'}
-                    </div>
+    fetch(`${API_BASE}/marketing-assets.php?action=list&event_id=${window.currentEventId}`, fetchOptions)
+    .then(response => response.json())
+    .then(data => {
+        const previewsGrid = document.getElementById('marketingPreviewsGrid');
+        if (!previewsGrid) return;
+        
+        if (data.success && data.data && data.data.length > 0) {
+            previewsGrid.innerHTML = data.data.map(asset => `
+                <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f3f4f6; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 8px 16px rgba(30, 115, 187, 0.3)'; this.style.transform='scale(1.02)';" onmouseout="this.style.boxShadow=''; this.style.transform='scale(1)';"> 
+                    <img src="../${asset.file_path}" alt="${asset.asset_type}" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" onclick="previewMarketingAsset('${asset.file_path}', '${asset.asset_type}')">
+                    <button type="button" 
+                            onclick="event.stopPropagation(); deleteMarketingAsset('${asset.asset_id}'); return false;"
+                            style="position: absolute; top: 4px; right: 4px; background: #ef5350; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s; font-size: 18px; padding: 0; line-height: 1; z-index: 10;"
+                            onmouseover="this.style.background='#d32f2f'; this.style.transform='scale(1.1);'"
+                            onmouseout="this.style.background='#ef5350'; this.style.transform='scale(1);'">
+                        ×
+                    </button>
                 </div>
-            `;
-            document.getElementById(mapType[type]).innerHTML = fileInfo;
-            document.getElementById(fileNameMap[type]).textContent = asset.filename;
+            `).join('');
+        } else {
+            previewsGrid.innerHTML = '<div style="text-align: center; color: #999; padding: 24px;">No assets uploaded yet</div>';
         }
+    })
+    .catch(error => {
+        console.error('Error loading assets:', error);
+        const previewsGrid = document.getElementById('marketingPreviewsGrid');
+        if (previewsGrid) {
+            previewsGrid.innerHTML = '<div style="text-align: center; color: #e74c3c; padding: 24px;">Error loading assets</div>';
+        }
+    });
+}
+
+function previewMarketingAsset(filePath, assetType) {
+    const modal = document.getElementById('imagePreviewModal');
+    const img = document.getElementById('previewModalImage');
+    const title = document.getElementById('previewModalTitle');
+    
+    if (modal && img && title) {
+        title.textContent = assetType.replace('_', ' ').toUpperCase();
+        img.src = '../' + filePath;
+        window.currentPreviewPath = filePath;
+        modal.classList.add('active');
     }
 }
 
-function deleteMarketingAssetFromDB(assetId, assetType) {
+function deleteMarketingAsset(assetId) {
     if (!confirm('Delete this asset?')) return;
     
     const headers = getUserHeaders ? getUserHeaders() : {};
-    headers['Content-Type'] = 'application/json';
-    
-    fetch(`${API_BASE}/marketing-assets.php`, {
+    const fetchOptions = {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({
-            action: 'delete',
-            event_id: window.currentEventId,
-            asset_id: assetId
-        })
-    })
+        body: JSON.stringify({ action: 'delete', asset_id: assetId, event_id: window.currentEventId })
+    };
+    
+    fetch(`${API_BASE}/marketing-assets.php`, fetchOptions)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showNotification('Asset deleted', 'success');
+            showNotification('Asset deleted successfully', 'success');
             loadMarketingAssets();
+        } else {
+            showNotification('Error: ' + data.message, 'error');
         }
     })
-    .catch(error => console.error('Error:', error));
-}
-
-function handlePosterUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('posterFileName').textContent = file.name;
-    }
-}
-
-function handleBannerUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('bannerFileName').textContent = file.name;
-    }
-}
-
-function handleSocialUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('socialFileName').textContent = file.name;
-    }
+    .catch(error => {
+        console.error('Delete error:', error);
+        showNotification('Delete failed', 'error');
+    });
 }
 
 function renderGiveawaysTable(items) {
@@ -14179,24 +14086,22 @@ function renderGiveawaysTable(items) {
             <td class="px-6 py-4 text-center">
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                     <button onclick="editGiveaway(${item.giveaway_id})" 
-                            style="padding: 8px 14px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.2s;" 
-                            onmouseover="this.style.background='#1560A3'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(30, 115, 187, 0.3)'"
-                            onmouseout="this.style.background='#1E73BB'; this.style.transform='translateY(0)'; this.style.boxShadow=''"
+                            style="padding: 6px 10px; background: none; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
+                            onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e40af'"
+                            onmouseout="this.style.background='none'; this.style.borderColor='#3b82f6'"
                             title="Edit giveaway">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
-                        Edit
                     </button>
                     <button onclick="deleteGiveaway(${item.giveaway_id})" 
-                            style="padding: 8px 14px; background: #EF5350; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.2s;" 
-                            onmouseover="this.style.background='#E53935'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239, 83, 80, 0.3)'"
-                            onmouseout="this.style.background='#EF5350'; this.style.transform='translateY(0)'; this.style.boxShadow=''"
+                            style="padding: 6px 10px; background: none; border: 1px solid #ef4444; color: #ef4444; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
+                            onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'"
+                            onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'"
                             title="Delete giveaway">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
                         </svg>
-                        Delete
                     </button>
                 </div>
             </td>

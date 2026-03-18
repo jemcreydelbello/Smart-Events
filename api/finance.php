@@ -75,6 +75,17 @@ $create_finance_table = "CREATE TABLE IF NOT EXISTS event_expenses (
 
 $conn->query($create_finance_table);
 
+// Ensure budget column exists in events table
+$check_budget_column = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME='events' AND TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='budget'";
+$result = $conn->query($check_budget_column);
+
+if (!$result || $result->num_rows === 0) {
+    // Budget column doesn't exist, add it
+    $add_budget = "ALTER TABLE events ADD COLUMN budget DECIMAL(12, 2) DEFAULT 0.00";
+    @$conn->query($add_budget);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
     $event_id = intval($_GET['event_id'] ?? 0);

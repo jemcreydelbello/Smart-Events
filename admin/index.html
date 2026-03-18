@@ -678,6 +678,7 @@
   <script src="./js/catalogue-lookup.js?v=11"></script>
   <script src="./js/edit-modal-v2.js"></script>
   <script src="./js/event-layout-manager.js?v=1"></script>
+  <script src="./js/pdf-export-modal.js"></script>
   
   <!-- Define helper function for inline scripts -->
   <script>
@@ -1045,7 +1046,7 @@
                 <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('finance')" data-tab="finance">Finance</button>
                 <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('postmortem')" data-tab="postmortem">Postmortem</button>
               </div>
-              <button style="margin-left: auto; padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 15px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; white-space: nowrap;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
+              <button onclick="openPdfExportModal()" style="margin-left: auto; padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 15px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; white-space: nowrap;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
             </div>
           </div>
 
@@ -1968,111 +1969,109 @@
         </div>
 
         <div id="marketing" class="event-tab-content hidden space-y-6" style="display: none;">
-          <!-- Header Section -->
-          <div>
-            <h2 class="text-3xl font-bold text-gray-900 mb-2">Marketing Collateral</h2>
-            <p class="text-base text-gray-600">Manage your marketing assets, campaigns, and promotional materials.</p>
+          <!-- Header Section - Matching Tasks Section Style -->
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Marketing Collateral</h2>
+              <p class="text-sm text-gray-600 mt-1">Manage your marketing assets, campaigns, and promotional materials.</p>
+            </div>
           </div>
 
-          <!-- Marketing Assets Upload Section -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-6">Marketing Assets</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <!-- Poster Upload -->
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-                <div style="position: relative; z-index: 2;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75-3.54c-.3-.38-.77-.62-1.3-.62-.93 0-1.69.76-1.69 1.69 0 .53.24 1 .62 1.3l2.75 3.54 1.37-1.37z"/>
-                  </svg>
-                  <h4 class="font-bold text-lg mb-2">Poster Upload</h4>
-                  <p class="text-sm opacity-90">Promotional posters and displays</p>
-                  <label style="cursor: pointer; margin-top: 16px; display: block;">
-                    <input type="file" id="posterFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'poster')">
-                    <span style="display: inline-block; background: white; color: #667eea; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
-                  </label>
-                  <p id="posterFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
-                  <div id="posterPreview" style="margin-top: 12px;"></div>
+          <!-- Marketing Assets Upload Cards (3 Columns) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Poster Upload Card -->
+            <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border-radius: 12px; padding: 2px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="background: white; border-radius: 12px; padding: 28px; color: #1f2937; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 40px; margin-bottom: 16px; color: #1E73BB;">
+                  <i class="bi bi-image"></i>
                 </div>
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">Poster Upload</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Promotional posters and displays</p>
+                <button type="button" onclick="document.getElementById('posterFile').click()" style="background: #1E73BB; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='scale(1.05)';" onmouseout="this.style.transform='scale(1);'">Choose Files</button>
+                <input type="file" id="posterFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'poster')">
               </div>
+            </div>
 
-              <!-- Banner Upload -->
-              <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-                <div style="position: relative; z-index: 2;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-2-10h-8v2h8v-2z"/>
-                  </svg>
-                  <h4 class="font-bold text-lg mb-2">Banner Upload</h4>
-                  <p class="text-sm opacity-90">Website and event banners</p>
-                  <label style="cursor: pointer; margin-top: 16px; display: block;">
-                    <input type="file" id="bannerFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'banner')">
-                    <span style="display: inline-block; background: white; color: #f5576c; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
-                  </label>
-                  <p id="bannerFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
-                  <div id="bannerPreview" style="margin-top: 12px;"></div>
+            <!-- Banner Upload Card -->
+            <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border-radius: 12px; padding: 2px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="background: white; border-radius: 12px; padding: 28px; color: #1f2937; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 40px; margin-bottom: 16px; color: #1E73BB;">
+                  <i class="bi bi-window"></i>
                 </div>
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">Banner Upload</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Website and event banners</p>
+                <button type="button" onclick="document.getElementById('bannerFile').click()" style="background: #1E73BB; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='scale(1.05)';" onmouseout="this.style.transform='scale(1);'">Choose Files</button>
+                <input type="file" id="bannerFile" accept="image/*,.svg" style="display: none;" onchange="handleMarketingUpload(event, 'banner')">
               </div>
+            </div>
 
-              <!-- Social Pack Upload -->
-              <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; padding: 24px; color: white; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-                <div style="position: relative; z-index: 2;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 12px; opacity: 0.9;">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-12h2v8h-2zm0 10h2v2h-2z"/>
-                  </svg>
-                  <h4 class="font-bold text-lg mb-2">Social Pack Upload</h4>
-                  <p class="text-sm opacity-90">Social media assets bundle</p>
-                  <label style="cursor: pointer; margin-top: 16px; display: block;">
-                    <input type="file" id="socialFile" accept="image/*,.txt,.pdf,.zip" style="display: none;" onchange="handleMarketingUpload(event, 'social_pack')">
-                    <span style="display: inline-block; background: white; color: #00f2fe; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">Choose Files</span>
-                  </label>
-                  <p id="socialFileName" style="font-size: 12px; margin-top: 12px; opacity: 0.8;">No file chosen</p>
-                  <div id="socialPreview" style="margin-top: 12px;"></div>
+            <!-- Social Pack Upload Card -->
+            <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border-radius: 12px; padding: 2px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="background: white; border-radius: 12px; padding: 28px; color: #1f2937; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 40px; margin-bottom: 16px; display: flex; justify-content: center; align-items: center; color: #1E73BB;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 512 512" fill="#1E73BB"><path d="M108.56 342.78a60.34 60.34 0 1 0 60.56 60.44a60.63 60.63 0 0 0-60.56-60.44"/><path d="M48 186.67v86.55c52 0 101.94 15.39 138.67 52.11s52 86.56 52 138.67h86.66c0-151.56-125.66-277.33-277.33-277.33"/><path d="M48 48v86.56c185.25 0 329.22 144.08 329.22 329.44H464C464 234.66 277.67 48 48 48"/></svg>
                 </div>
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">Social Pack Upload</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Social media assets bundle</p>
+                <button type="button" onclick="document.getElementById('socialFile').click()" style="background: #1E73BB; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='scale(1.05)';" onmouseout="this.style.transform='scale(1);'">Choose Files</button>
+                <input type="file" id="socialFile" accept="image/*,.txt,.pdf,.zip" style="display: none;" onchange="handleMarketingUpload(event, 'social_pack')">
               </div>
             </div>
           </div>
 
-          <!-- Giveaway List Section -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div class="flex justify-between items-center mb-6">
-              <h3 class="text-xl font-bold text-gray-900">Giveaway List</h3>
-              <button onclick="openAddGiveawayModal()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
-                </svg>
-                Add Giveaway
-              </button>
+          <!-- Uploaded Assets Gallery -->
+          <div style="background: #f9fafb; border-radius: 12px; padding: 24px;">
+            <h3 class="text-lg font-bold text-gray-900 mb-6">Uploaded Assets</h3>
+            <div id="marketingPreviewsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; min-height: 60px;">
+              <div style="text-align: center; color: #999; padding: 24px;">No assets uploaded yet</div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                  <tr>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Name</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Location</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Bundle & Inclusion</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Price</th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wide">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="giveawaysTableBody" class="divide-y divide-gray-200">
-                  <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading giveaways...</td></tr>
-                </tbody>
-              </table>
+          </div>
+
+          <!-- Giveaway List Section with Gradient Container -->
+          <div style="border: 1px solid #d1d5db; border-radius: 12px; overflow: hidden;">
+            <div class="bg-white rounded-lg p-8" style="border-radius: 12px;">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-900 m-0">Giveaway List</h3>
+                <button onclick="openAddGiveawayModal()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+                  </svg>
+                  Add Giveaway
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <tr>
+                      <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Name</th>
+                      <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Location</th>
+                      <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Bundle & Inclusion</th>
+                      <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Price</th>
+                      <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="giveawaysTableBody" class="divide-y divide-gray-200">
+                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading giveaways...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Add Giveaway Modal -->
         <div id="addGiveawayModal" class="modal" onclick="if(event.target.id === 'addGiveawayModal') closeGiveawayModal();">
-          <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white;">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-2xl font-bold text-gray-900">Add Giveaway</h2>
-              <button type="button" onclick="closeGiveawayModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+          <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white; padding: 0;">
+            <!-- Header (Gradient) -->
+            <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+              <div>
+                <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Giveaway</h2>
+                <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Create a new giveaway for your event</p>
+              </div>
+              <button type="button" onclick="closeGiveawayModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: rgba(255,255,255,0.8); position: absolute; right: 20px; top: 20px;">×</button>
             </div>
 
-            <form id="addGiveawayForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
+            <form id="addGiveawayForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%; padding: 24px;">
               <div style="width: 100%;">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
                 <input type="text" id="giveawayName" placeholder="e.g., Door Prize Kit A"
@@ -2120,11 +2119,15 @@
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
                 <button type="button" onclick="closeGiveawayModal()"
-                        style="padding: 10px 28px; background: white; color: #666; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                        style="padding: 10px 28px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#e5e7eb'"
+                        onmouseout="this.style.background='#f3f4f6'">
                   Cancel
                 </button>
                 <button type="submit"
-                        style="padding: 10px 32px; background: #1E73BB; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                        style="padding: 10px 32px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;"
+                        onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
                   Create
                 </button>
               </div>
@@ -2134,14 +2137,20 @@
 
         <!-- Edit Giveaway Images Modal -->
         <div id="editGiveawayImagesModal" class="modal" onclick="if(event.target.id === 'editGiveawayImagesModal') closeEditGiveawayImagesModal();">
-          <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-2xl font-bold text-gray-900">Edit Giveaway Images</h2>
-              <button type="button" onclick="closeEditGiveawayImagesModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">×</button>
+          <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white; padding: 0;">
+            <!-- Header (Gradient) -->
+            <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
+              <div>
+                <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Edit Giveaway Images</h2>
+                <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Upload images for this giveaway</p>
+              </div>
+              <button type="button" onclick="closeEditGiveawayImagesModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: rgba(255,255,255,0.8); position: absolute; right: 20px; top: 20px;">×</button>
             </div>
 
-            <form id="editGiveawayImagesForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
-              <input type="hidden" id="editGiveawayId">
+            <!-- Scrollable Content -->
+            <div style="padding: 24px;">
+              <form id="editGiveawayImagesForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
+                <input type="hidden" id="editGiveawayId">
               
               <div style="width: 100%;">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Giveaway Name</label>
@@ -2190,15 +2199,20 @@
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
                 <button type="button" onclick="closeEditGiveawayImagesModal()"
-                        style="padding: 10px 28px; background: white; color: #666; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
+                        style="padding: 10px 28px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#e5e7eb'"
+                        onmouseout="this.style.background='#f3f4f6'">
                   Cancel
                 </button>
                 <button type="submit"
-                        style="padding: 10px 32px; background: #1E73BB; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
+                        style="padding: 10px 32px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;"
+                        onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
                   Save Images
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
 
@@ -3715,6 +3729,94 @@
     </div>
   </div>
 
+  <!-- PDF Export Modal -->
+  <div id="pdfExportModal" class="modal" onclick="if(event.target.id === 'pdfExportModal') closePdfExportModal();">
+    <div class="modal-content" style="max-width: 550px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
+      <!-- Blue Header Section -->
+      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0;">
+        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Export Event Report</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Select which tables to include in your PDF report.</p>
+      </div>
+
+      <!-- Form Content with padding -->
+      <div class="space-y-6" style="padding: 24px;">
+        <!-- Select All / Clear All Buttons -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button type="button" onclick="selectAllTables()" style="flex: 1; padding: 10px 12px; background: #e8f1f8; color: #1E73BB; border: 1px solid #b3d9f2; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#d4e6f1'" onmouseout="this.style.background='#e8f1f8'">Select All</button>
+          <button type="button" onclick="clearAllTables()" style="flex: 1; padding: 10px 12px; background: #f5f5f5; color: #666; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#efefef'" onmouseout="this.style.background='#f5f5f5'">Clear All</button>
+        </div>
+
+        <!-- Table Selection -->
+        <div style="padding: 16px; background: #f9f9f9; border-radius: 8px; border: 1px solid #e5e5e5;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
+            <input type="checkbox" id="selectAllTablesCheckbox" onchange="handleSelectAllToggle()" style="width: 18px; height: 18px; cursor: pointer; accent-color: #1E73BB;">
+            <span style="font-size: 14px; font-weight: 600; color: #333; text-transform: uppercase; letter-spacing: 0.5px;">Select All Tables</span>
+          </label>
+          <div style="border-top: 1px solid #ddd; padding-top: 12px;">
+            <!-- Attendees -->
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+              <input type="checkbox" value="attendees" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
+              <span style="font-size: 13px; color: #555;">
+                <strong>Attendees</strong>
+                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Names, emails, check-in times</span>
+              </span>
+            </label>
+
+            <!-- Tasks -->
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+              <input type="checkbox" value="tasks" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
+              <span style="font-size: 13px; color: #555;">
+                <strong>Tasks</strong>
+                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">To-do items, assignments, status</span>
+              </span>
+            </label>
+
+            <!-- Program -->
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+              <input type="checkbox" value="program" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
+              <span style="font-size: 13px; color: #555;">
+                <strong>Program</strong>
+                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Sessions, speakers, schedule</span>
+              </span>
+            </label>
+
+            <!-- Logistics -->
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+              <input type="checkbox" value="logistics" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
+              <span style="font-size: 13px; color: #555;">
+                <strong>Logistics</strong>
+                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Equipment, supplies, inventory</span>
+              </span>
+            </label>
+
+            <!-- Finance -->
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" value="finance" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
+              <span style="font-size: 13px; color: #555;">
+                <strong>Finance</strong>
+                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Expenses, budget, cost tracking</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Info box -->
+        <div style="padding: 12px; background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f8 100%); border-radius: 8px; border-left: 4px solid #1968c4; box-shadow: 0 2px 4px rgba(25, 104, 196, 0.1);">
+          <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0; margin-top: 2px;"><path fill="#1968c4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-2h2v2m0-4h-2V7h2v6z"/></svg>
+            <p style="color: #1968c4; font-size: 12px; font-weight: 500; margin: 0; line-height: 1.4;">Select at least one table to include in your PDF report. The report will contain only the data you select.</p>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+          <button type="button" id="exportPdfBtn" onclick="exportEventSheetPdf()" style="padding: 12px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" onmouseover="this.style.background='#155a9b'" onmouseout="this.style.background='#1E73BB'">Export PDF</button>
+          <button type="button" onclick="closePdfExportModal()" style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Task Modal -->
   <div id="addTaskModal" class="modal" onclick="if(event.target.id === 'addTaskModal') closeAddTaskModal();">
     <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background-color: white;">
@@ -3999,7 +4101,7 @@
       
       <!-- Scrollable Content -->
       <div style="padding: 24px;">
-        <form id="editEventDetailsForm" style="space-y-6;">
+        <form id="editEventDetailsForm">
           <!-- Hidden fields to store event info -->
           <input type="hidden" id="editDetailsEventId" value="">
           
