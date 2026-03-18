@@ -60,9 +60,8 @@
 
 <!-- Sidebar with Red Theme -->
 <aside class="w-[260px] bg-white border-r border-slate-200 pr-5 pl-0 py-6 flex flex-col admin-sidebar">
-  <div class="flex items-center gap-2 mb-6 pl-5">
-    <img src="../intellismart.jpg" alt="IntelliSmart" style="height: 35px; width: auto;">
-    <img src="../assets/smart1.png" alt="Smart Events" style="margin-left: -10px; height: 35px; width: 180px;">
+  <div class="flex items-center gap-2 mb-6 pl-5 justify-center">
+    <img src="../assets/smart1.png" alt="Smart Events" style="height: 35px; width: auto;">
   </div>
   
   <div style="margin-top: 40px; margin-left: 5px;" id="adminNav" class="flex flex-col gap-8"> 

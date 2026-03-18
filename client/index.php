@@ -295,38 +295,37 @@
                     </div>
                 </div>
                 
-                <!-- Right Column: Thumbnail Grid & Event Details - Full width on mobile -->
-                <div class="w-full lg:w-64 flex flex-col p-2 lg:p-6 overflow-y-auto border-t lg:border-t-0 lg:border-l border-gray-200 flex-1 lg:flex-none">
-                    <!-- Thumbnails Section -->
-                    <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-4 flex-shrink-0">Event Gallery</p>
-                    <div id="galleryThumbnails" class="grid grid-cols-3 gap-1 lg:gap-2 mb-4 lg:mb-6 auto-rows-max">
-                        <!-- Thumbnails will be populated here -->
+                <!-- Right Column: Event Gallery & Asset Galleries - Full width on mobile -->
+                <div class="w-full lg:w-80 flex flex-col p-2 lg:p-6 overflow-y-auto border-t lg:border-t-0 lg:border-l border-gray-200 flex-1 lg:flex-none space-y-6">
+                    <!-- Event Gallery Section -->
+                    <div class="flex-shrink-0">
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-4">Event Gallery</p>
+                        <div id="galleryThumbnails" class="grid grid-cols-3 gap-1 lg:gap-2 auto-rows-max">
+                            <!-- Thumbnails will be populated here -->
+                        </div>
                     </div>
                     
-                    <!-- Event Details Section -->
-                    <div class="border-t border-gray-200 pt-3 sm:pt-4 lg:pt-6 flex-shrink-0">
-                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-3">Event Details</p>
-                        
-                        <!-- Date -->
-                        <div class="mb-3">
-                            <p class="text-xs text-gray-500 flex items-center gap-2">
-                                <i class="bi bi-calendar-event text-gray-600"></i>
-                                <span id="galleryEventDate" class="text-xs sm:text-sm text-gray-700">-</span>
-                            </p>
+                    <!-- Poster Gallery Section -->
+                    <div class="border-t border-gray-200 pt-4 flex-shrink-0">
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-3">Poster Gallery</p>
+                        <div id="posterGallery" class="grid grid-cols-3 gap-1 lg:gap-2 auto-rows-max">
+                            <!-- Poster assets will be populated here -->
                         </div>
-                        
-                        <!-- Location -->
-                        <div class="mb-3">
-                            <p class="text-xs text-gray-500 flex items-center gap-2">
-                                <i class="bi bi-geo-alt text-gray-600"></i>
-                                <span id="galleryEventLocation" class="text-xs sm:text-sm text-gray-700">-</span>
-                            </p>
+                    </div>
+                    
+                    <!-- Banner Gallery Section -->
+                    <div class="border-t border-gray-200 pt-4 flex-shrink-0">
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-3">Banner Gallery</p>
+                        <div id="bannerGallery" class="grid grid-cols-3 gap-1 lg:gap-2 auto-rows-max">
+                            <!-- Banner assets will be populated here -->
                         </div>
-                        
-                        <!-- Description -->
-                        <div>
-                            <p class="text-xs text-gray-500 mb-1">Description</p>
-                            <p id="galleryEventDescription" class="text-xs sm:text-sm text-gray-700 line-clamp-4">-</p>
+                    </div>
+                    
+                    <!-- Social Pack Gallery Section -->
+                    <div class="border-t border-gray-200 pt-4 flex-shrink-0">
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 lg:mb-3">Social Pack Gallery</p>
+                        <div id="socialPackGallery" class="grid grid-cols-3 gap-1 lg:gap-2 auto-rows-max">
+                            <!-- Social pack assets will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -1494,22 +1493,96 @@ function populateGalleryEventDetails() {
     const currentEvent = allCatalogueEvents[currentCatalogueEventIndex];
     if (!currentEvent) return;
     
-    // Format and display event date (with time if available)
-    const eventDate = formatDate(currentEvent.event_date);
-    let dateDisplay = eventDate;
+    // Load marketing assets for this event
+    const eventId = currentEvent.id || currentEvent.catalogue_id;
+    loadMarketingAssetsForGallery(eventId);
+}
+
+function loadMarketingAssetsForGallery(eventId) {
+    // Fetch marketing assets for this event
+    fetch(`../api/marketing-assets.php?action=list&event_id=${eventId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            // Organize assets by type
+            const assetsByType = {
+                poster: [],
+                banner: [],
+                social_pack: []
+            };
+            
+            // Categorize assets
+            data.data.forEach(asset => {
+                const type = asset.asset_type || 'poster';
+                if (assetsByType.hasOwnProperty(type)) {
+                    assetsByType[type].push(asset);
+                }
+            });
+            
+            // Populate poster gallery
+            const posterGallery = document.getElementById('posterGallery');
+            if (posterGallery) {
+                posterGallery.innerHTML = assetsByType.poster.length > 0 
+                    ? assetsByType.poster.map(asset => createClientAssetElement(asset)).join('')
+                    : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No posters available</p>';
+            }
+            
+            // Populate banner gallery
+            const bannerGallery = document.getElementById('bannerGallery');
+            if (bannerGallery) {
+                bannerGallery.innerHTML = assetsByType.banner.length > 0 
+                    ? assetsByType.banner.map(asset => createClientAssetElement(asset)).join('')
+                    : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No banners available</p>';
+            }
+            
+            // Populate social pack gallery
+            const socialPackGallery = document.getElementById('socialPackGallery');
+            if (socialPackGallery) {
+                socialPackGallery.innerHTML = assetsByType.social_pack.length > 0 
+                    ? assetsByType.social_pack.map(asset => createClientAssetElement(asset)).join('')
+                    : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No social packs available</p>';
+            }
+        }
+    })
+    .catch(error => console.error('Error loading marketing assets:', error));
+}
+
+function createClientAssetElement(asset) {
+    // Check if it's an image or other file type
+    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(asset.file_path);
     
-    // Only add time if start_time is available
-    if (currentEvent.start_time && currentEvent.end_time) {
-        const eventTime = `${formatTime(currentEvent.start_time)} to ${formatTime(currentEvent.end_time)}`;
-        dateDisplay = `${eventDate} · ${eventTime}`;
+    if (isImage) {
+        return `
+            <div style="position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #f3f4f6; cursor: pointer;" 
+                 onclick="previewAsset('../${asset.file_path}')">
+                <img src="../${asset.file_path}" alt="${asset.asset_type}" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+        `;
+    } else {
+        // For non-image files, show a file icon with name
+        const fileName = asset.file_path.split('/').pop();
+        const fileExt = fileName.split('.').pop().toUpperCase();
+        return `
+            <div style="position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 8px; text-align: center;" 
+                 onclick="downloadAsset('../${asset.file_path}', '${fileName}')">
+                <i class="bi bi-file-earmark" style="font-size: 24px; color: #6366f1; margin-bottom: 4px;"></i>
+                <p style="font-size: 10px; color: #4f46e5; font-weight: 500; line-height: 1.2;">${fileExt}</p>
+            </div>
+        `;
     }
-    document.getElementById('galleryEventDate').textContent = dateDisplay;
-    
-    // Display event location
-    document.getElementById('galleryEventLocation').textContent = currentEvent.location || '-';
-    
-    // Display event description
-    document.getElementById('galleryEventDescription').textContent = currentEvent.description || 'No description available';
+}
+
+function previewAsset(assetPath) {
+    // Open asset in new window or modal
+    window.open(assetPath, '_blank');
+}
+
+function downloadAsset(assetPath, fileName) {
+    // Download asset
+    const link = document.createElement('a');
+    link.href = assetPath;
+    link.download = fileName;
+    link.click();
 }
 
 function selectGalleryImage(index) {
