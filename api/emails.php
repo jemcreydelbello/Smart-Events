@@ -88,6 +88,48 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 try {
     switch ($action) {
+        case 'list_all':
+            // Get ALL email blasts for calendar display
+            $userInfo = [
+                'role' => $_SERVER['HTTP_X_USER_ROLE'] ?? 'GUEST',
+                'coordinator_id' => intval($_SERVER['HTTP_X_COORDINATOR_ID'] ?? 0)
+            ];
+            
+            // Query to get emails - filter by coordinator if user is a coordinator
+            if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
+                $query = "SELECT eb.email_id, eb.event_id, eb.email_blast_name, eb.audience, 
+                                 eb.details, eb.status, COALESCE(DATE(eb.scheduled_date), DATE(e.start_event)) as event_date, eb.created_at, 
+                                 'email' as item_type, e.event_name
+                          FROM email_blasts eb
+                          JOIN events e ON eb.event_id = e.event_id
+                          WHERE e.coordinator_id = " . intval($userInfo['coordinator_id']) . "
+                          ORDER BY COALESCE(eb.scheduled_date, e.start_event) ASC";
+            } else {
+                // For admins, show all emails
+                $query = "SELECT eb.email_id, eb.event_id, eb.email_blast_name, eb.audience, 
+                                 eb.details, eb.status, COALESCE(DATE(eb.scheduled_date), DATE(e.start_event)) as event_date, eb.created_at, 
+                                 'email' as item_type, e.event_name
+                          FROM email_blasts eb
+                          JOIN events e ON eb.event_id = e.event_id
+                          ORDER BY COALESCE(eb.scheduled_date, e.start_event) ASC";
+            }
+            
+            $result = $conn->query($query);
+            if (!$result) {
+                error_log("Calendar emails query error: " . $conn->error);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+                exit;
+            }
+            
+            $emails = [];
+            while ($row = $result->fetch_assoc()) {
+                $emails[] = $row;
+            }
+            
+            echo json_encode(['success' => true, 'data' => $emails]);
+            break;
+            
         case 'list':
             // Get all email blasts for an event
             $event_id = intval($_GET['event_id'] ?? 0);

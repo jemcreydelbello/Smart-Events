@@ -192,7 +192,7 @@ function ensureAdminTabsVisible() {
             if (tabBtn) {
                 tabBtn.style.display = 'none';
                 tabBtn.classList.add('hidden');
-                console.log(`[ENSURE-TABS] ✓ Hiding ${tabName} tab`);
+                console.log(`[ENSURE-TABS]  Hiding ${tabName} tab`);
             }
         });
     }
@@ -1504,6 +1504,14 @@ function navigateToPage(page) {
         targetPage.style.display = 'block';
         
         console.log('✓ Page activated:', page);
+        
+        // Restore deadline details panel visibility when calendar is shown
+        if (page === 'calendar') {
+            const deadlinePanel = document.getElementById('deadlineDetails');
+            if (deadlinePanel) {
+                deadlinePanel.style.display = 'block';
+            }
+        }
         
         // Load content for the page
         if (page === 'dashboard') loadDashboard();
@@ -6265,12 +6273,44 @@ let calendarCurrentDate = new Date();
 let calendarCurrentMonth = new Date().getMonth();
 let calendarCurrentYear = new Date().getFullYear();
 let allEventsForCalendar = [];
+let allTasksForCalendar = [];
+let allEmailsForCalendar = [];
+let allLogisticsForCalendar = [];
 let calendarSelectedDate = new Date();
 let calendarCurrentView = 'month'; // 'month' or 'list'
 
+// Helper function to generate status badge SVG based on task status
+function getStatusBadgeSVG(status) {
+    const statusNorm = (status || 'Pending').toLowerCase();
+    
+    if (statusNorm === 'pending') {
+        // Broken/dashed circle for pending (gray color)
+        return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-right: 4px;">
+            <circle cx="12" cy="12" r="10" stroke="#4b5563" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+        </svg>`;
+    } else if (statusNorm === 'in progress') {
+        // Half-filled circle for in progress (right half filled)
+        return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-right: 4px;">
+            <circle cx="12" cy="12" r="10" stroke="#60a5fa" stroke-width="1.5" fill="none"/>
+            <path d="M 12 2 A 10 10 0 0 1 12 22 L 12 12 Z" fill="#60a5fa"/>
+        </svg>`;
+    } else if (statusNorm === 'done') {
+        // Filled green circle with white checkmark for done
+        return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-right: 4px;">
+            <circle cx="12" cy="12" r="11" fill="#10b981" stroke="#059669" stroke-width="1"/>
+            <path d="M 7 12.5 L 10.5 16 L 17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>`;
+    }
+    
+    // Default: pending
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-right: 4px;">
+        <circle cx="12" cy="12" r="10" stroke="#4b5563" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+    </svg>`;
+}
+
 function loadCalendar() {
     console.log('📅 Loading calendar for', calendarCurrentMonth + 1, '/', calendarCurrentYear);
-    console.log('🔗 API URL:', `${API_BASE}/events.php?action=list_all`);
+    console.log('🔗 API URLs:', `${API_BASE}/events.php?action=list_all`, `${API_BASE}/events.php?action=list_all_tasks`);
     
     // Clear any eventId or id parameters from URL so they don't persist on reload
     const url = new URL(window.location);
@@ -6278,49 +6318,125 @@ function loadCalendar() {
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url);
     
-    // Fetch all events from API
-    fetch(`${API_BASE}/events.php?action=list_all`, {
-        headers: getUserHeaders()
-    })
-    .then(response => {
-        console.log('📡 API Response status:', response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log('📥 API Response data:', data);
-        if (data.success && data.data) {
-            allEventsForCalendar = data.data || [];
+    // Fetch both events and tasks in parallel
+    Promise.all([
+        // Fetch all events from API
+        fetch(`${API_BASE}/events.php?action=list_all`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            console.log('📡 Events API Response status:', response.status);
+            return response.json();
+        }),
+        
+        // Fetch all tasks from dedicated tasks-calendar API
+        fetch(`${API_BASE}/tasks-calendar.php?action=list_all`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            console.log('📡 Tasks API Response status:', response.status);
+            return response.json();
+        })
+        .catch(error => {
+            console.warn('⚠️ Tasks API not available, continuing with events only:', error);
+            return { success: true, data: [] };
+        }),
+        
+        // Fetch all emails from email-calendar API
+        fetch(`${API_BASE}/email-calendar.php?action=list_all`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            console.log('📡 Email-Calendar API Response status:', response.status);
+            return response.json();
+        })
+        .catch(error => {
+            console.warn('⚠️ Email-Calendar API not available, continuing without emails:', error);
+            return { success: true, data: [] };
+        }),
+        
+        // Fetch all logistics from logistics API
+        fetch(`${API_BASE}/logistics.php?action=list_all`, {
+            headers: getUserHeaders()
+        })
+        .then(response => {
+            console.log('📡 Logistics API Response status:', response.status);
+            return response.json();
+        })
+        .catch(error => {
+            console.warn('⚠️ Logistics API not available, continuing without logistics:', error);
+            return { success: true, data: [] };
+        })
+    ])
+    .then(([eventsData, tasksData, emailsData, logisticsData]) => {
+        console.log('📥 Events API Response data:', eventsData);
+        console.log('📥 Tasks API Response data:', tasksData);
+        console.log('📥 Emails API Response data:', emailsData);
+        
+        if (eventsData.success && eventsData.data) {
+            allEventsForCalendar = eventsData.data || [];
             window.allEventsForCalendar = allEventsForCalendar;  // Store on window for modal access
             console.log('✅ Loaded', allEventsForCalendar.length, 'events for calendar');
             console.log('📋 Events array:', allEventsForCalendar);
-            if (allEventsForCalendar.length > 0) {
-                console.log('🔍 First event:', allEventsForCalendar[0]);
-                console.log('📅 First event date:', allEventsForCalendar[0].event_date);
-            }
-            renderCalendarMonth();
-            
-            // Automatically show today's events in Deadline Details
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const todayEvents = allEventsForCalendar.filter(event => event.event_date === todayStr);
-            
-            if (todayEvents.length > 0) {
-                console.log(`🎯 Found ${todayEvents.length} event(s) for today (${todayStr})`);
-                updateDeadlineDetails(todayEvents);
-            } else {
-                console.log(`📅 No events found for today (${todayStr})`);
-                updateDeadlineDetails([]);
-            }
         } else {
-            console.warn('❌ Failed to load calendar events:', data.message);
+            console.warn('❌ Failed to load calendar events:', eventsData.message);
             allEventsForCalendar = [];
-            renderCalendarMonth();
+        }
+        
+        if (tasksData.success && tasksData.data) {
+            allTasksForCalendar = tasksData.data || [];
+            window.allTasksForCalendar = allTasksForCalendar;  // Store on window for modal access
+            console.log('✅ Loaded', allTasksForCalendar.length, 'tasks for calendar');
+            console.log('📋 Tasks array:', allTasksForCalendar);
+        } else {
+            console.warn('⚠️ No tasks loaded:', tasksData.message);
+            allTasksForCalendar = [];
+        }
+        
+        if (emailsData.success && emailsData.data) {
+            allEmailsForCalendar = emailsData.data || [];
+            window.allEmailsForCalendar = allEmailsForCalendar;  // Store on window for modal access
+            console.log('✅ Loaded', allEmailsForCalendar.length, 'emails for calendar');
+            console.log('📧 Emails array:', allEmailsForCalendar);
+        } else {
+            console.warn('⚠️ No emails loaded:', emailsData.message);
+            allEmailsForCalendar = [];
+        }
+        
+        if (logisticsData.success && logisticsData.data) {
+            allLogisticsForCalendar = logisticsData.data || [];
+            window.allLogisticsForCalendar = allLogisticsForCalendar;  // Store on window for modal access
+            console.log('✅ Loaded', allLogisticsForCalendar.length, 'logistics for calendar');
+            console.log('📦 Logistics array:', allLogisticsForCalendar);
+        } else {
+            console.warn('⚠️ No logistics loaded:', logisticsData.message);
+            allLogisticsForCalendar = [];
+        }
+        
+        renderCalendarMonth();
+        
+        // Automatically show today's events, tasks, emails, and logistics in Deadline Details
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayEvents = allEventsForCalendar.filter(event => event.event_date === todayStr);
+        const todayTasks = allTasksForCalendar.filter(task => task.event_date === todayStr);
+        const todayEmails = allEmailsForCalendar.filter(email => email.event_date === todayStr);
+        const todayLogistics = allLogisticsForCalendar.filter(log => log.event_date === todayStr);
+        const todayItems = [...todayEvents, ...todayTasks, ...todayEmails, ...todayLogistics];
+        
+        if (todayItems.length > 0) {
+            console.log(`🎯 Found ${todayItems.length} item(s) for today (${todayStr})`);
+            updateDeadlineDetails(todayItems);
+        } else {
+            console.log(`📅 No items found for today (${todayStr})`);
             updateDeadlineDetails([]);
         }
     })
     .catch(error => {
         console.error('❌ Error loading calendar:', error);
         allEventsForCalendar = [];
+        allTasksForCalendar = [];
+        allEmailsForCalendar = [];
         renderCalendarMonth();
         updateDeadlineDetails([]);
     });
@@ -6426,40 +6542,123 @@ function createCalendarDayElement(day, dateStr, monthType) {
     dayNum.textContent = day;
     dayEl.appendChild(dayNum);
     
-    // Get events for this day
-    const dayEvents = getEventsForDate(dateStr);
-    console.log(`📅 Date ${dateStr}: Found ${dayEvents.length} events`);
+    // Get events, tasks, and emails for this day
+    const dayItems = getEventsForDate(dateStr);
+    console.log(`📅 Date ${dateStr}: Found ${dayItems.length} items (events, tasks & emails)`);
     
-    // Add event display
-    if (dayEvents.length > 0) {
+    // Separate events, tasks, and emails
+    const dayEvents = dayItems.filter(item => item.event_name && !item.task_id && !item.email_id);
+    const dayTasks = dayItems.filter(item => item.task_id);
+    const dayEmails = dayItems.filter(item => item.email_id);
+    
+    // Add event/task/email display
+    if (dayItems.length > 0) {
         const indicatorContainer = document.createElement('div');
         indicatorContainer.style.cssText = 'display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1;';
         
-        dayEvents.slice(0, 2).forEach((event, idx) => {
-            const eventItem = document.createElement('div');
-            eventItem.style.cssText = `
-                font-size: 10px;
-                padding: 2px 4px;
-                background: #e3f2fd;
-                color: #1976d2;
-                border-radius: 3px;
-                border-left: 2px solid #1976d2;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                font-weight: 600;
-            `;
-            const eventName = event.event_name || event.event_title || 'Untitled Event';
-            console.log(`  ├─ Event ${idx + 1}: "${eventName}"`);
-            eventItem.textContent = eventName.substring(0, 18);
-            eventItem.title = eventName;
-            indicatorContainer.appendChild(eventItem);
+        dayItems.slice(0, 2).forEach((item, idx) => {
+            const itemElement = document.createElement('div');
+            
+            // Determine if it's a task, email, logistics, or event and apply appropriate styling
+            const isTask = item.task_id;
+            const isEmail = item.email_id;
+            const isLogistics = item.logistics_id;
+            const itemName = isTask ? item.task_name : (isEmail ? item.email_blast_name : (isLogistics ? item.item : (item.event_name || item.event_title || 'Untitled Event')));
+            
+            if (isTask || isEmail || isLogistics) {
+                // Task/Email/Logistics styling - same appearance with status badge and word wrapping
+                // Check if item is overdue and needs red highlighting
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const itemDate = new Date(item.event_date);
+                itemDate.setHours(0, 0, 0, 0);
+                const isOverdue = itemDate < today;
+                
+                // Determine if should show as red (overdue + specific status conditions)
+                let isRedAlert = false;
+                if (isEmail && isOverdue && item.status === 'Draft') {
+                    isRedAlert = true;
+                } else if (isTask && isOverdue && (item.status === 'Pending' || item.status === 'In Progress')) {
+                    isRedAlert = true;
+                }
+                
+                const bgColor = isRedAlert ? '#fee2e2' : '#f3f4f6';
+                const textColor = isRedAlert ? '#991b1b' : '#6b7280';
+                const borderColor = isRedAlert ? '#dc2626' : '#d1d5db';
+                
+                itemElement.style.cssText = `
+                    font-size: 10px;
+                    padding: 2px 4px;
+                    background: ${bgColor};
+                    color: ${textColor};
+                    border-radius: 3px;
+                    border-left: 2px solid ${borderColor};
+                    overflow: hidden;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 2px;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                    max-height: 30px;
+                    line-height: 1.2;
+                `;
+                console.log(`  ├─ ${isTask ? 'Task' : (isEmail ? 'Email' : 'Logistics')} ${idx + 1}: "${itemName}"`);
+                // Create a small SVG badge for the status
+                const svgBadge = document.createElement('span');
+                if (isTask) {
+                    svgBadge.innerHTML = '<i class="bi bi-check2-square"></i>';
+                } else if (isEmail) {
+                    // For email, use mail icon
+                    svgBadge.innerHTML = '<i class="bi bi-envelope"></i>';
+                } else if (isLogistics) {
+                    // For logistics, use box icon
+                    svgBadge.innerHTML = '<i class="bi bi-box"></i>';
+                }
+                svgBadge.style.display = 'flex';
+                svgBadge.style.alignItems = 'center';
+                svgBadge.style.flexShrink = 0;
+                svgBadge.style.marginTop = '1px';
+                // Set SVG size to fit calendar cell
+                const svg = svgBadge.querySelector('svg');
+                if (svg) {
+                    svg.setAttribute('width', '12');
+                    svg.setAttribute('height', '12');
+                }
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = escapeHtml(itemName.substring(0, 18));
+                textSpan.style.wordWrap = 'break-word';
+                textSpan.style.overflowWrap = 'break-word';
+                textSpan.style.wordBreak = 'break-word';
+                
+                itemElement.appendChild(svgBadge);
+                itemElement.appendChild(textSpan);
+            } else {
+                itemElement.style.cssText = `
+                    font-size: 10px;
+                    padding: 2px 4px;
+                    background: #e3f2fd;
+                    color: #1976d2;
+                    border-radius: 3px;
+                    border-left: 2px solid #1976d2;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-weight: 600;
+                `;
+                console.log(`  ├─ Event ${idx + 1}: "${itemName}"`);
+                itemElement.textContent = itemName.substring(0, 18);
+            }
+            
+            itemElement.title = itemName;
+            indicatorContainer.appendChild(itemElement);
         });
         
-        if (dayEvents.length > 2) {
+        if (dayItems.length > 2) {
             const more = document.createElement('div');
             more.style.cssText = 'font-size: 9px; color: #666; font-weight: 600; padding: 0 4px;';
-            more.textContent = `+${dayEvents.length - 2} more`;
+            more.textContent = `+${dayItems.length - 2} more`;
             indicatorContainer.appendChild(more);
         }
         
@@ -6470,7 +6669,7 @@ function createCalendarDayElement(day, dateStr, monthType) {
     if (monthType === 'current-month') {
         dayEl.addEventListener('click', () => {
             calendarSelectedDate = cellDate;
-            updateDeadlineDetails(dayEvents);
+            updateDeadlineDetails(dayItems);
             
             // Update selected styling
             document.querySelectorAll('[data-date]').forEach(el => {
@@ -6517,10 +6716,57 @@ function getEventsForDate(dateStr) {
         return match;
     });
     
-    return events;
+    // Also include tasks for this date
+    const tasks = allTasksForCalendar.filter(task => {
+        if (!task.event_date) {
+            return false;
+        }
+        const taskDate = task.event_date.split(' ')[0];
+        const match = taskDate === dateStr;
+        
+        if (match) {
+            console.log(`📅 ${dateStr}: Found task "${task.task_name}"`, task);
+        }
+        
+        return match;
+    });
+    
+    // Also include emails for this date
+    const emails = allEmailsForCalendar.filter(email => {
+        if (!email.event_date) {
+            return false;
+        }
+        const emailDate = email.event_date.split(' ')[0];
+        const match = emailDate === dateStr;
+        
+        if (match) {
+            console.log(`📅 ${dateStr}: Found email "${email.email_blast_name}"`, email);
+        }
+        
+        return match;
+    });
+    
+    // Also include logistics for this date
+    const logistics = allLogisticsForCalendar.filter(log => {
+        if (!log.event_date) {
+            return false;
+        }
+        const logDate = log.event_date.split(' ')[0];
+        const match = logDate === dateStr;
+        
+        if (match) {
+            console.log(`📅 ${dateStr}: Found logistics "${log.item}"`, log);
+        }
+        
+        return match;
+    });
+    
+    // Combine and return events, tasks, emails, and logistics
+    return [...events, ...tasks, ...emails, ...logistics];
 }
 
 let calendarListWeekOffset = 0; // Track which week we're viewing in list mode
+let calendarListHideEmptyDays = false; // Track whether to hide empty days
 
 function getWeekDates(year, month, weekOffset = 0) {
     // Get the first day of the current month view
@@ -6551,8 +6797,9 @@ function renderCalendarList() {
     const listContainer = document.getElementById('calendarEventsList');
     listContainer.innerHTML = '';
     
-    if (allEventsForCalendar.length === 0) {
-        listContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-8">No events found</p>';
+    // Check if there are any items (events, tasks, or emails)
+    if (allEventsForCalendar.length === 0 && allTasksForCalendar.length === 0 && allEmailsForCalendar.length === 0) {
+        listContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-8">No events, tasks, or emails found</p>';
         return;
     }
     
@@ -6579,19 +6826,89 @@ function renderCalendarList() {
     }
     document.getElementById('calendarDateRange').textContent = dateRangeText;
     
-    // Group events by date for this week
-    const eventsByDate = {};
+    // Add toggle button for hiding empty days
+    const toggleBtn = document.createElement('button');
+    toggleBtn.style.cssText = `
+        padding: 8px 16px;
+        background: ${calendarListHideEmptyDays ? '#3b82f6' : '#e5e7eb'};
+        color: ${calendarListHideEmptyDays ? 'white' : '#374151'};
+        border: 1px solid ${calendarListHideEmptyDays ? '#3b82f6' : '#d1d5db'};
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    toggleBtn.textContent = calendarListHideEmptyDays ? 'Show all days' : 'Hide empty days';
+    toggleBtn.addEventListener('click', () => {
+        calendarListHideEmptyDays = !calendarListHideEmptyDays;
+        renderCalendarList();
+    });
+    
+    // Create sticky wrapper for button positioned on the right
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+        position: sticky;
+        top: 0;
+        right: 0;
+        display: flex;
+        justify-content: flex-end;
+        padding: 12px 0;
+        margin-bottom: 12px;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        z-index: 10;
+    `;
+    wrapper.appendChild(toggleBtn);
+    listContainer.appendChild(wrapper);
+    
+    // Group events, tasks, emails, and logistics by date for this week
+    const itemsByDate = {};
+    
+    // Add events
     allEventsForCalendar.forEach(event => {
         const date = event.event_date;
-        if (!eventsByDate[date]) {
-            eventsByDate[date] = [];
+        if (!itemsByDate[date]) {
+            itemsByDate[date] = [];
         }
-        eventsByDate[date].push(event);
+        itemsByDate[date].push(event);
+    });
+    
+    // Add tasks
+    allTasksForCalendar.forEach(task => {
+        const date = task.event_date;
+        if (!itemsByDate[date]) {
+            itemsByDate[date] = [];
+        }
+        itemsByDate[date].push(task);
+    });
+    
+    // Add emails
+    allEmailsForCalendar.forEach(email => {
+        const date = email.event_date;
+        if (!itemsByDate[date]) {
+            itemsByDate[date] = [];
+        }
+        itemsByDate[date].push(email);
+    });
+    
+    // Add logistics
+    allLogisticsForCalendar.forEach(log => {
+        const date = log.event_date;
+        if (!itemsByDate[date]) {
+            itemsByDate[date] = [];
+        }
+        itemsByDate[date].push(log);
     });
     
     // For each day of the week, create entries for all days
     weekDates.forEach(({ date: dateObj, dateStr }) => {
-        const events = eventsByDate[dateStr] || [];
+        const items = itemsByDate[dateStr] || [];
+        
+        // Skip empty days if toggle is on
+        if (calendarListHideEmptyDays && items.length === 0) {
+            return;
+        }
         
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
         const monthDay = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -6612,8 +6929,8 @@ function renderCalendarList() {
         dayHeaderEl.innerHTML = `${dayName} | ${monthDay}`;
         listContainer.appendChild(dayHeaderEl);
         
-        if (events.length === 0) {
-            // Show "No events" message for days with no events
+        if (items.length === 0) {
+            // Show "No items" message for days with no events or tasks
             const noEventEl = document.createElement('div');
             noEventEl.style.cssText = `
                 padding: 12px 16px;
@@ -6625,18 +6942,38 @@ function renderCalendarList() {
                 font-size: 13px;
                 text-align: center;
             `;
-            noEventEl.innerHTML = 'No events on this day';
+            noEventEl.innerHTML = 'No events, tasks, or emails on this day';
             listContainer.appendChild(noEventEl);
         } else {
-            // Sort events by start time
-            events.sort((a, b) => {
-                const timeA = a.start_time || '23:59';
-                const timeB = b.start_time || '23:59';
-                return timeA.localeCompare(timeB);
+            // Sort items: events first by start time, then tasks, then emails
+            items.sort((a, b) => {
+                // Events come first
+                const aIsEvent = a.event_name && !a.task_id && !a.email_id;
+                const bIsEvent = b.event_name && !b.task_id && !b.email_id;
+                
+                const aIsTask = a.task_id;
+                const bIsTask = b.task_id;
+                
+                const aIsEmail = a.email_id;
+                const bIsEmail = b.email_id;
+                
+                if (aIsEvent && !bIsEvent) return -1;
+                if (!aIsEvent && bIsEvent) return 1;
+                
+                if (aIsTask && !bIsTask && !aIsEmail) return -1;
+                if (!aIsTask && bIsTask && !bIsEmail) return 1;
+                
+                if (aIsEmail && !bIsEmail) return 1;
+                if (!aIsEmail && bIsEmail) return -1;
+                
+                // Within same type, sort by time
+                const timeA = aIsEvent ? (a.start_time || '23:59') : (aIsEmail ? (a.scheduled_date || '99:99') : '00:00');
+                const timeB = bIsEvent ? (b.start_time || '23:59') : (bIsEmail ? (b.scheduled_date || '99:99') : '00:00');
+                return String(timeA).localeCompare(String(timeB));
             });
         
-            // Create event rows with 2 columns: time range | event name
-            events.forEach((event, index) => {
+            // Create rows with time/badge | item name
+            items.forEach((item, index) => {
                 const formatTime = (timeStr) => {
                     if (!timeStr) return '-';
                     const [hours, minutes] = timeStr.split(':');
@@ -6647,48 +6984,179 @@ function renderCalendarList() {
                     return `${h}:${minutes} ${ampm}`;
                 };
                 
-                const startTime = event.start_time ? formatTime(event.start_time) : '-';
-                const endTime = event.end_time ? formatTime(event.end_time) : '-';
-                const timeRange = `${startTime} - ${endTime}`;
+                const isTask = item.task_id;
+                const isEmail = item.email_id;
+                const isLogistics = item.logistics_id;
+                const itemName = isTask ? item.task_name : (isEmail ? item.email_blast_name : (isLogistics ? item.item : item.event_name));
                 
-                const eventEl = document.createElement('div');
-                eventEl.style.cssText = `
+                const itemEl = document.createElement('div');
+                itemEl.style.cssText = `
                     display: grid;
-                    grid-template-columns: 140px 1fr;
+                    grid-template-columns: 140px 1fr 100px;
                     gap: 16px;
                     padding: 12px 16px;
                     border: 1px solid #e5e7eb;
                     border-right: 1px solid #e5e7eb;
                     border-left: 1px solid #e5e7eb;
-                    ${index === events.length - 1 ? 'border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-bottom: 1px solid #e5e7eb;' : 'border-bottom: none;'}
+                    ${index === items.length - 1 ? 'border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-bottom: 1px solid #e5e7eb;' : 'border-bottom: none;'}
                     cursor: pointer;
                     transition: all 0.2s ease;
                     background: white;
                     align-items: center;
                 `;
                 
-                eventEl.innerHTML = `
-                    <div style="font-weight: 500; color: #666; font-size: 13px; text-align: center;">${timeRange}</div>
-                    <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px;">${escapeHtml(event.event_name)}</h4>
-                `;
+                if (isTask) {
+                    // Task formatting with text status badge for list view
+                    // Check if task is overdue
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const itemDate = new Date(item.event_date);
+                    itemDate.setHours(0, 0, 0, 0);
+                    const isTaskOverdue = itemDate < today && (item.status === 'Pending' || item.status === 'In Progress');
+                    
+                    // Status color mapping for deadline details style
+                    let statusColorMap = {
+                        'Pending': '#2196F3',
+                        'In Progress': '#FF9800',
+                        'Done': '#4CAF50'
+                    };
+                    let statusBgColorMap = {
+                        'Pending': '#e3f2fd',
+                        'In Progress': '#fff3e0',
+                        'Done': '#f1f8e9'
+                    };
+                    
+                    // Override with red if overdue
+                    if (isTaskOverdue) {
+                        statusColorMap[item.status] = '#991b1b';
+                        statusBgColorMap[item.status] = '#fee2e2';
+                    }
+                    
+                    const status = item.status || 'Pending';
+                    const statusColor = statusColorMap[status] || '#999';
+                    const statusBgColor = statusBgColorMap[status] || '#f9f9f9';
+                    
+                    itemEl.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; background: ${statusBgColor}; color: ${statusColor}; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; white-space: nowrap; min-height: 24px;">${status}</div>
+                        <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(itemName)}</h4>
+                        <div style="background: #f3f4f6; color: #6b7280; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; text-align: center; white-space: nowrap; border-left: 2px solid #d1d5db;">Task</div>
+                    `;
+                } else if (isEmail) {
+                    // Email formatting with status badge matching task style
+                    // Check if email is overdue (passed scheduled date and still draft)
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const itemDate = new Date(item.event_date);
+                    itemDate.setHours(0, 0, 0, 0);
+                    const isEmailOverdue = itemDate < today && item.status === 'Draft';
+                    
+                    let statusColorMap = {
+                        'Draft': '#6b7280',
+                        'Scheduled': '#3b82f6',
+                        'Sent': '#10b981',
+                        'Cancelled': '#ef4444'
+                    };
+                    let statusBgColorMap = {
+                        'Draft': '#f3f4f6',
+                        'Scheduled': '#eff6ff',
+                        'Sent': '#ecfdf5',
+                        'Cancelled': '#fef2f2'
+                    };
+                    
+                    // Override with red if overdue
+                    if (isEmailOverdue) {
+                        statusColorMap['Draft'] = '#991b1b';
+                        statusBgColorMap['Draft'] = '#fee2e2';
+                    }
+                    
+                    const status = item.status || 'Draft';
+                    const statusColor = statusColorMap[status] || '#999';
+                    const statusBgColor = statusBgColorMap[status] || '#f9f9f9';
+                    
+                    itemEl.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; background: ${statusBgColor}; color: ${statusColor}; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; white-space: nowrap; min-height: 24px;">${status}</div>
+                        <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(itemName)}</h4>
+                        <div style="background: #f3f4f6; color: #6b7280; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; text-align: center; white-space: nowrap; border-left: 2px solid #d1d5db;">Email</div>
+                    `;
+                } else if (isLogistics) {
+                    // Logistics formatting with status badge (matching task color scheme)
+                    const statusColorMap = {
+                        'Pending': '#2196F3',
+                        'In Progress': '#FF9800',
+                        'Completed': '#4CAF50',
+                        'Cancelled': '#ef4444'
+                    };
+                    const statusBgColorMap = {
+                        'Pending': '#e3f2fd',
+                        'In Progress': '#fff3e0',
+                        'Completed': '#f1f8e9',
+                        'Cancelled': '#fef2f2'
+                    };
+                    const status = item.status || 'Pending';
+                    const statusColor = statusColorMap[status] || '#999';
+                    const statusBgColor = statusBgColorMap[status] || '#f9f9f9';
+                    
+                    itemEl.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; background: ${statusBgColor}; color: ${statusColor}; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; white-space: nowrap; min-height: 24px;">${status}</div>
+                        <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(itemName)}</h4>
+                        <div style="background: #f3f4f6; color: #6b7280; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; text-align: center; white-space: nowrap; border-left: 2px solid #d1d5db;">Logistics</div>
+                    `;
+                } else {
+                    // Event formatting
+                    const startTime = formatTime(item.start_time);
+                    const endTime = formatTime(item.end_time);
+                    const timeRange = `${startTime} - ${endTime}`;
+                    
+                    itemEl.innerHTML = `
+                        <div style="font-weight: 500; color: #666; font-size: 13px; text-align: center;">${timeRange}</div>
+                        <h4 style="margin: 0; font-weight: 500; color: #111827; font-size: 14px;">${escapeHtml(itemName)}</h4>
+                        <div style="background: #dbeafe; color: #0284c7; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; text-align: center; white-space: nowrap;">Event</div>
+                    `;
+                }
                 
-                eventEl.addEventListener('click', () => {
-                    updateDeadlineDetails([event], true);
+                itemEl.addEventListener('click', () => {
+                    updateDeadlineDetails([item], true);
                 });
                 
-                eventEl.addEventListener('mouseover', () => {
-                    eventEl.style.background = '#f0f9ff';
-                    eventEl.style.borderColor = '#0284c7';
-                    eventEl.style.boxShadow = '0 2px 8px rgba(2, 132, 199, 0.1)';
+                itemEl.addEventListener('mouseover', () => {
+                    // Check for overdue conditions
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const itemDateObj = new Date(item.event_date);
+                    itemDateObj.setHours(0, 0, 0, 0);
+                    const isItemOverdue = itemDateObj < today;
+                    
+                    let isRedAlert = false;
+                    if (isEmail && isItemOverdue && item.status === 'Draft') {
+                        isRedAlert = true;
+                    } else if (isTask && isItemOverdue && (item.status === 'Pending' || item.status === 'In Progress')) {
+                        isRedAlert = true;
+                    }
+                    
+                    if (isRedAlert) {
+                        itemEl.style.background = '#fecaca';
+                        itemEl.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.1)';
+                    } else if (isEmail) {
+                        itemEl.style.background = '#f3f2ff';
+                        itemEl.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.1)';
+                    } else if (isTask) {
+                        itemEl.style.background = '#fef3c7';
+                        itemEl.style.boxShadow = '0 2px 8px rgba(251, 191, 36, 0.1)';
+                    } else if (isLogistics) {
+                        itemEl.style.background = '#fef3c7';
+                        itemEl.style.boxShadow = '0 2px 8px rgba(251, 191, 36, 0.1)';
+                    } else {
+                        itemEl.style.background = '#f0f9ff';
+                        itemEl.style.boxShadow = '0 2px 8px rgba(2, 132, 199, 0.1)';
+                    }
                 });
                 
-                eventEl.addEventListener('mouseout', () => {
-                    eventEl.style.background = 'white';
-                    eventEl.style.borderColor = '#e5e7eb';
-                    eventEl.style.boxShadow = 'none';
+                itemEl.addEventListener('mouseout', () => {
+                    itemEl.style.background = 'white';
+                    itemEl.style.boxShadow = 'none';
                 });
                 
-                listContainer.appendChild(eventEl);
+                listContainer.appendChild(itemEl);
             });
         }
     });
@@ -6771,7 +7239,7 @@ function goToToday() {
     }
 }
 
-function updateDeadlineDetails(events, isFromListView = false) {
+function updateDeadlineDetails(items, isFromListView = false) {
     const detailsDiv = document.getElementById('deadlineDetails');
     const deadlineCountEl = document.getElementById('deadlineCount');
     
@@ -6787,7 +7255,7 @@ function updateDeadlineDetails(events, isFromListView = false) {
         return `${h}:${m} ${ampm}`;
     };
     
-    if (!events || events.length === 0) {
+    if (!items || items.length === 0) {
         detailsDiv.innerHTML = '';
         if (calendarSelectedDate) {
             const selectedDateStr = calendarSelectedDate.toLocaleDateString('en-US', { 
@@ -6795,105 +7263,326 @@ function updateDeadlineDetails(events, isFromListView = false) {
                 month: 'short', 
                 day: 'numeric'
             });
-            deadlineCountEl.textContent = `0 events happening on ${selectedDateStr}`;
+            deadlineCountEl.textContent = `0 events/tasks happening on ${selectedDateStr}`;
         } else {
-            deadlineCountEl.textContent = `0 events`;
+            deadlineCountEl.textContent = `0 events/tasks`;
         }
         return;
     }
     
-    // Build HTML for ALL events
-    let eventsHTML = '';
-    events.forEach((event, index) => {
-        const eventDate = new Date(event.event_date);
-        const dateStr = eventDate.toLocaleDateString('en-US', { 
+    // Build HTML for ALL items (events, tasks, and emails)
+    let itemsHTML = '';
+    items.forEach((item, index) => {
+        const isTask = item.task_id;
+        const isEmail = item.email_id;
+        const itemDate = new Date(item.event_date);
+        const dateStr = itemDate.toLocaleDateString('en-US', { 
             weekday: 'long', 
             month: 'long', 
             day: 'numeric', 
             year: 'numeric'
         });
         
-        let timeStr = dateStr;
-        if (event.start_time) {
-            const [hours, mins] = event.start_time.split(':');
-            const startTime = new Date(eventDate);
-            startTime.setHours(parseInt(hours), parseInt(mins));
-            const startTimeFormatted = formatTimeAmPm(event.start_time);
-            const endTimeFormatted = event.end_time ? formatTimeAmPm(event.end_time) : '';
+        if (isTask) {
+            // Task display - find the event this task belongs to
+            const taskEventId = item.event_id;
+            const taskEvent = allEventsForCalendar.find(e => e.event_id == taskEventId);
+            const eventName = taskEvent ? taskEvent.event_name : 'Unknown Event';
+            const taskDetailsId = 'task-details-' + Math.random().toString(36).substr(2, 9);
             
-            let endDateTimeStr = '';
-            if (endTimeFormatted) {
-                const endDate = event.end_date ? new Date(event.end_date) : eventDate;
-                const endDateStr = endDate.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    month: 'long', 
-                    day: 'numeric', 
-                    year: 'numeric'
-                });
-                endDateTimeStr = ` - ${endDateStr} ${endTimeFormatted}`;
+            itemsHTML += `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-weight: 700; font-size: 15px; color: #111827; flex: 1;">${escapeHtml(item.task_name)}</h4>
+                        <span style="display: inline-block; padding: 4px 10px; background: #0284c7; color: white; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap;">TASK</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="color: #666; font-size: 12px;">${escapeHtml(eventName)}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button onclick="document.getElementById('${taskDetailsId}').style.display = document.getElementById('${taskDetailsId}').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'View Details' ? 'Hide Details' : 'View Details';" style="background: none; border: none; color: #0284c7; padding: 0; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline;">View Details</button>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: #e5e7eb; color: ${(item.status || 'Pending').toLowerCase() === 'pending' ? '#4b5563' : (item.status || 'Pending').toLowerCase() === 'in progress' ? '#60a5fa' : '#34d399'}; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap;">${getStatusBadgeSVG(item.status).replace('width="24"', 'width="14"').replace('height="24"', 'height="14"').replace('style="display: inline-block; margin-right: 4px;"', 'style="display: inline-block;"')} ${item.status || 'Pending'}</span>
+                    </div>
+                    <div id="${taskDetailsId}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${item.party_responsible ? `<div style="color: #000; font-size: 13px;">Assigned to:<br /><span style="margin-left: 4px;">${escapeHtml(item.party_responsible)}</span></div>` : ''}
+                            ${item.remarks ? `<div style="color: #000; font-size: 13px;">Remarks:<br /><span style="margin-left: 4px;">${escapeHtml(item.remarks)}</span></div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (isEmail) {
+            // Email display
+            const emailEvent = allEventsForCalendar.find(e => e.event_id == item.event_id);
+            const eventName = emailEvent ? emailEvent.event_name : 'Unknown Event';
+            const emailDetailsId = 'email-details-' + Math.random().toString(36).substr(2, 9);
+            
+            const statusColorMap = {
+                'Draft': '#6b7280',
+                'Scheduled': '#3b82f6',
+                'Sent': '#10b981',
+                'Cancelled': '#ef4444'
+            };
+            const statusBgColorMap = {
+                'Draft': '#f3f4f6',
+                'Scheduled': '#eff6ff',
+                'Sent': '#ecfdf5',
+                'Cancelled': '#fef2f2'
+            };
+            const status = item.status || 'Draft';
+            const statusColor = statusColorMap[status] || '#999';
+            const statusBgColor = statusBgColorMap[status] || '#f9f9f9';
+            
+            // Define status icons
+            let statusIcon = '';
+            if (status === 'Draft') {
+                statusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;"><path d="M3 8L10.89 13.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" stroke="${statusColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+            } else if (status === 'Scheduled') {
+                statusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;"><circle cx="12" cy="12" r="9" stroke="${statusColor}" stroke-width="1.5"/><polyline points="12 6 12 12 16 14" stroke="${statusColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+            } else if (status === 'Sent') {
+                statusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;"><polyline points="20 6 9 17 4 12" stroke="${statusColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+            } else if (status === 'Cancelled') {
+                statusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;"><circle cx="12" cy="12" r="10" stroke="${statusColor}" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="16" stroke="${statusColor}" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="${statusColor}" stroke-width="2" stroke-linecap="round"/></svg>`;
             }
             
-            timeStr += ` · ${startTimeFormatted}${endDateTimeStr}`;
+            itemsHTML += `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-weight: 700; font-size: 15px; color: #111827; flex: 1; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(item.email_blast_name)}</h4>
+                        <span style="display: inline-block; padding: 4px 10px; background: #3b82f6; color: white; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap;">EMAIL</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="color: #666; font-size: 12px;">${escapeHtml(eventName)}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button onclick="viewEmailBlast(${item.event_id})" style="background: none; border: none; color: #3b82f6; padding: 0; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline;">View Email</button>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: ${statusBgColor}; color: ${statusColor}; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap;">${statusIcon}${status}</span>
+                    </div>
+                    <div id="${emailDetailsId}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="color: #000; font-size: 13px;">Audience:<br /><span style="margin-left: 4px; color: #666; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(item.audience)}</span></div>
+                            ${item.details ? `<div style="color: #000; font-size: 13px;">Details:<br /><span style="margin-left: 4px; color: #666; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(item.details)}</span></div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (item.logistics_id) {
+            // Logistics display
+            const logisticsEvent = allEventsForCalendar.find(e => e.event_id == item.event_id);
+            const eventName = logisticsEvent ? logisticsEvent.event_name : 'Unknown Event';
+            const logisticsDetailsId = 'logistics-details-' + Math.random().toString(36).substr(2, 9);
+            
+            const statusColorMap = {
+                'Pending': '#6b7280',
+                'In Progress': '#f59e0b',
+                'Completed': '#10b981',
+                'Cancelled': '#ef4444'
+            };
+            const statusBgColorMap = {
+                'Pending': '#f3f4f6',
+                'In Progress': '#fef3c7',
+                'Completed': '#ecfdf5',
+                'Cancelled': '#fef2f2'
+            };
+            const status = item.status || 'Pending';
+            const statusColor = statusColorMap[status] || '#999';
+            const statusBgColor = statusBgColorMap[status] || '#f9f9f9';
+            
+            itemsHTML += `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-weight: 700; font-size: 15px; color: #111827; flex: 1; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(item.item)}</h4>
+                        <span style="display: inline-block; padding: 4px 10px; background: #0284c7; color: white; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap;">LOGISTICS</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="color: #666; font-size: 12px;">${escapeHtml(eventName)}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button onclick="document.getElementById('${logisticsDetailsId}').style.display = document.getElementById('${logisticsDetailsId}').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'View Details' ? 'Hide Details' : 'View Details';" style="background: none; border: none; color: #0284c7; padding: 0; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline;">View Details</button>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: ${statusBgColor}; color: ${statusColor}; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap;">${status}</span>
+                    </div>
+                    <div id="${logisticsDetailsId}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${item.category ? `<div style="color: #000; font-size: 13px;">Category:<br /><span style="margin-left: 4px; color: #666;">${escapeHtml(item.category)}</span></div>` : ''}
+                            ${item.partner ? `<div style="color: #000; font-size: 13px;">Partner:<br /><span style="margin-left: 4px; color: #666;">${escapeHtml(item.partner)}</span></div>` : ''}
+                            ${item.quantity ? `<div style="color: #000; font-size: 13px;">Quantity:<br /><span style="margin-left: 4px; color: #666;">${item.quantity}</span></div>` : ''}
+                            ${item.notes ? `<div style="color: #000; font-size: 13px;">Notes:<br /><span style="margin-left: 4px; color: #666; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${escapeHtml(item.notes)}</span></div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Event display
+            let timeStr = dateStr;
+            if (item.start_time) {
+                const [hours, mins] = item.start_time.split(':');
+                const startTime = new Date(itemDate);
+                startTime.setHours(parseInt(hours), parseInt(mins));
+                const startTimeFormatted = formatTimeAmPm(item.start_time);
+                const endTimeFormatted = item.end_time ? formatTimeAmPm(item.end_time) : '';
+                
+                let endDateTimeStr = '';
+                if (endTimeFormatted) {
+                    const endDate = item.end_date ? new Date(item.end_date) : itemDate;
+                    const endDateStr = endDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric'
+                    });
+                    endDateTimeStr = ` to ${endDateStr} ${endTimeFormatted}`;
+                }
+                
+                timeStr = `${dateStr} ${startTimeFormatted}${endDateTimeStr}`;
+            }
+            
+            // Extract location separately for proper display
+            const locationValue = item.location && item.location !== 'undefined' && item.location !== 'null' && item.location.trim() ? item.location : 'TBA';
+            const eventDetailsId = 'event-details-' + Math.random().toString(36).substr(2, 9);
+            
+            itemsHTML += `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-weight: 700; font-size: 15px; color: #111827; flex: 1;">${escapeHtml(item.event_name)}</h4>
+                        <span style="display: inline-block; padding: 4px 10px; background: #0284c7; color: white; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap;">EVENT</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button onclick="document.getElementById('${eventDetailsId}').style.display = document.getElementById('${eventDetailsId}').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'View Details' ? 'Hide Details' : 'View Details';" style="background: none; border: none; color: #0284c7; padding: 0; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline;">View Details</button>
+                    </div>
+                    <div id="${eventDetailsId}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="color: #6b7280; flex-shrink: 0; margin-top: 2px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg>
+                                <div style="color: #374151; font-size: 14px;">${timeStr}</div>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="color: #6b7280; flex-shrink: 0; margin-top: 2px;"><g fill="none"><path d="M12 2a8 8 0 0 1 8 8c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 8-8m0 5a3 3 0 1 0 0 6a3 3 0 0 0 0-6" clip-rule="evenodd"/><path stroke="currentColor" stroke-width="2" d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 1 1 16 0Z"/><path stroke="currentColor" stroke-width="2" d="M15 10a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z"/></g></svg>
+                                <div style="color: #374151; font-size: 14px;">${escapeHtml(locationValue)}</div>
+                            </div>
+                            ${item.capacity ? `<div style="display: flex; align-items: flex-start; gap: 12px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="color: #6b7280; flex-shrink: 0; margin-top: 2px;"><path fill="currentColor" d="M16 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m4.78 3.58A6.95 6.95 0 0 0 18 7c-.67 0-1.31.1-1.92.28c.58.55.92 1.32.92 2.15V10h5v-.57c0-.81-.48-1.53-1.22-1.85M6 6c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2m1.92 1.28C7.31 7.1 6.67 7 6 7c-.99 0-1.93.21-2.78.58A2.01 2.01 0 0 0 2 9.43V10h5v-.57c0-.83.34-1.6.92-2.15M10 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 16 9.43zm-1 6c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6h-8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 21 21.43zM5 16c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H3v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 11 21.43zm1.75-9v-2h-1.5v2H9l3 3l3-3z"/></svg>
+                                <div style="color: #374151; font-size: 14px;">${item.capacity}</div>
+                            </div>` : ''}
+                            ${item.total_registrations !== undefined ? `<div style="display: flex; align-items: flex-start; gap: 12px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="color: #6b7280; flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="6" r="2" fill="currentColor"/><circle cx="6" cy="18" r="2" fill="currentColor"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="6" r="2" fill="currentColor"/><circle cx="18" cy="6" r="2" fill="currentColor"/><path fill="currentColor" d="M11 18.07v1.43c0 .28.22.5.5.5h1.4c.13 0 .26-.05.35-.15l5.83-5.83l-2.12-2.12l-5.81 5.81c-.1.1-.15.23-.15.36M12.03 14L14 12.03V12c0-1.1-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm8.82-2.44l-1.41-1.41c-.2-.2-.51-.2-.71 0l-1.06 1.06l2.12 2.12l1.06-1.06c.2-.2.2-.51 0-.71"/></svg>
+                                <div style="color: #374151; font-size: 14px;">${item.total_registrations}/${item.capacity || '∞'}</div>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
-        
-        // Extract location separately for proper display
-        const locationValue = event.location && event.location !== 'undefined' && event.location !== 'null' && event.location.trim() ? event.location : 'TBA';
-        
-        eventsHTML += `
-            <div class="space-y-3 pb-4 ${index < events.length - 1 ? 'border-b border-gray-200' : ''}">
-                <div>
-                    <h4 class="font-semibold text-gray-900 text-lg mb-2">${escapeHtml(event.event_name)}</h4>
-                    <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #0284c7; border-radius: 4px; font-size: 11px; font-weight: 600;">EVENT</span>
-                </div>
-                <div style="display: table; width: 100%; margin-top: 12px;">
-                    <div style="display: table-row;">
-                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12-4v4M8 3v4m-4 4h16m-9 4h1m0 0v3"/></svg></div>
-                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${timeStr}</div>
-                    </div>
-                    <div style="display: table-row;">
-                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><g fill="none"><path d="M12 2a8 8 0 0 1 8 8c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 8-8m0 5a3 3 0 1 0 0 6a3 3 0 0 0 0-6" clip-rule="evenodd"/><path stroke="currentColor" stroke-width="2" d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 1 1 16 0Z"/><path stroke="currentColor" stroke-width="2" d="M15 10a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z"/></g></svg></div>
-                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${escapeHtml(locationValue)}</div>
-                    </div>
-                    ${event.capacity ? `<div style="display: table-row;">
-                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><path fill="currentColor" d="M16 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m4.78 3.58A6.95 6.95 0 0 0 18 7c-.67 0-1.31.1-1.92.28c.58.55.92 1.32.92 2.15V10h5v-.57c0-.81-.48-1.53-1.22-1.85M6 6c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2m1.92 1.28C7.31 7.1 6.67 7 6 7c-.99 0-1.93.21-2.78.58A2.01 2.01 0 0 0 2 9.43V10h5v-.57c0-.83.34-1.6.92-2.15M10 4c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 16 9.43zm-1 6c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6h-8v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 21 21.43zM5 16c0-1.1.9-2 2-2s2 .9 2 2s-.9 2-2 2s-2-.9-2-2m6 6H3v-.57c0-.81.48-1.53 1.22-1.85a6.95 6.95 0 0 1 5.56 0A2.01 2.01 0 0 1 11 21.43zm1.75-9v-2h-1.5v2H9l3 3l3-3z"/></svg></div>
-                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${event.capacity}</div>
-                    </div>` : ''}
-                    ${event.total_registrations !== undefined ? `<div style="display: table-row;">
-                        <div style="display: table-cell; width: 45px; padding: 4px 0; vertical-align: middle; text-align: center;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color: #000; display: inline-block;"><circle cx="12" cy="6" r="2" fill="currentColor"/><circle cx="6" cy="18" r="2" fill="currentColor"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="6" r="2" fill="currentColor"/><circle cx="18" cy="6" r="2" fill="currentColor"/><path fill="currentColor" d="M11 18.07v1.43c0 .28.22.5.5.5h1.4c.13 0 .26-.05.35-.15l5.83-5.83l-2.12-2.12l-5.81 5.81c-.1.1-.15.23-.15.36M12.03 14L14 12.03V12c0-1.1-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm8.82-2.44l-1.41-1.41c-.2-.2-.51-.2-.71 0l-1.06 1.06l2.12 2.12l1.06-1.06c.2-.2.2-.51 0-.71"/></svg></div>
-                        <div style="display: table-cell; padding: 4px 0 4px 8px; vertical-align: middle; color: #000; font-size: 13px;">${event.total_registrations}/${event.capacity || '∞'}</div>
-                    </div>` : ''}
-                </div>
-            </div>
-        `;
     });
     
-    // Wrap with scrolling container if multiple events
-    const scrollStyle = events.length > 2 ? 'max-height: 400px; overflow-y: auto;' : '';
-    detailsDiv.innerHTML = `<div style="${scrollStyle}">${eventsHTML}</div>`;
+    // Wrap with scrolling container if multiple items
+    const scrollStyle = items.length > 2 ? 'max-height: 400px; overflow-y: auto;' : '';
+    detailsDiv.innerHTML = `<div style="${scrollStyle}">${itemsHTML}</div>`;
     
-    // Update count to show events for the selected date
-    const eventCount = events.length;
-    if (eventCount > 1) {
-        const selectedDate = new Date(events[0].event_date);
-        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric'
-        });
-        deadlineCountEl.textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''} happening on ${selectedDateStr}`;
-    } else if (eventCount === 1 && isFromListView) {
-        // Single event from list view - hide the count message
-        deadlineCountEl.textContent = '';
-    } else if (eventCount === 1 && !isFromListView) {
-        // Single event from month view - show the count message
-        const selectedDate = new Date(events[0].event_date);
-        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric'
-        });
-        deadlineCountEl.textContent = `1 event happening on ${selectedDateStr}`;
+    // Set max-height to match calendar grid height but let content determine actual height
+    const calendarGrid = document.getElementById('calendarGrid');
+    const calendarEventsList = document.getElementById('calendarEventsList');
+    const targetCalendar = calendarGrid || calendarEventsList;
+    
+    if (targetCalendar) {
+        // Use setTimeout to ensure DOM has been fully laid out
+        setTimeout(() => {
+            const calendarHeight = targetCalendar.offsetHeight;
+            if (calendarHeight > 0) {
+                detailsDiv.style.maxHeight = calendarHeight + 'px';
+                detailsDiv.style.overflowY = 'auto';
+                detailsDiv.style.height = 'auto';
+            }
+        }, 0);
     }
+    
+    // Update count to show items for the selected date
+    const itemCount = items.length;
+    const eventCount = items.filter(i => !i.task_id && !i.email_id && !i.logistics_id).length;
+    const taskCount = items.filter(i => i.task_id).length;
+    const emailCount = items.filter(i => i.email_id).length;
+    const logisticsCount = items.filter(i => i.logistics_id).length;
+    
+    if (itemCount > 1) {
+        const selectedDate = new Date(items[0].event_date);
+        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric'
+        });
+        let countText = ``;
+        if (eventCount > 0) countText += `${eventCount} event${eventCount !== 1 ? 's' : ''} scheduled`;
+        if (taskCount > 0) {
+            if (countText) countText += ` & `;
+            countText += `${taskCount} task${taskCount !== 1 ? 's' : ''} due`;
+        }
+        if (emailCount > 0) {
+            if (countText) countText += ` & `;
+            countText += `${emailCount} email${emailCount !== 1 ? 's' : ''} queued`;
+        }
+        if (logisticsCount > 0) {
+            if (countText) countText += ` & `;
+            countText += `${logisticsCount} logistic${logisticsCount !== 1 ? 's' : ''} to manage`;
+        }
+        countText += ` on ${selectedDateStr}`;
+        deadlineCountEl.textContent = countText;
+    } else if (itemCount === 1 && isFromListView) {
+        // Single item from list view - hide the count message
+        deadlineCountEl.textContent = '';
+    } else if (itemCount === 1 && !isFromListView) {
+        // Single item from month view - show the count message
+        const selectedDate = new Date(items[0].event_date);
+        const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric'
+        });
+        let itemLabel = 'event scheduled';
+        if (items[0].task_id) itemLabel = 'task due';
+        if (items[0].email_id) itemLabel = 'email queued';
+        if (items[0].logistics_id) itemLabel = 'logistic to manage';
+        deadlineCountEl.textContent = `1 ${itemLabel} on ${selectedDateStr}`;
+    }
+}
+
+function viewEmailBlast(eventId) {
+    console.log('📧 View Email clicked with eventId:', eventId);
+    
+    // Set the current event ID
+    window.currentEventId = eventId;
+    
+    // Navigate to event details which will load all the event data
+    console.log('📧 Navigating to event details');
+    viewEventDetails(eventId);
+    
+    // After a short delay, switch to emails tab and load emails
+    setTimeout(() => {
+        console.log('📧 Switching to emails tab');
+        // Click the emails tab button to switch tabs
+        const emailTabBtn = document.querySelector('[data-tab="emails"]') || 
+                           document.querySelector('button[onclick*="switchTab"]');
+        
+        // Try to switch tab using the switchTab function if available
+        if (typeof switchTab === 'function') {
+            console.log('📧 Using switchTab function');
+            switchTab('emails');
+        } else if (emailTabBtn) {
+            console.log('📧 Clicking emails tab button');
+            emailTabBtn.click();
+        }
+        
+        // Load emails for this event
+        if (typeof window.loadEmailBlasts === 'function') {
+            console.log('📧 Loading emails for event:', eventId);
+            window.loadEmailBlasts(eventId);
+        }
+        
+        // Scroll to emails section
+        const emailsSection = document.getElementById('emails');
+        if (emailsSection) {
+            console.log('📧 Scrolling to emails section');
+            emailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 300);
 }
 
 let currentParticipantFilter = 'all';

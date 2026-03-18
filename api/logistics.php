@@ -82,6 +82,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     $userInfo = getUserInfo();
     
+    // Handle list_all - get all logistics for calendar
+    if ($action === 'list_all') {
+        // Filter by coordinator if user is a coordinator
+        if (($userInfo['role'] === 'COORDINATOR' || $userInfo['role'] === 'coordinator') && $userInfo['coordinator_id']) {
+            $query = "SELECT l.*, 'logistics' as item_type, DATE(l.schedule_date) as event_date, e.event_name
+                      FROM event_logistics l
+                      JOIN events e ON l.event_id = e.event_id
+                      WHERE e.coordinator_id = " . intval($userInfo['coordinator_id']) . "
+                      ORDER BY COALESCE(l.schedule_date, e.start_event) ASC";
+        } else {
+            // For admins, show all logistics
+            $query = "SELECT l.*, 'logistics' as item_type, DATE(l.schedule_date) as event_date, e.event_name
+                      FROM event_logistics l
+                      JOIN events e ON l.event_id = e.event_id
+                      ORDER BY COALESCE(l.schedule_date, e.start_event) ASC";
+        }
+        
+        $result = $conn->query($query);
+        if (!$result) {
+            error_log("Calendar logistics query error: " . $conn->error);
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+            exit;
+        }
+        
+        $logistics = [];
+        while ($row = $result->fetch_assoc()) {
+            $logistics[] = $row;
+        }
+        
+        echo json_encode(['success' => true, 'data' => $logistics]);
+        exit;
+    }
+    
     if (!$event_id) {
         echo json_encode(['success' => false, 'message' => 'Event ID is required']);
         exit;
