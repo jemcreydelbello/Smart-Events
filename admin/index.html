@@ -5985,6 +5985,38 @@
           } catch (addError) {
             console.log('Could not add to check-in table (may not be visible):', addError);
           }
+          
+          // Auto-refresh QR stats immediately
+          if (typeof updateQRStats === 'function') {
+            console.log('🔄 Refreshing QR statistics...');
+            updateQRStats();
+          }
+          
+          // Also refresh Dashboard if event details are open
+          if (typeof loadDashboardLogisticsData === 'function' && window.currentEventId) {
+            console.log('🔄 Refreshing Dashboard Registrations KPI...');
+            // Refresh dashboard attendance stats
+            fetch('../api/events.php?action=get&event_id=' + window.currentEventId, { headers: getUserHeaders() })
+              .then(r => r.json())
+              .then(data => {
+                if (data.success && data.data) {
+                  const registered = data.data.total_registrations || 0;
+                  const attended = data.data.attended_count || 0;
+                  
+                  const dashRegistrations = document.getElementById('dashRegistrations');
+                  const dashRegistrationsDetail = document.getElementById('dashRegistrationsDetail');
+                  
+                  if (dashRegistrations) {
+                    dashRegistrations.textContent = registered;
+                    console.log('✅ Dashboard Registrations updated:', registered);
+                  }
+                  if (dashRegistrationsDetail) {
+                    dashRegistrationsDetail.textContent = `Checked in: ${attended} (${registered > 0 ? Math.round((attended/registered)*100) : 0}%)`;
+                  }
+                }
+              })
+              .catch(err => console.error('Could not refresh dashboard:', err));
+          }
         } else {
           console.log('✗ Check-in failed:', data.message);
           showQRResult('✗ ' + (data.message || 'Invalid registration code'), false);
@@ -6029,6 +6061,38 @@
           showQRResult(`✓ ${data.data.full_name} checked in successfully!`, true);
           document.getElementById('qrManualInput').value = '';
           addCheckInRecord(data.data);
+          
+          // Auto-refresh QR stats immediately
+          if (typeof updateQRStats === 'function') {
+            console.log('🔄 Refreshing QR statistics after manual check-in...');
+            updateQRStats();
+          }
+          
+          // Also refresh Dashboard if event details are open
+          if (typeof loadDashboardLogisticsData === 'function' && window.currentEventId) {
+            console.log('🔄 Refreshing Dashboard Registrations KPI...');
+            // Refresh dashboard attendance stats
+            fetch('../api/events.php?action=get&event_id=' + window.currentEventId, { headers: getUserHeaders() })
+              .then(r => r.json())
+              .then(data => {
+                if (data.success && data.data) {
+                  const registered = data.data.total_registrations || 0;
+                  const attended = data.data.attended_count || 0;
+                  
+                  const dashRegistrations = document.getElementById('dashRegistrations');
+                  const dashRegistrationsDetail = document.getElementById('dashRegistrationsDetail');
+                  
+                  if (dashRegistrations) {
+                    dashRegistrations.textContent = registered;
+                    console.log('✅ Dashboard Registrations updated:', registered);
+                  }
+                  if (dashRegistrationsDetail) {
+                    dashRegistrationsDetail.textContent = `Checked in: ${attended} (${registered > 0 ? Math.round((attended/registered)*100) : 0}%)`;
+                  }
+                }
+              })
+              .catch(err => console.error('Could not refresh dashboard:', err));
+          }
         } else {
           showQRResult('✗ ' + (data.message || 'Invalid registration code'), false);
         }
@@ -6197,11 +6261,9 @@
           participants = participants.filter(p => (p.status || '').toLowerCase() === 'attended');
           console.log(`Filtered ATTENDED: ${participants.length}`);
         } else if (status === 'NO-SHOW') {
-          participants = participants.filter(p => {
-            const s = (p.status || '').toLowerCase();
-            return s === 'no-show' || s === 'no show' || s === 'unattended';
-          });
-          console.log(`Filtered NO-SHOW: ${participants.length}`);
+          // No-show = Anyone who is NOT attended (i.e., registered but didn't check in)
+          participants = participants.filter(p => (p.status || '').toLowerCase() !== 'attended');
+          console.log(`Filtered NO-SHOW (not attended): ${participants.length}`);
         }
 
         // Display participants
