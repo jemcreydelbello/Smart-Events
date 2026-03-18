@@ -509,9 +509,37 @@
         document.getElementById('logReportsList').innerHTML = '<p class="text-red-500 text-center py-8">Error loading reports</p>';
       });
     };
+
+    window.cancelLogReportForm = function() {
+      console.log('❌ Cancelling log report form');
+      
+      // Clear form fields
+      document.getElementById('logTitleIntroduction').value = '';
+      document.getElementById('logIssueSummary').value = '';
+      document.getElementById('logRootCauseAnalysis').value = '';
+      document.getElementById('logImpactMitigation').value = '';
+      document.getElementById('logResolutionRecovery').value = '';
+      document.getElementById('logCorrectiveMeasures').value = '';
+      document.getElementById('logFeedbackSurvey').value = '';
+      document.getElementById('logLessonLearned').value = '';
+      document.getElementById('logReviewMeasurements').value = '';
+      
+      // Reset edit mode
+      window.currentEditingReportId = null;
+      
+      // Reset button text
+      const saveBtn = document.getElementById('logReportCreateBtn');
+      if (saveBtn) {
+        saveBtn.textContent = 'Save';
+      }
+      
+      // Switch to Log Report list view
+      window.switchPostmortemView('log');
+      window.loadLogReports();
+    };
     
     window.saveLogReport = function() { 
-      console.log('� saveLogReport called');
+      console.log('📝 saveLogReport called');
       if (!window.currentEventId) {
         alert('Event ID is required');
         return;
@@ -540,7 +568,15 @@
         'X-Coordinator-Id': userInfo.coordinator_id || userInfo.id || 0
       };
       
-      fetch('../api/postmortem.php?action=save_log_report', {
+      // Check if we're in edit mode
+      const isEditMode = window.currentEditingReportId;
+      const action = isEditMode ? 'update_log_report' : 'save_log_report';
+      
+      if (isEditMode) {
+        formData.append('log_report_id', window.currentEditingReportId);
+      }
+      
+      fetch(`../api/postmortem.php?action=${action}`, {
         method: 'POST',
         headers: headers,
         body: formData
@@ -555,9 +591,32 @@
           const data = JSON.parse(text);
           console.log('Parsed JSON:', data);
           if (data.success) {
-            alert('✅ Log report saved successfully!');
-            // Switch to Log Report view and load the saved data
+            const message = isEditMode ? '✅ Log report updated successfully!' : '✅ Log report saved successfully!';
+            alert(message);
+            
+            // Clear form fields
+            document.getElementById('logTitleIntroduction').value = '';
+            document.getElementById('logIssueSummary').value = '';
+            document.getElementById('logRootCauseAnalysis').value = '';
+            document.getElementById('logImpactMitigation').value = '';
+            document.getElementById('logResolutionRecovery').value = '';
+            document.getElementById('logCorrectiveMeasures').value = '';
+            document.getElementById('logFeedbackSurvey').value = '';
+            document.getElementById('logLessonLearned').value = '';
+            document.getElementById('logReviewMeasurements').value = '';
+            
+            // Reset edit mode
+            window.currentEditingReportId = null;
+            
+            // Reset button text
+            const saveBtn = document.getElementById('logReportCreateBtn');
+            if (saveBtn) {
+              saveBtn.textContent = 'Save';
+            }
+            
+            // Switch to Log Report list view and load the saved data
             window.switchPostmortemView('log');
+            window.loadLogReports();
           } else {
             alert('❌ Error: ' + (data.message || 'Save failed'));
           }
@@ -569,6 +628,373 @@
       .catch(err => {
         console.error('Fetch error:', err);
         alert('Error saving report: ' + err.message);
+      });
+    };
+
+    window.loadLogReports = function() {
+      console.log('📥 loadLogReports called for event:', window.currentEventId);
+      if (!window.currentEventId) {
+        console.error('Event ID is not set');
+        return;
+      }
+      
+      const headers = {
+        'X-User-Role': window.userRole || 'user',
+        'X-User-Id': window.userId || 0,
+        'X-Coordinator-Id': window.coordinatorId || 0
+      };
+      
+      fetch(`../api/postmortem.php?action=list_log_reports&event_id=${window.currentEventId}`, {
+        headers: headers
+      })
+      .then(r => r.json())
+      .then(data => {
+        console.log('📊 Log reports response:', data);
+        
+        const listContainer = document.getElementById('logReportsList');
+        if (!listContainer) {
+          console.error('logReportsList container not found');
+          return;
+        }
+        
+        if (data.success && data.data && data.data.length > 0) {
+          const reports = data.data;
+          console.log(`✅ Found ${reports.length} reports`);
+          
+          let html = '';
+          reports.forEach((report, index) => {
+            const createdDate = new Date(report.created_at).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+            
+            html += `
+              <div onclick="window.viewLogReport(${report.log_report_id})" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='translateY(0)';'">
+                <div style="flex: 1;">
+                  <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #111827; font-size: 15px;">Log Report #${reports.length - index}</h4>
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${createdDate}</p>
+                  <p style="margin: 0; font-size: 13px; color: #374151; line-height: 1.5;">${report.log_title_introduction || '(No title)'}</p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-left: 16px; align-items: center;">
+                  <button onclick="event.stopPropagation(); window.exportLogReport(${report.log_report_id})" style="padding: 8px 14px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background 0.2s; white-space: nowrap;" onmouseover="this.style.background='#155aa6';" onmouseout="this.style.background='#1E73BB';">
+                    Export
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+          
+          listContainer.innerHTML = html;
+        } else {
+          listContainer.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No log reports created yet. Click "Create" to add one.</p>';
+        }
+      })
+      .catch(err => {
+        console.error('Error loading log reports:', err);
+        const listContainer = document.getElementById('logReportsList');
+        if (listContainer) {
+          listContainer.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 20px;">Error loading reports</p>';
+        }
+      });
+    };
+
+    window.viewLogReport = function(reportId) {
+      console.log('👁️ Viewing report:', reportId);
+      
+      const headers = {
+        'X-User-Role': window.userRole || 'user',
+        'X-User-Id': window.userId || 0,
+        'X-Coordinator-Id': window.coordinatorId || 0
+      };
+      
+      fetch(`../api/postmortem.php?action=get_log_report&event_id=${window.currentEventId}&log_report_id=${reportId}`, {
+        headers: headers
+      })
+      .then(r => r.json())
+      .then(data => {
+        console.log('📄 Report data received:', data);
+        
+        if (data.success && data.data) {
+          const report = data.data;
+          
+          // Format the created date
+          const createdDate = new Date(report.created_at).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+          
+          // Build the report content HTML
+          let content = `
+            <div style="color: #374151;">
+              <p style="margin-bottom: 16px; font-size: 13px; color: #6b7280;">
+                <strong>Created:</strong> ${createdDate}
+              </p>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Title Introduction</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_title_introduction || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Issue Summary</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_issue_summary || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Root Cause Analysis</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_root_cause_analysis || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Impact and Mitigation</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_impact_mitigation || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Resolution and Recovery</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_resolution_recovery || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Corrective Measures</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_corrective_measures || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Feedback and Survey</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_feedback_survey || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Lessons Learned</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_lesson_learned || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+              
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111827;">Review and Measurements</h3>
+                <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-wrap;">
+                  ${(report.log_review_measurements || '(Not provided)').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </p>
+              </div>
+            </div>
+          `;
+          
+          // Update modal content
+          document.getElementById('viewLogReportTitle').textContent = 'Log Report #' + reportId;
+          document.getElementById('viewLogReportContent').innerHTML = content;
+          
+          // Store the current viewing report ID for Edit/Delete buttons
+          window.currentViewingReportId = reportId;
+          
+          // Show modal
+          document.getElementById('viewLogReportModal').style.display = 'block';
+        } else {
+          alert('Error loading report: ' + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching report:', err);
+        alert('Error loading report');
+      });
+    };
+
+    window.deleteLogReport = function(reportId) {
+      if (!confirm('Are you sure you want to delete this report?')) {
+        return;
+      }
+      
+      console.log('🗑️ Deleting report:', reportId);
+      
+      const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userInfo = (admin && admin.id) ? admin : user;
+      
+      const headers = {
+        'X-User-Role': userInfo.role || userInfo.role_name || 'user',
+        'X-User-Id': userInfo.id || userInfo.user_id || 0,
+        'X-Coordinator-Id': userInfo.coordinator_id || userInfo.id || 0,
+        'Content-Type': 'application/json'
+      };
+      
+      fetch(`../api/postmortem.php?action=delete_log_report&event_id=${window.currentEventId}`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ log_report_id: reportId, event_id: window.currentEventId })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          console.log('✅ Report deleted successfully');
+          window.loadLogReports();
+        } else {
+          alert('Error: ' + (data.message || 'Failed to delete'));
+        }
+      })
+      .catch(err => {
+        console.error('Error deleting report:', err);
+        alert('Error deleting report: ' + err.message);
+      });
+    };
+
+    window.deleteLogReportFromView = function() {
+      const reportId = window.currentViewingReportId;
+      if (!reportId) {
+        alert('Report ID not found');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to delete this report?')) {
+        return;
+      }
+
+      console.log('🗑️ Deleting report from view:', reportId);
+
+      window.deleteLogReport(reportId);
+      document.getElementById('viewLogReportModal').style.display = 'none';
+    };
+
+    window.editLogReportFromView = function() {
+      const reportId = window.currentViewingReportId;
+      if (!reportId) {
+        alert('Report ID not found');
+        return;
+      }
+
+      const headers = {
+        'X-User-Role': window.userRole || 'user',
+        'X-User-Id': window.userId || 0,
+        'X-Coordinator-Id': window.coordinatorId || 0
+      };
+
+      fetch(`../api/postmortem.php?action=get_log_report&event_id=${window.currentEventId}&log_report_id=${reportId}`, {
+        headers: headers
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const report = data.data;
+
+          // Populate form fields
+          document.getElementById('logTitleIntroduction').value = report.log_title_introduction || '';
+          document.getElementById('logIssueSummary').value = report.log_issue_summary || '';
+          document.getElementById('logRootCauseAnalysis').value = report.log_root_cause_analysis || '';
+          document.getElementById('logImpactMitigation').value = report.log_impact_mitigation || '';
+          document.getElementById('logResolutionRecovery').value = report.log_resolution_recovery || '';
+          document.getElementById('logCorrectiveMeasures').value = report.log_corrective_measures || '';
+          document.getElementById('logFeedbackSurvey').value = report.log_feedback_survey || '';
+          document.getElementById('logLessonLearned').value = report.log_lesson_learned || '';
+          document.getElementById('logReviewMeasurements').value = report.log_review_measurements || '';
+
+          // Set the current editing report ID
+          window.currentEditingReportId = reportId;
+
+          // Close view modal and switch to edit form
+          document.getElementById('viewLogReportModal').style.display = 'none';
+
+          // Switch to createForm view (which is actually the edit form)
+          const metricsView = document.getElementById('postmortemMetricsView');
+          const createView = document.getElementById('postmortemCreateReportView');
+          const logListView = document.getElementById('postmortemLogReportView');
+
+          if (metricsView) metricsView.style.display = 'none';
+          if (createView) createView.style.display = 'block';
+          if (logListView) logListView.style.display = 'none';
+
+          // Change button text to indicate edit mode
+          const saveBtn = document.getElementById('logReportCreateBtn');
+          if (saveBtn) {
+            saveBtn.textContent = 'Update';
+          }
+
+          console.log('✏️ Form populated for editing report:', reportId);
+        } else {
+          alert('Error loading report: ' + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching report for edit:', err);
+        alert('Error loading report');
+      });
+    };
+
+    window.exportLogReports = function() {
+      console.log('📥 Exporting all log reports for event:', window.currentEventId);
+      if (!window.currentEventId) {
+        alert('Event ID is required');
+        return;
+      }
+
+      const headers = {
+        'X-User-Role': window.userRole || 'user',
+        'X-User-Id': window.userId || 0,
+        'X-Coordinator-Id': window.coordinatorId || 0
+      };
+
+      fetch(`../api/postmortem.php?action=list_log_reports&event_id=${window.currentEventId}`, {
+        headers: headers
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data && data.data.length > 0) {
+          const reports = data.data;
+          
+          // Create CSV content
+          let csvContent = 'data:text/csv;charset=utf-8,';
+          csvContent += 'Log Report #,Title,Issue Summary,Root Cause Analysis,Impact & Mitigation,Resolution & Recovery,Corrective Measures,Feedback & Survey,Lessons Learned,Review & Measurements,Created Date\n';
+          
+          reports.forEach((report, index) => {
+            const reportNum = reports.length - index;
+            const createdDate = new Date(report.created_at).toLocaleString();
+            
+            // Escape CSV fields
+            const escapeCSV = (str) => {
+              if (!str) return '""';
+              return '"' + String(str).replace(/"/g, '""') + '"';
+            };
+            
+            csvContent += `${reportNum},${escapeCSV(report.log_title_introduction)},${escapeCSV(report.log_issue_summary)},${escapeCSV(report.log_root_cause_analysis)},${escapeCSV(report.log_impact_mitigation)},${escapeCSV(report.log_resolution_recovery)},${escapeCSV(report.log_corrective_measures)},${escapeCSV(report.log_feedback_survey)},${escapeCSV(report.log_lesson_learned)},${escapeCSV(report.log_review_measurements)},${createdDate}\n`;
+          });
+          
+          // Download CSV
+          const link = document.createElement('a');
+          link.setAttribute('href', encodeURI(csvContent));
+          link.setAttribute('download', `log-reports-${window.currentEventId}-${new Date().toISOString().slice(0,10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          console.log('✅ Log reports exported successfully');
+        } else {
+          alert('No log reports to export');
+        }
+      })
+      .catch(err => {
+        console.error('Error exporting reports:', err);
+        alert('Error exporting reports');
       });
     };
     
@@ -853,13 +1279,15 @@
     }
 
     .postmortem-nav-btn.active {
-      background-color: #2563eb;
+      background: linear-gradient(90deg, rgb(85, 156, 218) 0%, rgb(123, 173, 255) 27%, rgb(255, 181, 141) 76%, rgb(237, 128, 40) 100%);
       color: white;
+      box-shadow: 0 4px 12px rgba(85, 156, 218, 0.3);
     }
 
     .postmortem-nav-btn:hover {
-      background-color: #2563eb;
-      color: white;
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
   </style>
   
@@ -2494,10 +2922,10 @@
                 <button id="logReportBtn" onclick="switchPostmortemView('log')" class="postmortem-nav-btn px-6 py-2 font-medium rounded-lg">
                   Log Report
                 </button>
-                <button id="exportReportBtn" onclick="exportPostmortemReport(window.currentEventId)" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
+                <button id="exportReportBtn" onclick="exportPostmortemReport(window.currentEventId)" style="padding: 8px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='#155a9b'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#1E73BB'; this.style.transform='translateY(0)';">
                   Export
                 </button>
-                <button id="createLogReportBtn" onclick="switchPostmortemView('createForm')" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" style="display: none;">
+                <button id="createLogReportBtn" onclick="switchPostmortemView('createForm')" style="padding: 8px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; display: none; white-space: nowrap;" onmouseover="this.style.background='#155a9b'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#1E73BB'; this.style.transform='translateY(0)';">
                   Create
                 </button>
               </div>
@@ -2583,9 +3011,11 @@
             <!-- Log Report List View (Shows created reports) -->
             <div id="postmortemLogReportView" style="display: none;">
               <div class="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">Log Reports</h3>
-                <div id="logReportsList" class="space-y-3">
-                  <p class="text-gray-500 text-center py-8">No log reports created yet. Click "Create" to add one.</p>
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0; font-size: 18px; font-weight: bold; color: #111827;">Log Reports</h3>
+                </div>
+                <div id="logReportsList" style="space-y: 12px;">
+                  <p style="color: #6b7280; text-align: center; padding: 20px;">No log reports created yet. Click "Create New" to add one.</p>
                 </div>
               </div>
             </div>
@@ -2635,11 +3065,35 @@
                 
                 <!-- Buttons at bottom right -->
                 <div class="flex justify-end gap-3 mt-6">
-                  <button id="logReportCancelBtn" onclick="switchPostmortemView('log')" class="px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors">
+                  <button id="logReportCancelBtn" onclick="cancelLogReportForm()" class="px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors">
                     Cancel
                   </button>
                   <button id="logReportCreateBtn" onclick="saveLogReport();" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
                     Save
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- View Log Report Modal -->
+            <div id="viewLogReportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; overflow-y: auto; padding: 20px;">
+              <div style="background: white; margin: auto; border-radius: 12px; width: 100%; max-width: 900px; height: 90vh; max-height: 800px; padding: 0; box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column;">
+                <!-- Modal Header with Gradient -->
+                <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); display: flex; justify-content: space-between; align-items: center; padding: 24px; border-radius: 12px 12px 0 0; color: white;">
+                  <h2 id="viewLogReportTitle" style="margin: 0; font-size: 24px; font-weight: 700; color: white;">Log Report</h2>
+                  <button onclick="document.getElementById('viewLogReportModal').style.display='none'" style="background: none; border: none; font-size: 32px; cursor: pointer; color: white; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+                </div>
+
+                <!-- Modal Content - Scrollable -->
+                <div id="viewLogReportContent" style="flex: 1; padding: 24px; overflow-y: auto; background: white;"></div>
+
+                <!-- Modal Footer with Buttons -->
+                <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px;">
+                  <button id="viewReportEditBtn" onclick="editLogReportFromView()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                    Edit
+                  </button>
+                  <button id="viewReportDeleteBtn" onclick="deleteLogReportFromView()" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                    Delete
                   </button>
                 </div>
               </div>

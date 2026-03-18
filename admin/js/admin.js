@@ -11886,8 +11886,10 @@ function switchPostmortemView(viewType) {
         if (logBtn) logBtn.classList.add('active');
         
         // Load and display the log reports
-        console.log('📥 loadLogReportData() - loading reports for event:', currentEventId);
-        loadLogReportData(currentEventId);
+        console.log('📥 Loading log reports for event:', window.currentEventId);
+        if (window.loadLogReports) {
+            window.loadLogReports();
+        }
     } else if (viewType === 'createForm') {
         // Show Log Report creation form view
         if (metricsView) metricsView.style.display = 'none';
@@ -11901,71 +11903,22 @@ function switchPostmortemView(viewType) {
         // Update button styling  
         if (automatedBtn) automatedBtn.classList.remove('active');
         if (logBtn) logBtn.classList.add('active');
+        
+        // Clear form fields for new report
+        document.getElementById('logTitleIntroduction').value = '';
+        document.getElementById('logIssueSummary').value = '';
+        document.getElementById('logRootCauseAnalysis').value = '';
+        document.getElementById('logImpactMitigation').value = '';
+        document.getElementById('logResolutionRecovery').value = '';
+        document.getElementById('logCorrectiveMeasures').value = '';
+        document.getElementById('logFeedbackSurvey').value = '';
+        document.getElementById('logLessonLearned').value = '';
+        document.getElementById('logReviewMeasurements').value = '';
     }
 }
 
 // Load and display log reports from API
-function loadLogReportData(eventId) {
-    console.log('📥 loadLogReportData() called for event:', eventId);
-    
-    if (!eventId) {
-        console.error('❌ Event ID is missing');
-        const listContainer = document.getElementById('logReportsList');
-        if (listContainer) listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Event ID not found</p>';
-        return;
-    }
-    
-    const headers = getUserHeaders();
-    const apiUrl = `${API_BASE}/postmortem.php?action=get&event_id=${eventId}`;
-    
-    console.log('🌐 API URL:', apiUrl);
-    
-    fetch(apiUrl, { headers })
-        .then(r => {
-            console.log('📩 API Response Status:', r.status);
-            return r.json();
-        })
-        .then(data => {
-            console.log('📦 API Response Data:', data);
-            
-            const listContainer = document.getElementById('logReportsList');
-            if (!listContainer) {
-                console.error('❌ logReportsList container not found');
-                return;
-            }
-            
-            // Check if we have report data
-            if (data.success && data.data && (data.data.log_report_created || data.data.log_title_introduction)) {
-                const pm = data.data;
-                console.log('✅ Log report found, title:', pm.log_title_introduction);
-                
-                let html = `
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <h4 class="text-base font-semibold text-gray-900">${pm.log_title_introduction || 'Log Report'}</h4>
-                                <p class="text-sm text-gray-500 mt-1">Created: ${pm.created_at ? new Date(pm.created_at).toLocaleString() : 'N/A'}</p>
-                            </div>
-                            <button onclick="window.exportLogReport && window.exportLogReport(${eventId})" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors ml-4">
-                                📥 Export
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                listContainer.innerHTML = html;
-                console.log('🎨 HTML updated with report');
-            } else {
-                console.log('ℹ️ No log report found');
-                listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No log reports created yet. Click "Create" to add one.</p>';
-            }
-        })
-        .catch(err => {
-            console.error('❌ Error loading log reports:', err);
-            const listContainer = document.getElementById('logReportsList');
-            if (listContainer) listContainer.innerHTML = '<p class="text-red-500 text-center py-8">Error loading reports</p>';
-        });
-}
+// Load and display log reports is now handled by window.loadLogReports() in index.html
 
 // Load event details from API
 function loadEventDetails() {

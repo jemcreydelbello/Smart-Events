@@ -98,7 +98,40 @@ $create_postmortem_table = "CREATE TABLE IF NOT EXISTS event_postmortem (
     INDEX idx_event (event_id)
 )";
 
-$conn->query($create_postmortem_table);
+try {
+    if (!$conn->query($create_postmortem_table)) {
+        error_log("Warning: Failed to create/verify postmortem table: " . $conn->error);
+    }
+} catch (Exception $e) {
+    error_log("Exception creating postmortem table: " . $e->getMessage());
+}
+
+// Create event_log_reports table for multiple reports per event
+$create_log_reports_table = "CREATE TABLE IF NOT EXISTS event_log_reports (
+    log_report_id INT PRIMARY KEY AUTO_INCREMENT,
+    event_id INT NOT NULL,
+    log_title_introduction LONGTEXT,
+    log_issue_summary LONGTEXT,
+    log_root_cause_analysis LONGTEXT,
+    log_impact_mitigation LONGTEXT,
+    log_resolution_recovery LONGTEXT,
+    log_corrective_measures LONGTEXT,
+    log_feedback_survey LONGTEXT,
+    log_lesson_learned LONGTEXT,
+    log_review_measurements LONGTEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+    INDEX idx_event (event_id),
+    INDEX idx_created (created_at)
+)";
+
+try {
+    if (!$conn->query($create_log_reports_table)) {
+        error_log("Warning: Failed to create/verify event_log_reports table: " . $conn->error);
+    }
+} catch (Exception $e) {
+    error_log("Exception creating event_log_reports table: " . $e->getMessage());
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
@@ -106,7 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     $userInfo = getUserInfo();
     
-    if (!$event_id) {
+    // Only require event_id for actions that need it upfront
+    if ($action !== 'get_log_report' && !$event_id) {
         echo json_encode(['success' => false, 'message' => 'Event ID is required']);
         exit;
     }
@@ -287,6 +321,135 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ]);
         }
         exit;
+    } else if ($action === 'get_log_report') {
+        // GET_LOG_REPORT action fetches a specific log report by ID
+        try {
+            $log_report_id = intval($_GET['log_report_id'] ?? 0);
+            
+            if (!$log_report_id) {
+                echo json_encode(['success' => false, 'message' => 'Log report ID is required']);
+                exit;
+            }
+            
+            // First get the report to verify access
+            $verify_query = "SELECT event_id FROM event_log_reports WHERE log_report_id = ?";
+            $verify_stmt = $conn->prepare($verify_query);
+            if (!$verify_stmt) {
+                throw new Exception("Verify query prepare failed: " . $conn->error);
+            }
+            $verify_stmt->bind_param('i', $log_report_id);
+            $verify_stmt->execute();
+            $verify_result = $verify_stmt->get_result();
+            $verify_row = $verify_result->fetch_assoc();
+            $verify_stmt->close();
+            
+            if (!$verify_row) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Report not found']);
+                exit;
+            }
+            
+            $report_event_id = $verify_row['event_id'];
+            
+            // Verify access to the event
+            if (!checkEventAccess($conn, $report_event_id, $userInfo)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Access denied']);
+                exit;
+            }
+            
+            // Now fetch the full report with event info
+            $query = "SELECT 
+                r.log_report_id,
+                r.event_id,
+                e.event_name,
+                r.log_title_introduction,
+                r.log_issue_summary,
+                r.log_root_cause_analysis,
+                r.log_impact_mitigation,
+                r.log_resolution_recovery,
+                r.log_corrective_measures,
+                r.log_feedback_survey,
+                r.log_lesson_learned,
+                r.log_review_measurements,
+                r.created_at
+                FROM event_log_reports r
+                LEFT JOIN events e ON r.event_id = e.event_id
+                WHERE r.log_report_id = ?";
+            
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param('i', $log_report_id);
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+            
+            $result = $stmt->get_result();
+            $report = $result->fetch_assoc();
+            
+            if ($report) {
+                echo json_encode(['success' => true, 'data' => $report]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Report not found']);
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error fetching log report: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    } else if ($action === 'list_log_reports') {
+        // LIST action fetches all log reports for an event
+        try {
+            $query = "SELECT 
+                log_report_id,
+                event_id,
+                log_title_introduction,
+                log_issue_summary,
+                log_root_cause_analysis,
+                log_impact_mitigation,
+                log_resolution_recovery,
+                log_corrective_measures,
+                log_feedback_survey,
+                log_lesson_learned,
+                log_review_measurements,
+                created_at
+                FROM event_log_reports
+                WHERE event_id = ?
+                ORDER BY created_at DESC";
+            
+            $stmt = $conn->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param('i', $event_id);
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+            
+            $result = $stmt->get_result();
+            
+            $reports = [];
+            while ($row = $result->fetch_assoc()) {
+                $reports[] = $row;
+            }
+            
+            echo json_encode(['success' => true, 'data' => $reports]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error listing log reports: ' . $e->getMessage()
+            ]);
+        }
+        exit;
     }
 }
 
@@ -414,70 +577,160 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Failed to generate report']);
         }
         exit;
-    } else if ($action === 'save_log_report') {
-        $log_title = $input_data['log_title_introduction'] ?? '';
-        $log_issue = $input_data['log_issue_summary'] ?? '';
-        $log_root_cause = $input_data['log_root_cause_analysis'] ?? '';
-        $log_impact = $input_data['log_impact_mitigation'] ?? '';
-        $log_resolution = $input_data['log_resolution_recovery'] ?? '';
-        $log_corrective = $input_data['log_corrective_measures'] ?? '';
-        $log_feedback = $input_data['log_feedback_survey'] ?? '';
-        $log_lesson = $input_data['log_lesson_learned'] ?? '';
-        $log_review = $input_data['log_review_measurements'] ?? '';
-        
-        // Check if postmortem record exists
-        $check_query = "SELECT postmortem_id FROM event_postmortem WHERE event_id = ?";
-        $stmt = $conn->prepare($check_query);
-        $stmt->bind_param('i', $event_id);
-        $stmt->execute();
-        $exists = $stmt->get_result()->num_rows > 0;
-        
-        if ($exists) {
-            // Update existing record
-            $update_query = "UPDATE event_postmortem SET 
-                log_title_introduction = ?,
-                log_issue_summary = ?,
-                log_root_cause_analysis = ?,
-                log_impact_mitigation = ?,
-                log_resolution_recovery = ?,
-                log_corrective_measures = ?,
-                log_feedback_survey = ?,
-                log_lesson_learned = ?,
-                log_review_measurements = ?,
-                log_report_created = TRUE,
-                generated_at = NOW()
-                WHERE event_id = ?";
+    } else if ($action === 'update_log_report') {
+        try {
+            $log_report_id = intval($input_data['log_report_id'] ?? 0);
+            
+            if (!$log_report_id) {
+                echo json_encode(['success' => false, 'message' => 'Log report ID is required']);
+                exit;
+            }
+            
+            $log_title = $input_data['log_title_introduction'] ?? '';
+            $log_issue = $input_data['log_issue_summary'] ?? '';
+            $log_root_cause = $input_data['log_root_cause_analysis'] ?? '';
+            $log_impact = $input_data['log_impact_mitigation'] ?? '';
+            $log_resolution = $input_data['log_resolution_recovery'] ?? '';
+            $log_corrective = $input_data['log_corrective_measures'] ?? '';
+            $log_feedback = $input_data['log_feedback_survey'] ?? '';
+            $log_lesson = $input_data['log_lesson_learned'] ?? '';
+            $log_review = $input_data['log_review_measurements'] ?? '';
+            
+            // Verify the report belongs to this event
+            $verify_query = "SELECT log_report_id FROM event_log_reports WHERE log_report_id = ? AND event_id = ?";
+            $stmt = $conn->prepare($verify_query);
+            if (!$stmt) {
+                throw new Exception("Verify prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param('ii', $log_report_id, $event_id);
+            if (!$stmt->execute()) {
+                throw new Exception("Verify execute failed: " . $stmt->error);
+            }
+            
+            if ($stmt->get_result()->num_rows === 0) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Report not found or access denied']);
+                exit;
+            }
+            
+            // UPDATE the log report
+            $update_query = "UPDATE event_log_reports 
+                SET log_title_introduction = ?, 
+                    log_issue_summary = ?, 
+                    log_root_cause_analysis = ?, 
+                    log_impact_mitigation = ?, 
+                    log_resolution_recovery = ?, 
+                    log_corrective_measures = ?, 
+                    log_feedback_survey = ?, 
+                    log_lesson_learned = ?, 
+                    log_review_measurements = ?
+                WHERE log_report_id = ? AND event_id = ?";
             
             $stmt = $conn->prepare($update_query);
-            
-            // Bind: 9 strings (log fields) + 1 integer (event_id) = 10 params total
-            $stmt->bind_param('sssssssssi', $log_title, $log_issue, $log_root_cause, $log_impact, $log_resolution, $log_corrective, $log_feedback, $log_lesson, $log_review, $event_id);
-            
-            if ($stmt->execute()) {
-                echo json_encode(['success' => true, 'message' => 'Log report updated successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to update: ' . $stmt->error]);
+            if (!$stmt) {
+                throw new Exception("Update prepare failed: " . $conn->error);
             }
-        } else {
-            // Create new record
-            $insert_query = "INSERT INTO event_postmortem 
-                (event_id, log_title_introduction, log_issue_summary, log_root_cause_analysis, log_impact_mitigation, log_resolution_recovery, log_corrective_measures, log_feedback_survey, log_lesson_learned, log_review_measurements, log_report_created, generated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, NOW())";
+            
+            $stmt->bind_param('sssssssssii', $log_title, $log_issue, $log_root_cause, $log_impact, $log_resolution, $log_corrective, $log_feedback, $log_lesson, $log_review, $log_report_id, $event_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Update execute failed: " . $stmt->error);
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Log report updated successfully']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to update: ' . $e->getMessage()]);
+        }
+        exit;
+    } else if ($action === 'save_log_report') {
+        try {
+            $log_title = $input_data['log_title_introduction'] ?? '';
+            $log_issue = $input_data['log_issue_summary'] ?? '';
+            $log_root_cause = $input_data['log_root_cause_analysis'] ?? '';
+            $log_impact = $input_data['log_impact_mitigation'] ?? '';
+            $log_resolution = $input_data['log_resolution_recovery'] ?? '';
+            $log_corrective = $input_data['log_corrective_measures'] ?? '';
+            $log_feedback = $input_data['log_feedback_survey'] ?? '';
+            $log_lesson = $input_data['log_lesson_learned'] ?? '';
+            $log_review = $input_data['log_review_measurements'] ?? '';
+            
+            // INSERT new log report into event_log_reports table
+            $insert_query = "INSERT INTO event_log_reports 
+                (event_id, log_title_introduction, log_issue_summary, log_root_cause_analysis, log_impact_mitigation, log_resolution_recovery, log_corrective_measures, log_feedback_survey, log_lesson_learned, log_review_measurements)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $conn->prepare($insert_query);
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
             
-            // Bind: 1 integer (event_id) + 9 strings (log fields) = 10 params total
             $stmt->bind_param('isssssssss', $event_id, $log_title, $log_issue, $log_root_cause, $log_impact, $log_resolution, $log_corrective, $log_feedback, $log_lesson, $log_review);
             
-            if ($stmt->execute()) {
-                echo json_encode(['success' => true, 'message' => 'Log report created successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to create: ' . $stmt->error]);
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
             }
+            
+            echo json_encode(['success' => true, 'message' => 'Log report created successfully']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to create: ' . $e->getMessage()]);
         }
+        exit;
+    } else if ($action === 'delete_log_report') {
+        try {
+            $log_report_id = intval($input_data['log_report_id'] ?? 0);
+            
+            if (!$log_report_id) {
+                echo json_encode(['success' => false, 'message' => 'Log report ID is required']);
+                exit;
+            }
+            
+            // Verify the report belongs to this event
+            $verify_query = "SELECT log_report_id FROM event_log_reports WHERE log_report_id = ? AND event_id = ?";
+            $stmt = $conn->prepare($verify_query);
+            if (!$stmt) {
+                throw new Exception("Verify prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param('ii', $log_report_id, $event_id);
+            if (!$stmt->execute()) {
+                throw new Exception("Verify execute failed: " . $stmt->error);
+            }
+            
+            if ($stmt->get_result()->num_rows === 0) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Report not found or access denied']);
+                exit;
+            }
+            
+            // Delete the report
+            $delete_query = "DELETE FROM event_log_reports WHERE log_report_id = ? AND event_id = ?";
+            $stmt = $conn->prepare($delete_query);
+            if (!$stmt) {
+                throw new Exception("Delete prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param('ii', $log_report_id, $event_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Delete execute failed: " . $stmt->error);
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Log report deleted successfully']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to delete: ' . $e->getMessage()]);
+        }
+        exit;
+    } else {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
         exit;
     }
 }
 
+// GET request with no matching action
 echo json_encode(['success' => false, 'message' => 'Invalid request']);
 ?>

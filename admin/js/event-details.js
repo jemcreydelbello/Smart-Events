@@ -4436,7 +4436,13 @@ function loadPostmortemData(eventId) {
     fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${eventId}`, {
         headers: getUserHeaders()
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📊 Postmortem API response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         console.log('📊 Postmortem data received:', data);
         
@@ -6813,144 +6819,89 @@ async function generatePostmortemPDF(eventName, eventId, registrations, attendan
 }
 
 // Export Log Report as file
-function exportLogReport(eventId) {
-    console.log('📥 exportLogReport called for event:', eventId);
+function exportLogReport(reportId) {
+    console.log('📥 exportLogReport called for report:', reportId);
     
-    if (!eventId) {
-        eventId = currentEventId || window.currentEventId;
-    }
-    
-    if (!eventId) {
-        alert('Event ID is required');
+    if (!reportId) {
+        alert('Report ID is required');
         return;
     }
     
-    // Fetch the log report from API
+    // Fetch the log report from API using log_report_id
     const headers = getUserHeaders ? getUserHeaders() : {
         'Content-Type': 'application/json'
     };
     
-    fetch(`${API_BASE || '../api'}/postmortem.php?action=get&event_id=${eventId}`, { headers })
+    const apiUrl = `${API_BASE || '../api'}/postmortem.php?action=get_log_report&log_report_id=${reportId}`;
+    console.log('🌐 API URL:', apiUrl);
+    console.log('📊 Headers:', headers);
+    
+    fetch(apiUrl, { headers })
         .then(r => {
-            if (!r.ok) throw new Error('Failed to fetch log report');
-            return r.json();
+            console.log('📡 API Response status:', r.status, r.statusText);
+            if (!r.ok) throw new Error('Failed to fetch log report: ' + r.statusText);
+            return r.text(); // Get as text first to debug
         })
-        .then(async data => {
-            if (!data.success || !data.data) {
+        .then(async text => {
+            console.log('📄 Raw response text (first 500 chars):', text.substring(0, 500));
+            
+            // Try to parse JSON
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('❌ JSON Parse Error:', e.message);
+                console.error('Response starts with:', text.substring(0, 100));
+                console.error('Response ends with:', text.substring(Math.max(0, text.length - 100)));
+                throw new Error('Invalid JSON response from server: ' + e.message);
+            }
+            
+            console.log('📊 API Response data:', data);
+            console.log('  - success:', data.success);
+            console.log('  - data:', data.data);
+            console.log('  - message:', data.message);
+            
+            if (!data.success) {
+                alert(`❌ API Error: ${data.message || 'Unknown error'}`);
+                return;
+            }
+            
+            if (!data.data) {
                 alert('No log report found to export');
                 return;
             }
             
-            const pm = data.data;
-            const eventName = pm.event_name || ('Event ' + eventId);
+            const report = data.data;
+            const eventName = report.event_name || ('Event ' + report.event_id);
+            
+            // Check if log report has any actual content
+            const hasContent = report.log_title_introduction || report.log_issue_summary || report.log_root_cause_analysis || 
+                             report.log_impact_mitigation || report.log_resolution_recovery || report.log_corrective_measures || 
+                             report.log_feedback_survey || report.log_lesson_learned || report.log_review_measurements;
+            
+            if (!hasContent) {
+                alert('⚠️ This log report has no content to export.');
+                console.log('ℹ️ Log report data is empty for report:', reportId);
+                return;
+            }
             
             console.log('📄 Exporting Log Report for:', eventName);
             
-            console.log('📄 Exporting Log Report for:', eventName);
-            
-            // Create simple HTML content for export - matching Finance Report style
-            let htmlContent = `
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Log Report - Event ${eventId}</title>
-                <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        margin: 40px; 
-                        color: #333; 
-                        background: white;
-                    }
-                    h1 { 
-                        font-size: 32px; 
-                        margin: 10px 0; 
-                        color: #000;
-                    }
-                    .header-info { 
-                        margin-bottom: 20px; 
-                        font-size: 14px;
-                    }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin: 20px 0;
-                    }
-                    th { 
-                        background-color: #3b82f6; 
-                        color: white; 
-                        padding: 12px; 
-                        text-align: left; 
-                        font-weight: bold;
-                    }
-                    td { 
-                        padding: 12px; 
-                        border-bottom: 1px solid #e5e7eb;
-                    }
-                    tr:last-child td { 
-                        border-bottom: none;
-                    }
-                    .label { 
-                        font-weight: bold; 
-                        width: 25%; 
-                        background-color: #f9fafb;
-                    }
-                </style>
-            </head>
-            <body>
-                <h1>Log Report</h1>
-                
-                <div class="header-info">
-                    <div><strong>Event:</strong> ${eventName}</div>
-                    <div><strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}</div>
-                </div>
-                
-                <table>
-                    <tr>
-                        <th colspan="2">Report Details</th>
-                    </tr>
-                    <tr>
-                        <td class="label">Title</td>
-                        <td>${pm.log_title_introduction || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Issue Summary</td>
-                        <td>${pm.log_issue_summary || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Root Cause Analysis</td>
-                        <td>${pm.log_root_cause_analysis || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Impact & Mitigation</td>
-                        <td>${pm.log_impact_mitigation || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Resolution & Recovery</td>
-                        <td>${pm.log_resolution_recovery || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Corrective Measures</td>
-                        <td>${pm.log_corrective_measures || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Feedback & Survey</td>
-                        <td>${pm.log_feedback_survey || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Lessons Learned</td>
-                        <td>${pm.log_lesson_learned || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Review & Measurements</td>
-                        <td>${pm.log_review_measurements || '-'}</td>
-                    </tr>
-                </table>
-            </body>
-            </html>
-            `;
+            // Add report table
+            const reportData = [
+                ['Title', report.log_title_introduction || '-'],
+                ['Issue Summary', report.log_issue_summary || '-'],
+                ['Root Cause Analysis', report.log_root_cause_analysis || '-'],
+                ['Impact & Mitigation', report.log_impact_mitigation || '-'],
+                ['Resolution & Recovery', report.log_resolution_recovery || '-'],
+                ['Corrective Measures', report.log_corrective_measures || '-'],
+                ['Feedback & Survey', report.log_feedback_survey || '-'],
+                ['Lessons Learned', report.log_lesson_learned || '-'],
+                ['Review & Measurements', report.log_review_measurements || '-']
+            ];
             
             // Download as PDF file
-            await generateLogReportPDF(eventName, eventId, pm);
+            await generateLogReportPDF(eventName, report.event_id, reportData, report.log_report_id);
         })
         .catch(err => {
             console.error('❌ Error exporting log report:', err);
@@ -6960,7 +6911,7 @@ function exportLogReport(eventId) {
 }
 
 // Generate Log Report PDF
-async function generateLogReportPDF(eventName, eventId, pm) {
+async function generateLogReportPDF(eventName, eventId, reportData, logReportId) {
     try {
         console.log('🔧 Starting Log Report PDF generation...');
         console.log('window.jspdf:', window.jspdf);
@@ -7020,10 +6971,11 @@ async function generateLogReportPDF(eventName, eventId, pm) {
         doc.text(`${eventName}`, textX, yPos);
         
         yPos += 5;
-        // Log Report label (smaller, normal)
+        // Log Report label with ID (smaller, normal)
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
-        doc.text('Log Report', textX, yPos);
+        const reportLabel = logReportId ? `Log Report #${logReportId}` : 'Log Report';
+        doc.text(reportLabel, textX, yPos);
         
         yPos += 4;
         // Date (smallest, normal)
@@ -7038,29 +6990,36 @@ async function generateLogReportPDF(eventName, eventId, pm) {
         doc.setLineWidth(0.5);
         doc.setFontSize(11);
         
-        // Add report table
-        const reportData = [
-            ['Title', pm.log_title_introduction || '-'],
-            ['Issue Summary', pm.log_issue_summary || '-'],
-            ['Root Cause Analysis', pm.log_root_cause_analysis || '-'],
-            ['Impact & Mitigation', pm.log_impact_mitigation || '-'],
-            ['Resolution & Recovery', pm.log_resolution_recovery || '-'],
-            ['Corrective Measures', pm.log_corrective_measures || '-'],
-            ['Feedback & Survey', pm.log_feedback_survey || '-'],
-            ['Lessons Learned', pm.log_lesson_learned || '-'],
-            ['Review & Measurements', pm.log_review_measurements || '-']
-        ];
-        
+        // Add report table using the reportData passed as parameter
         console.log('📊 Adding log report table...');
         doc.autoTable({
             startY: yPos,
             head: [['Field', 'Details']],
             body: reportData,
-            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
-            bodyStyles: { textColor: [51, 51, 51], valign: 'top' },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: pageWidth - 90 } },
-            margin: { left: margin, right: margin },
+            headStyles: { 
+                fillColor: [30, 115, 187], 
+                textColor: [255, 255, 255], 
+                fontStyle: 'bold', 
+                fontSize: 12,
+                halign: 'left',
+                valign: 'middle'
+            },
+            bodyStyles: { 
+                textColor: [51, 51, 51], 
+                valign: 'top',
+                fontSize: 10,
+                overflow: 'linebreak',
+                cellPadding: 8
+            },
+            alternateRowStyles: { 
+                fillColor: [245, 245, 245] 
+            },
+            columnStyles: { 
+                0: { cellWidth: 45, fontStyle: 'bold', halign: 'left' }, 
+                1: { cellWidth: pageWidth - (2 * margin) - 45, halign: 'left' } 
+            },
+            margin: { left: margin, right: margin, top: 10 },
+            pageBreak: 'auto',
             didDrawPage: function(data) {
                 // Add blue line at bottom
                 doc.setDrawColor(30, 115, 187);
@@ -7076,19 +7035,6 @@ async function generateLogReportPDF(eventName, eventId, pm) {
                 doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
             }
         });
-        
-        // Add blue line at bottom of last page
-        doc.setDrawColor(30, 115, 187);
-        doc.setLineWidth(2);
-        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
-        
-        // Add footer text on last page
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(9);
-        doc.text('Intellismart - Log Report', margin, pageHeight - 15);
-        
-        // Add page number on right
-        doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
         
         // Save the PDF
         const filename = `${eventName} - Postmortem Log Report.pdf`;
@@ -7166,7 +7112,13 @@ function loadPostmortemFinanceSummary(eventId) {
     };
     
     fetch(`${API_BASE || '../api'}/finance.php?action=list&event_id=${eventId}`, { headers })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📊 Finance API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log('📊 Finance Summary data loaded:', data);
             
