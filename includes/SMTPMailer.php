@@ -50,7 +50,7 @@ class SMTPMailer {
         }
         
         try {
-            $result = $conn->query("SELECT * FROM email_configurations LIMIT 1");
+            $result = $conn->query("SELECT * FROM email_config LIMIT 1");
             if ($result && $result->num_rows > 0) {
                 $config = $result->fetch_assoc();
                 error_log('📧 Email configuration loaded from database');

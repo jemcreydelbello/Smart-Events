@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Task Modal</title>
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Modal Test</h1>
+    <button onclick="testShowModal()">Test Show Modal</button>
+    <button onclick="testHideModal()">Test Hide Modal</button>
+    <button onclick="testSelectChange()">Simulate Select Change</button>
+
+    <!-- Task Status Remarks Modal -->
+    <div id="taskStatusRemarksModal" class="modal" onclick="if(event.target === event.currentTarget || event.target.id === 'taskStatusRemarksModal') closeTaskStatusRemarksModal();">
+        <div class="modal-content" style="position: relative;" onclick="event.stopPropagation();">
+            <div style="margin: -30px -30px 0 -30px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: white; padding: 16px 24px;">Add Remarks for Status Change</h2>
+                <button onclick="closeTaskStatusRemarksModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: white; padding: 16px 24px;">&times;</button>
+            </div>
+            
+            <div style="padding: 24px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">New Status: <span id="modalStatusDisplay" style="color: #1E73BB;"></span></label>
+                <textarea id="taskRemarksInput" placeholder="Enter remarks for this status change..." style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical; min-height: 120px; box-sizing: border-box;"></textarea>
+                <p style="margin-top: 8px; font-size: 12px; color: #6b7280;">This will help track why the status was changed.</p>
+            </div>
+            
+            <div style="padding: 16px 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeTaskStatusRemarksModal()" style="padding: 10px 20px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+                <button onclick="testSubmit()" style="padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#1a5fa0'" onmouseout="this.style.background='#1E73BB'">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function testShowModal() {
+            console.log('[TEST] Showing modal');
+            const modal = document.getElementById('taskStatusRemarksModal');
+            if (modal) {
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                document.getElementById('modalStatusDisplay').textContent = 'Test Status';
+                console.log('[TEST] Modal shown - computed display:', window.getComputedStyle(modal).display);
+            } else {
+                console.error('[TEST] Modal element not found!');
+            }
+        }
+
+        function testHideModal() {
+            const modal = document.getElementById('taskStatusRemarksModal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
+        }
+
+        function testSelectChange() {
+            console.log('[TEST] Simulating select change');
+            updateEventTaskStatus(1, 'In Progress');
+        }
+
+        function testSubmit() {
+            const remarks = document.getElementById('taskRemarksInput').value;
+            console.log('[TEST] Submit clicked - remarks:', remarks);
+            testHideModal();
+        }
+
+        function closeTaskStatusRemarksModal() {
+            console.log('[Tasks] Closing remarks modal');
+            const modal = document.getElementById('taskStatusRemarksModal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
+        }
+
+        function updateEventTaskStatus(taskId, newStatus) {
+            console.log('[Tasks] updateEventTaskStatus called with taskId:', taskId, 'newStatus:', newStatus);
+            
+            const modal = document.getElementById('taskStatusRemarksModal');
+            const statusDisplay = document.getElementById('modalStatusDisplay');
+            const remarksInput = document.getElementById('taskRemarksInput');
+            
+            console.log('[Tasks] Modal elements check:', {
+                modal: !!modal,
+                statusDisplay: !!statusDisplay,
+                remarksInput: !!remarksInput
+            });
+            
+            if (modal && statusDisplay && remarksInput) {
+                console.log('[Tasks] Setting modal content...');
+                statusDisplay.textContent = newStatus;
+                remarksInput.value = '';
+                
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+                
+                console.log('[Tasks] Modal classList:', modal.className);
+                console.log('[Tasks] Modal display style:', modal.style.display);
+                console.log('[Tasks] Modal computed style:', window.getComputedStyle(modal).display);
+                
+                setTimeout(() => {
+                    remarksInput.focus();
+                    console.log('[Tasks] ✓ Modal displayed and focused');
+                }, 100);
+            }
+        }
+    </script>
+</body>
+</html>

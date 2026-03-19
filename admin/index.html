@@ -3289,133 +3289,30 @@ try {
               <div class="space-y-6">
                 <div>
                   <h3 class="text-xl font-bold text-gray-900">Email Configuration</h3>
-                  <p class="text-sm text-gray-600 mt-1">Configure SMTP settings for sending registration emails, password resets, and notifications.</p>
+                  <p class="text-sm text-gray-600 mt-1">View and manage the email address used by Smart Events for sending system notifications and communications.</p>
                 </div>
 
-                <!-- Email Configuration Form -->
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <div class="space-y-8">
-                    
-                    <!-- SMTP Server Settings -->
-                    <div class="border-b border-gray-100 pb-8">
-                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#3b82f6" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                        SMTP Server Settings
-                      </h4>
-                      
-                      <!-- Help Alert -->
-                      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-                        <p style="font-size: 13px; color: #1e40af; margin: 0;">
-                          <strong>Quick Guide:</strong> Enter your email provider's SMTP details. Most common providers (Gmail, Outlook, etc.) have standard settings.
-                        </p>
-                      </div>
-
-                      <div class="grid grid-cols-2 gap-4">
-                        <div>
-                          <div style="display: flex; align-items: center;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">SMTP Host</label>
-                            <span title="Enter your email provider's SMTP server address. Example: smtp.gmail.com" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="text" id="smtpHost" placeholder="smtp.gmail.com"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Gmail: <strong>smtp.gmail.com</strong> | Outlook: <strong>smtp-mail.outlook.com</strong></p>
-                        </div>
-                        <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Port</label>
-                            <span title="Port number for SMTP connection. Usually 587 (TLS) or 465 (SSL)" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="number" id="smtpPort" placeholder="587"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;"><strong>587</strong> (TLS) or <strong>465</strong> (SSL)</p>
-                        </div>
-                        <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Username/Email</label>
-                            <span title="Your email account username. Usually your full email address." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="email" id="smtpUser" placeholder="your-email@gmail.com"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                        </div>
-                        <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">Password/App Password</label>
-                            <span title="Your email password or app-specific password. For Gmail, use App Password if 2FA is enabled." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="password" id="smtpPassword" placeholder="••••••••"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                          <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">For Gmail: Generate <strong>App Password</strong> if 2FA is enabled</p>
-                        </div>
-                      </div>
-                      
-                      <div style="margin-top: 16px; display: flex; gap: 8px;">
-                        <button onclick="testEmailConnection()" style="padding: 9px 16px; border: 1px solid #3b82f6; color: #3b82f6; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;"
-                                onmouseover="this.style.backgroundColor='#eff6ff';"
-                                onmouseout="this.style.backgroundColor='white';">Test Connection</button>
-                      </div>
+                <!-- Current Email Display -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                  <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0">
+                      <svg class="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                     </div>
-
-                    <!-- Email Sender Settings -->
-                    <div class="border-b border-gray-100 pb-8">
-                      <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#10b981" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                        Email Sender Details
-                      </h4>
-                      
-                      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #10b981; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-                        <p style="font-size: 13px; color: #065f46; margin: 0;">
-                          <strong>Tip:</strong> The "From Name" will appear in recipients' inboxes. Use something recognizable like "Smart Events Team".
-                        </p>
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-gray-900 mb-1">Current Email Address</h4>
+                      <p class="text-sm text-gray-600 mb-3">This is the email address configured for sending system notifications:</p>
+                      <div class="bg-white rounded border border-blue-200 p-3 text-center mb-4">
+                        <p id="currentEmailDisplay" class="text-base font-mono text-blue-600">Loading...</p>
                       </div>
-                      
-                      <div class="grid grid-cols-2 gap-4">
-                        <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">From Name</label>
-                            <span title="The name that will appear when recipients receive your emails" style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="text" id="fromName" placeholder="Smart Events Team"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                        </div>
-                        <div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <label style="font-size: 13px; font-weight: 600; color: #374151;">From Email</label>
-                            <span title="The email address that emails will be sent from. Usually your SMTP email." style="cursor: help; color: #6b7280; font-weight: bold;">?</span>
-                          </div>
-                          <input type="email" id="fromEmail" placeholder="noreply@smartevents.com"
-                                 style="width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;"
-                                 onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                 onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
-                        </div>
-                      </div>
+                      <button onclick="window.location.href='email-configuration.php'" style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">Change Email Configuration</button>
                     </div>
-
-                    <!-- Save Buttons -->
-                    <div style="display: flex; gap: 8px; padding-top: 8px;">
-                      <button onclick="saveEmailConfiguration()" style="padding: 9px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;"
-                              onmouseover="this.style.opacity='0.9';"
-                              onmouseout="this.style.opacity='1';">Save Email Configuration</button>
-                      <button onclick="loadEmailConfiguration()" style="padding: 9px 24px; border: 1px solid #cbd5e1; color: #475569; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;"
-                              onmouseover="this.style.backgroundColor='#f8fafc';"
-                              onmouseout="this.style.backgroundColor='white';">Reload</button>
-                    </div>
-                    
-                    <!-- Status Message -->
-                    <div id="emailStatusMessage" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px; margin-top: 16px;"></div>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

@@ -954,6 +954,8 @@ function markParticipantAsAttended(registrationId, registrationCode) {
         if (data.success) {
             alert('Participant marked as attended');
             loadAttendees(currentEventId); // Refresh the attendees list
+            // AUTO-RECALCULATE POSTMORTEM when participants change
+            recalculatePostmortemIfOpen();
         } else {
             alert('Failed to mark as attended: ' + (data.message || 'Unknown error'));
         }
@@ -985,6 +987,8 @@ function moveParticipantToInitial(registrationId, registrationCode) {
         if (data.success) {
             alert('Participant moved to Initial List');
             loadAttendees(currentEventId); // Refresh the attendees list
+            // AUTO-RECALCULATE POSTMORTEM when participants change
+            recalculatePostmortemIfOpen();
         } else {
             alert('Failed to move to initial: ' + (data.message || 'Unknown error'));
         }
@@ -1011,6 +1015,8 @@ function deleteParticipant(registrationId, registrationCode) {
         if (data.success) {
             alert('Participant deleted successfully');
             loadAttendees(currentEventId); // Refresh the attendees list
+            // AUTO-RECALCULATE POSTMORTEM when participants change
+            recalculatePostmortemIfOpen();
         } else {
             alert('Failed to delete participant: ' + (data.message || 'Unknown error'));
         }
@@ -1106,6 +1112,8 @@ function handleAddAttendeeSubmit(event) {
             setTimeout(() => {
                 closeAddAttendeeModal();
                 loadAttendees(currentEventId);
+                // AUTO-RECALCULATE POSTMORTEM when participants change
+                recalculatePostmortemIfOpen();
             }, 1500);
         } else {
             showAddAttendeeError(data.message || 'Failed to add attendee');
@@ -1143,14 +1151,96 @@ function openOtherInfoModal() {
     alert('Other info management coming soon');
 }
 
+// Load Dashboard Logistics Items
+function loadDashboardLogisticsItems(eventId) {
+    if (!eventId) {
+        console.warn('⚠️ loadDashboardLogisticsItems: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/logistics.php?action=list&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📦 Logistics items loaded:', data);
+            
+            const container = document.getElementById('logisticsItemsList');
+            if (!container) {
+                console.warn('⚠️ logisticsItemsList container not found');
+                return;
+            }
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const items = data.data;
+                let html = '';
+                
+                items.forEach(item => {
+                    const status = item.status || 'Pending';
+                    const statusClass = getStatusColor(status);
+                    const statusBadge = `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`;
+                    
+                    html += `
+                        <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-900">${item.item || '-'}</div>
+                                <div class="text-xs text-gray-600">${item.category || '-'} • Qty: ${item.quantity || 0}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                console.log('✅ Logistics items displayed:', items.length, 'items');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No logistics items yet</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading logistics items:', err);
+            const container = document.getElementById('logisticsItemsList');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading logistics</p>';
+            }
+        });
+}
+window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
+
+// Helper function to get status color
+function getStatusColor(status) {
+    const statusLower = (status || '').toLowerCase();
+    
+    if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
+        return 'bg-green-100 text-green-800';
+    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
+        return 'bg-blue-100 text-blue-800';
+    } else if (statusLower === 'pending') {
+        return 'bg-yellow-100 text-yellow-800';
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
+        return 'bg-red-100 text-red-800';
+    } else {
+        return 'bg-gray-100 text-gray-800';
+    }
+}
+window.getStatusColor = getStatusColor;
+
 // Load Dashboard Data
 function loadDashboard(eventId) {
     if (!eventId) {
         console.warn('❌ loadDashboard: No eventId provided');
-        return;
+        eventId = window.currentEventId;
+        if (!eventId) {
+            console.error('❌ FATAL: No eventId available');
+            return;
+        }
     }
     
     console.log('📊 Loading DASHBOARD for EVENT ID:', eventId);
+    console.log('[Dashboard] API_BASE:', API_BASE);
+    console.log('[Dashboard] Headers:', getUserHeaders());
     
     // Fetch attendees first for accurate registration stats
     fetch(`${API_BASE}/participants.php?action=list&event_id=${eventId}`, {
@@ -1179,6 +1269,50 @@ function loadDashboard(eventId) {
         })
         .catch(error => console.error('Error loading dashboard:', error));
     
+    // Fetch real budget and expenses data
+    fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('[Dashboard] Finance API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Dashboard] Finance API data:', data);
+            if (data.success) {
+                updateDashboardBudget(data);
+            } else {
+                console.warn('[Dashboard] Finance API error:', data.message);
+                updateDashboardBudget({ data: [], grand_total: 0, budget: 0, balance: 0 });
+            }
+        })
+        .catch(error => {
+            console.error('[Dashboard] Error loading budget:', error);
+            updateDashboardBudget({ data: [], grand_total: 0, budget: 0, balance: 0 });
+        });
+    
+    // Fetch real logistics data
+    fetch(`${API_BASE}/logistics.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('[Dashboard] Logistics API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Dashboard] Logistics API data:', data);
+            if (data.success && data.data) {
+                updateDashboardLogistics(data.data);
+            } else {
+                console.warn('[Dashboard] Logistics API error or no data:', data);
+                updateDashboardLogistics([]);
+            }
+        })
+        .catch(error => {
+            console.error('[Dashboard] Error loading logistics:', error);
+            updateDashboardLogistics([]);
+        });
+    
     // Fetch real tasks for the event
     fetch(`${API_BASE}/tasks.php?action=list&event_id=${eventId}`, {
         headers: getUserHeaders()
@@ -1198,20 +1332,82 @@ function loadDashboard(eventId) {
     
     // Initialize other dashboard sections with sample data for now
     updateDashboardEmails();
-    updateDashboardProgram();
+    loadDashboardTimeline(currentEventId);
 }
 
 function updateDashboardKPIs(event) {
     // Note: Registrations KPI is now updated by updateDashboardAttendees() with real attendee data
-    // This function handles other KPIs from the event data
+    // Budget and Logistics KPIs are now updated by their respective functions
+    // This function now just handles any event-level KPIs
+}
+
+function updateDashboardBudget(financeData) {
+    // Update Budget KPI with real expense data
+    console.log('[KPI] updateDashboardBudget called with:', financeData);
     
-    // Update Budget KPI (placeholder for now)
-    document.getElementById('dashBudget').textContent = '$0.00';
-    document.getElementById('dashBudgetDetail').textContent = '0 EXPENSE LINE ITEMS';
+    try {
+        const budgetAmount = parseFloat(financeData.budget) || 0;
+        const grandTotal = parseFloat(financeData.grand_total) || 0;
+        const balance = parseFloat(financeData.balance) || (budgetAmount - grandTotal);
+        const expenseCount = (financeData.data && Array.isArray(financeData.data)) ? financeData.data.length : 0;
+        
+        // Format as PHP currency
+        const formattedAmount = grandTotal.toFixed(2);
+        
+        const dashBudget = document.getElementById('dashBudget');
+        const dashBudgetDetail = document.getElementById('dashBudgetDetail');
+        
+        if (dashBudget) {
+            dashBudget.textContent = '₱' + formattedAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            console.log('[KPI] Budget amount updated to: ₱' + formattedAmount);
+        }
+        
+        if (dashBudgetDetail) {
+            dashBudgetDetail.textContent = expenseCount + ' EXPENSE LINE ITEMS';
+            console.log('[KPI] Budget detail updated to: ' + expenseCount + ' items');
+        }
+        
+        console.log('💰 Budget KPI Updated: ₱' + formattedAmount + ' (' + expenseCount + ' items)');
+    } catch (error) {
+        console.error('[KPI] Error updating budget:', error);
+    }
+}
+
+function updateDashboardLogistics(logisticsData) {
+    // Update Logistics Readiness KPI
+    console.log('[KPI] updateDashboardLogistics called with:', logisticsData);
     
-    // Update Logistics Readiness (placeholder)
-    document.getElementById('dashLogistics').textContent = '0%';
-    document.getElementById('dashLogisticsDetail').textContent = '0 LOGISTICS ITEMS TRACKED';
+    try {
+        if (!logisticsData || !Array.isArray(logisticsData)) {
+            logisticsData = [];
+        }
+        
+        const totalItems = logisticsData.length;
+        const completedItems = logisticsData.filter(item => {
+            const status = item.status ? item.status.toLowerCase() : '';
+            return status === 'completed' || status === 'done' || status === 'finished';
+        }).length;
+        
+        // Calculate percentage (0% if no items)
+        const readinessPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        
+        const dashLogistics = document.getElementById('dashLogistics');
+        const dashLogisticsDetail = document.getElementById('dashLogisticsDetail');
+        
+        if (dashLogistics) {
+            dashLogistics.textContent = readinessPercent + '%';
+            console.log('[KPI] Logistics percentage updated to: ' + readinessPercent + '%');
+        }
+        
+        if (dashLogisticsDetail) {
+            dashLogisticsDetail.textContent = totalItems + ' LOGISTICS ITEMS TRACKED';
+            console.log('[KPI] Logistics detail updated to: ' + totalItems + ' items');
+        }
+        
+        console.log('📦 Logistics KPI Updated: ' + readinessPercent + '% (' + totalItems + ' items, ' + completedItems + ' completed)');
+    } catch (error) {
+        console.error('[KPI] Error updating logistics:', error);
+    }
 }
 
 function updateDashboardAttendees(attendees) {
@@ -1297,23 +1493,8 @@ function updateDashboardTasks(tasks) {
     
     document.getElementById('taskStatusTotal').textContent = `${total} total tasks`;
     
-    // Top Cost Drivers (sample data for now - can be connected to a budget table later)
-    document.getElementById('costDriversList').innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <span>Hall Rental</span>
-            <span style="font-weight: 600;">₱4,200.00</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <span>Lunch Pack</span>
-            <span style="font-weight: 600;">₱3,960.00</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Badge Printing</span>
-            <span style="font-weight: 600;">₱420.00</span>
-        </div>
-    `;
-    
-    document.getElementById('costDriversTotal').textContent = '3 shown';
+    // Load Logistics Items for Dashboard
+    loadDashboardLogisticsItems(currentEventId);
 }
 
 function updateDashboardEmails() {
@@ -1427,34 +1608,100 @@ function updateDashboardEmails() {
     });
 }
 
-function updateDashboardProgram() {
-    // Sample program coverage data
-    const program = {
-        milestones: 3,
-        flowSlots: 4
+function loadDashboardTimeline(eventId, eventObj) {
+    if (!eventId) {
+        console.warn('⚠️ loadDashboardTimeline: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
     };
     
-    const total = program.milestones + program.flowSlots;
+    // Get event date from the eventObj parameter (passed from displayEventDetailsData)
+    let eventDate = new Date();
+    if (eventObj && eventObj.event_date) {
+        eventDate = new Date(eventObj.event_date);
+    }
     
-    document.getElementById('programCoverageList').innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                <span>Timeline Milestones</span>
-                <div style="height: 8px; background: #ff9800; border-radius: 4px; flex: 1;"></div>
-            </div>
-            <span style="font-weight: 600; min-width: 30px; text-align: right;">${program.milestones}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                <span>Program Flow Slots</span>
-                <div style="height: 8px; background: #00bcd4; border-radius: 4px; flex: 1;"></div>
-            </div>
-            <span style="font-weight: 600; min-width: 30px; text-align: right;">${program.flowSlots}</span>
-        </div>
-    `;
-    
-    document.getElementById('programCoverageTotal').textContent = `${total} entries`;
+    // Fetch timeline items
+    fetch(`${API_BASE || '../api'}/program.php?action=list-timeline&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📅 Timeline items loaded:', data);
+            
+            const container = document.getElementById('timelineList');
+            if (!container) {
+                console.warn('⚠️ timelineList container not found');
+                return;
+            }
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const items = data.data;
+                let html = '';
+                
+                items.forEach(item => {
+                    const weekNum = item.week_number || '-';
+                    const activity = item.activity || item.description || '-';
+                    const status = item.status || 'Pending';
+                    const statusClass = getTimelineStatusColor(status);
+                    
+                    // Only show status badge if it's NOT Pending
+                    const statusBadge = status.toLowerCase() !== 'pending' 
+                        ? `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`
+                        : '';
+                    
+                    // Calculate month and year based on event date
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                       'July', 'August', 'September', 'October', 'November', 'December'];
+                    const month = monthNames[eventDate.getMonth()];
+                    const year = eventDate.getFullYear();
+                    
+                    html += `
+                        <div class="flex justify-between items-start p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-900">Week ${weekNum} in Month of ${month} ${year}</div>
+                                <div class="text-sm text-gray-700 mt-1">${activity}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                console.log('✅ Timeline items displayed:', items.length, 'items');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No timeline items yet</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading timeline items:', err);
+            const container = document.getElementById('timelineList');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading timeline</p>';
+            }
+        });
 }
+window.loadDashboardTimeline = loadDashboardTimeline;
+
+// Helper function for timeline status color
+function getTimelineStatusColor(status) {
+    const statusLower = (status || '').toLowerCase();
+    
+    if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
+        return 'bg-green-100 text-green-800';
+    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
+        return 'bg-blue-100 text-blue-800';
+    } else if (statusLower === 'pending') {
+        return 'bg-yellow-100 text-yellow-800';
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
+        return 'bg-red-100 text-red-800';
+    } else {
+        return 'bg-gray-100 text-gray-800';
+    }
+}
+window.getTimelineStatusColor = getTimelineStatusColor;
+
 function editEvent() {
     // Load current event data into the form and open edit modal
     console.log('🔧 Opening edit modal for event ID:', currentEventId);
@@ -4104,6 +4351,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Helper function to recalculate postmortem if the postmortem tab is currently open
+function recalculatePostmortemIfOpen() {
+    if (!currentEventId) return;
+    
+    // Check if postmortem tab is visible
+    const postmortemTab = document.getElementById('postmortem');
+    if (!postmortemTab || postmortemTab.style.display === 'none') {
+        console.log('📊 Postmortem tab not visible - skipping recalculation');
+        return;
+    }
+    
+    console.log('📊 Postmortem tab is visible - recalculating metrics from source tables');
+    
+    // Silently recalculate without showing alerts
+    fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${currentEventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            const pm = data.data;
+            console.log('✓ Postmortem recalculated from source tables:', pm);
+            
+            // Update the UI with fresh calculated values
+            const registrations = document.getElementById('postmortemRegistrations');
+            if (registrations) registrations.textContent = pm.total_registrations || 0;
+            
+            const regDetail = document.getElementById('postmortemRegistrationsDetail');
+            if (regDetail) {
+                const attended = pm.attended_count || 0;
+                const noShow = pm.no_show_count || 0;
+                regDetail.textContent = `${attended} attended • ${noShow} no-show`;
+            }
+            
+            const attendance = document.getElementById('postmortemAttendanceRate');
+            if (attendance) attendance.textContent = (pm.attendance_rate || 0).toFixed(1) + '%';
+            
+            const tasks = document.getElementById('postmortemTaskCompletion');
+            if (tasks) tasks.textContent = (pm.task_completion_rate || 0).toFixed(0) + '%';
+            
+            const taskDetail = document.getElementById('postmortemTaskDetail');
+            if (taskDetail) {
+                const done = pm.completed_tasks || 0;
+                const total = pm.total_tasks || 0;
+                taskDetail.textContent = `${done}/${total} done`;
+            }
+            
+            const logistics = document.getElementById('postmortemLogisticsCompletion');
+            if (logistics) logistics.textContent = (pm.logistics_completion_rate || 0).toFixed(0) + '%';
+            
+            const logisticsDetail = document.getElementById('postmortemLogisticsDetail');
+            if (logisticsDetail) {
+                const completed = pm.completed_logistics || 0;
+                const total = pm.total_logistics || 0;
+                logisticsDetail.textContent = `${completed}/${total} completed`;
+            }
+        }
+    })
+    .catch(error => console.warn('Error recalculating postmortem:', error));
+}
+
 function loadFinanceData(eventId) {
     // Load finance data for the Finance tab
     if (!eventId) return;
@@ -4117,83 +4425,97 @@ function loadFinanceData(eventId) {
 
 function loadPostmortemData(eventId) {
     // Load postmortem data for the Postmortem tab
-    if (!eventId) return;
+    if (!eventId) {
+        console.warn('❌ No eventId provided to loadPostmortemData');
+        return;
+    }
     
     console.log('📊 Loading postmortem data for event:', eventId);
     
-    // First calculate metrics from existing data
+    // Single call to calculate - it now returns complete fresh data from database
     fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${eventId}`, {
         headers: getUserHeaders()
     })
     .then(response => response.json())
     .then(data => {
-        console.log('📊 Postmortem calculation:', data);
-    })
-    .catch(err => console.error('Error calculating postmortem:', err));
-    
-    // Fetch postmortem data from API
-    fetch(`${API_BASE}/postmortem.php?action=get&event_id=${eventId}`, {
-        headers: getUserHeaders()
-    })
-    .then(response => response.json())
-    .then(data => {
+        console.log('📊 Postmortem data received:', data);
+        
         if (data.success && data.data) {
             const pm = data.data;
             
             console.log('✓ Postmortem data loaded:', pm);
             
             // Update statistics cards
-            document.getElementById('postmortemRegistrations').textContent = pm.registered_count || 0;
-            document.getElementById('postmortemAttendanceRate').textContent = (pm.attendance_rate || 0).toFixed(1) + '%';
-            document.getElementById('postmortemTaskCompletion').textContent = (pm.task_completion_rate || 0).toFixed(0) + '%';
-            document.getElementById('postmortemLogisticsCompletion').textContent = (pm.logistics_completion_rate || 0).toFixed(0) + '%';
+            const registrations = document.getElementById('postmortemRegistrations');
+            if (registrations) registrations.textContent = pm.total_registrations || 0;
+            
+            const attendance = document.getElementById('postmortemAttendanceRate');
+            if (attendance) attendance.textContent = (pm.attendance_rate || 0).toFixed(1) + '%';
+            
+            // Update detail sections with calculated values
+            // Registrations Detail
+            const regDetail = document.getElementById('postmortemRegistrationsDetail');
+            if (regDetail) {
+                const attended = pm.attended_count || 0;
+                const noShow = pm.no_show_count || 0;
+                regDetail.textContent = `${attended} attended • ${noShow} no-show`;
+            }
+            
+            // Task Completion with count
+            const tasks = document.getElementById('postmortemTaskCompletion');
+            if (tasks) tasks.textContent = (pm.task_completion_rate || 0).toFixed(0) + '%';
+            
+            const taskDetail = document.getElementById('postmortemTaskDetail');
+            if (taskDetail) {
+                const done = pm.completed_tasks || 0;
+                const total = pm.total_tasks || 0;
+                taskDetail.textContent = `${done}/${total} done`;
+            }
+            
+            // Logistics Completion with count
+            const logistics = document.getElementById('postmortemLogisticsCompletion');
+            if (logistics) logistics.textContent = (pm.logistics_completion_rate || 0).toFixed(0) + '%';
+            
+            const logisticsDetail = document.getElementById('postmortemLogisticsDetail');
+            if (logisticsDetail) {
+                const completed = pm.completed_logistics || 0;
+                const total = pm.total_logistics || 0;
+                logisticsDetail.textContent = `${completed}/${total} completed`;
+            }
             
             // Update Event Dynamics
             const maxInitial = Math.max(pm.initial_attendees || 0, pm.actual_attendees || 0, 1);
-            document.getElementById('eventDynamicsInitial').textContent = pm.initial_attendees || 0;
-            document.getElementById('eventDynamicsInitialBar').style.width = ((pm.initial_attendees || 0) / maxInitial * 100) + '%';
+            const initialElem = document.getElementById('eventDynamicsInitial');
+            if (initialElem) initialElem.textContent = pm.initial_attendees || 0;
+            const initialBar = document.getElementById('eventDynamicsInitialBar');
+            if (initialBar) initialBar.style.width = ((pm.initial_attendees || 0) / maxInitial * 100) + '%';
             
-            document.getElementById('eventDynamicsActual').textContent = pm.actual_attendees || 0;
-            document.getElementById('eventDynamicsActualBar').style.width = ((pm.actual_attendees || 0) / maxInitial * 100) + '%';
+            const actualElem = document.getElementById('eventDynamicsActual');
+            if (actualElem) actualElem.textContent = pm.actual_attendees || 0;
+            const actualBar = document.getElementById('eventDynamicsActualBar');
+            if (actualBar) actualBar.style.width = ((pm.actual_attendees || 0) / maxInitial * 100) + '%';
             
-            document.getElementById('eventDynamicsRegistered').textContent = pm.registered_count || 0;
-            document.getElementById('eventDynamicsRegisteredBar').style.width = ((pm.registered_count || 0) / Math.max(maxInitial, pm.registered_count || 1) * 100) + '%';
+            const registeredElem = document.getElementById('eventDynamicsRegistered');
+            if (registeredElem) registeredElem.textContent = pm.registered_count || 0;
+            const registeredBar = document.getElementById('eventDynamicsRegisteredBar');
+            if (registeredBar) registeredBar.style.width = ((pm.registered_count || 0) / Math.max(maxInitial, pm.registered_count || 1) * 100) + '%';
             
-            document.getElementById('eventDynamicsAttended').textContent = pm.attended_count || 0;
-            document.getElementById('eventDynamicsAttendedBar').style.width = ((pm.attended_count || 0) / Math.max(pm.registered_count || 1, pm.attended_count || 1) * 100) + '%';
+            const attendedElem = document.getElementById('eventDynamicsAttended');
+            if (attendedElem) attendedElem.textContent = pm.attended_count || 0;
+            const attendedBar = document.getElementById('eventDynamicsAttendedBar');
+            if (attendedBar) attendedBar.style.width = ((pm.attended_count || 0) / Math.max(pm.registered_count || 1, pm.attended_count || 1) * 100) + '%';
             
-            // Update Communication Mix
-            const maxComm = Math.max(pm.communications_sent || 0, pm.communications_scheduled || 0, pm.communications_draft || 0, 1);
-            document.getElementById('commMixSent').textContent = pm.communications_sent || 0;
-            document.getElementById('commMixSentBar').style.width = ((pm.communications_sent || 0) / maxComm * 100) + '%';
+            // Load Postmortem Finance Summary
+            loadPostmortemFinanceSummary(currentEventId);
             
-            document.getElementById('commMixScheduled').textContent = pm.communications_scheduled || 0;
-            document.getElementById('commMixScheduledBar').style.width = ((pm.communications_scheduled || 0) / maxComm * 100) + '%';
-            
-            document.getElementById('commMixDraft').textContent = pm.communications_draft || 0;
-            document.getElementById('commMixDraftBar').style.width = ((pm.communications_draft || 0) / maxComm * 100) + '%';
-            
-
-            
-            // Update button states
-            if (pm.automated_report_generated) {
-                document.getElementById('automatedReportBtn').textContent = '✓ Automated Report Generated';
-                document.getElementById('automatedReportBtn').disabled = true;
-            } else {
-                document.getElementById('automatedReportBtn').textContent = 'Automated Report';
-                document.getElementById('automatedReportBtn').disabled = false;
-            }
-            
-            if (pm.log_report_created) {
-                document.getElementById('logReportBtn').textContent = '✓ Log Report Created';
-                document.getElementById('logReportBtn').disabled = false;
-            } else {
-                document.getElementById('logReportBtn').textContent = 'Log Report';
-                document.getElementById('logReportBtn').disabled = false;
-            }
+            console.log('✅ All postmortem metrics updated successfully from source tables');
+        } else {
+            console.warn('⚠️ No postmortem data returned');
         }
     })
-    .catch(err => console.error('Error loading postmortem data:', err));
+    .catch(err => {
+        console.error('❌ Error loading postmortem data:', err);
+    });
 }
 
 // ============= ATTENDEES MANAGEMENT =============
@@ -5967,6 +6289,37 @@ console.log('[DEBUG] Assigned window.deleteEmailBlast immediately after function
 
 // ============= POSTMORTEM FUNCTIONS =============
 
+// Helper to get user headers without Content-Type (for FormData)
+function getUserHeadersForFormData() {
+    const headers = {};
+    try {
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userInfo = (admin && admin.id) ? admin : user;
+        
+        if (userInfo.role) {
+            headers['X-User-Role'] = userInfo.role;
+        } else if (userInfo.role_name) {
+            headers['X-User-Role'] = userInfo.role_name;
+        } else {
+            headers['X-User-Role'] = 'GUEST';
+        }
+        
+        if (userInfo.id) {
+            headers['X-User-Id'] = userInfo.id;
+        } else if (userInfo.user_id) {
+            headers['X-User-Id'] = userInfo.user_id;
+        }
+        
+        if (userInfo.coordinator_id) {
+            headers['X-Coordinator-Id'] = userInfo.coordinator_id;
+        }
+    } catch (e) {
+        console.error('Error parsing user info:', e);
+    }
+    return headers;
+}
+
 function savePostmortemData() {
     if (!currentEventId) {
         alert('Event ID is required');
@@ -5990,7 +6343,7 @@ function savePostmortemData() {
     
     fetch(`${API_BASE}/postmortem.php?action=save`, {
         method: 'POST',
-        headers: getUserHeaders(),
+        headers: getUserHeadersForFormData(),
         body: formData
     })
     .then(response => response.json())
@@ -6022,9 +6375,37 @@ function generateAutomatedReport() {
     formData.append('event_id', eventId);
     formData.append('report_type', 'automated');
     
+    // Get headers WITHOUT Content-Type (let fetch handle it for FormData)
+    const headers = {};
+    try {
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userInfo = (admin && admin.id) ? admin : user;
+        
+        if (userInfo.role) {
+            headers['X-User-Role'] = userInfo.role;
+        } else if (userInfo.role_name) {
+            headers['X-User-Role'] = userInfo.role_name;
+        } else {
+            headers['X-User-Role'] = 'GUEST';
+        }
+        
+        if (userInfo.id) {
+            headers['X-User-Id'] = userInfo.id;
+        } else if (userInfo.user_id) {
+            headers['X-User-Id'] = userInfo.user_id;
+        }
+        
+        if (userInfo.coordinator_id) {
+            headers['X-Coordinator-Id'] = userInfo.coordinator_id;
+        }
+    } catch (e) {
+        console.error('Error parsing user info:', e);
+    }
+    
     fetch(`${API_BASE}/postmortem.php?action=generate_report`, {
         method: 'POST',
-        headers: getUserHeaders(),
+        headers: headers,
         body: formData
     })
     .then(response => response.json())
@@ -6174,7 +6555,7 @@ function saveLogReport() {
     
     fetch(apiUrl, {
         method: 'POST',
-        headers: getUserHeaders(),
+        headers: getUserHeadersForFormData(),
         body: formData
     })
     .then(response => {
@@ -6185,22 +6566,23 @@ function saveLogReport() {
         console.log('✅ API Response:', data);
         if (data.success) {
             console.log('✅ Success! Showing notification...');
-            showNotification('Log report saved successfully!', 'success');
+            showNotification('✅ Log report saved successfully!', 'success');
             const btn = document.getElementById('logReportBtn');
             if (btn) {
-                btn.textContent = '✓ Log Report Created';
+                btn.textContent = 'Log Report';
                 btn.disabled = false;
             }
-            // Return to metrics view after save
+            // Return to log reports list view after save
             setTimeout(() => {
-                console.log('Hiding form and returning to metrics view...');
-                if (typeof hideCreateReportForm === 'function') {
-                    hideCreateReportForm();
+                console.log('Returning to log reports list view...');
+                if (typeof switchPostmortemView === 'function') {
+                    switchPostmortemView('log');
                 } else {
+                    console.error('❌ switchPostmortemView not found');
                     const formView = document.getElementById('postmortemCreateReportView');
                     if (formView) formView.style.display = 'none';
                 }
-            }, 1000);
+            }, 800);
         } else {
             console.warn('❌ API returned success: false');
             showNotification(data.message || 'Failed to save log report', 'error');
@@ -6221,73 +6603,521 @@ function exportPostmortemPDF() {
         return;
     }
     
-    // Gather postmortem data
-    const postmortemData = {
-        event_id: currentEventId,
-        event_name: document.title,
-        registrations: document.getElementById('postmortemRegistrations').textContent,
-        attendance_rate: document.getElementById('postmortemAttendanceRate').textContent,
-        task_completion: document.getElementById('postmortemTaskCompletion').textContent,
-        logistics_completion: document.getElementById('postmortemLogisticsCompletion').textContent,
-        initial_attendees: document.getElementById('eventDynamicsInitial').textContent,
-        actual_attendees: document.getElementById('eventDynamicsActual').textContent,
-        registered: document.getElementById('eventDynamicsRegistered').textContent,
-        attended: document.getElementById('eventDynamicsAttended').textContent,
-        communications_sent: document.getElementById('commMixSent').textContent,
-        communications_scheduled: document.getElementById('commMixScheduled').textContent,
-        communications_draft: document.getElementById('commMixDraft').textContent
+    // Fetch event name AND metrics from API
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
     };
     
-    // Create a simple HTML table for PDF export
-    let htmlContent = `
-    <html>
-    <head>
-        <title>Postmortem Report</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #1F4CC4; }
-            h2 { color: #333; margin-top: 20px; }
-            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f0f0f0; }
-            .metric { display: inline-block; width: 48%; margin: 1%; padding: 10px; border: 1px solid #ddd; }
-        </style>
-    </head>
-    <body>
-        <h1>Event Postmortem Report</h1>
-        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-        
-        <h2>Key Metrics</h2>
-        <div class="metric"><strong>Registrations:</strong> ${postmortemData.registrations}</div>
-        <div class="metric"><strong>Attendance Rate:</strong> ${postmortemData.attendance_rate}</div>
-        <div class="metric"><strong>Task Completion:</strong> ${postmortemData.task_completion}</div>
-        <div class="metric"><strong>Logistics Completion:</strong> ${postmortemData.logistics_completion}</div>
-        
-        <h2>Event Dynamics</h2>
-        <table>
-            <tr><td>Initial Attendees</td><td>${postmortemData.initial_attendees}</td></tr>
-            <tr><td>Actual Attendees</td><td>${postmortemData.actual_attendees}</td></tr>
-            <tr><td>Registered</td><td>${postmortemData.registered}</td></tr>
-            <tr><td>Attended</td><td>${postmortemData.attended}</td></tr>
-        </table>
-        
-        <h2>Communication Mix</h2>
-        <table>
-            <tr><td>Sent</td><td>${postmortemData.communications_sent}</td></tr>
-            <tr><td>Scheduled</td><td>${postmortemData.communications_scheduled}</td></tr>
-            <tr><td>Draft</td><td>${postmortemData.communications_draft}</td></tr>
-        </table>
-    </body>
-    </html>
-    `;
-    
-    // Open print dialog
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.print();
+    // Fetch both postmortem data and metrics
+    Promise.all([
+        fetch(`${API_BASE || '../api'}/postmortem.php?action=get&event_id=${currentEventId}`, { headers }).then(r => r.json()),
+        fetch(`${API_BASE || '../api'}/postmortem.php?action=calculate&event_id=${currentEventId}`, { headers }).then(r => r.json())
+    ])
+        .then(async ([apiData, metricsData]) => {
+            let eventName = apiData.data?.event_name || ('Event ' + currentEventId);
+            
+            // Get metrics from the calculate API response
+            const metrics = metricsData.data || {};
+            const registrations = metrics.total_registrations || '-';
+            const attendanceRate = (metrics.attendance_rate || 0) + '%';
+            const taskCompletion = (metrics.task_completion_rate || 0) + '%';
+            const logisticsCompletion = (metrics.logistics_completion_rate || 0) + '%';
+            const initialAttendees = metrics.initial_attendees || '-';
+            const actualAttendees = metrics.actual_attendees || '-';
+            const registered = metrics.registered_count || '-';
+            const attended = metrics.attended_count || '-';
+            const commSent = metrics.communications_sent || '-';
+            const commScheduled = metrics.communications_scheduled || '-';
+            const commDraft = metrics.communications_draft || '-';
+            
+            console.log('📄 Exporting Automated Report for:', eventName);
+            console.log('📊 Metrics:', metrics);
+            
+            // Download as PDF file
+            await generatePostmortemPDF(eventName, currentEventId, registrations, attendanceRate, taskCompletion, logisticsCompletion, initialAttendees, actualAttendees, registered, attended, commSent, commScheduled, commDraft);
+        })
+        .catch(err => {
+            console.error('❌ Error exporting postmortem:', err);
+            console.error('Error details:', err.message, err.stack);
+            alert('Failed to export postmortem. Check console for details.');
+        });
 }
-window.exportPostmortemPDF = exportPostmortemPDF; // Immediate assignment
+
+// Generate Postmortem PDF
+async function generatePostmortemPDF(eventName, eventId, registrations, attendanceRate, taskCompletion, logisticsCompletion, initialAttendees, actualAttendees, registered, attended, commSent, commScheduled, commDraft) {
+    try {
+        console.log('🔧 Starting PDF generation...');
+        console.log('window.jspdf:', window.jspdf);
+        
+        // Check if jsPDF is available - try different access patterns
+        let jsPDFClass = null;
+        
+        if (window.jspdf && window.jspdf.jsPDF) {
+            // UMD module pattern
+            jsPDFClass = window.jspdf.jsPDF;
+            console.log('✅ Found jsPDF via window.jspdf.jsPDF');
+        } else if (window.jsPDF) {
+            // Alternative pattern
+            jsPDFClass = window.jsPDF;
+            console.log('✅ Found jsPDF via window.jsPDF');
+        } else {
+            throw new Error('jsPDF library not loaded. Available: ' + Object.keys(window).filter(k => k.includes('pdf') || k.includes('js')).join(', '));
+        }
+        
+        const doc = new jsPDFClass();
+        
+        console.log('✅ jsPDF initialized');
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        let yPos = 20;
+        
+        // Try to add logo at top left
+        const logoData = await (async () => {
+            try {
+                const response = await fetch('../assets/smart1.png');
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.log('⚠️ Could not load logo image');
+                return null;
+            }
+        })();
+        
+        if (logoData) {
+            doc.addImage(logoData, 'PNG', margin, 10, 30, 20);
+        }
+        
+        // Add text to the right of logo
+        doc.setTextColor(0, 0, 0);
+        yPos = 18;
+        const textX = margin + 35; // Position text to the right of logo
+        
+        // Event name at top (largest, bold)
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${eventName}`, textX, yPos);
+        
+        yPos += 5;
+        // Postmortem Report label (smaller, normal)
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text('Postmortem Report', textX, yPos);
+        
+        yPos += 4;
+        // Date (smallest, normal)
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, textX, yPos);
+        
+        yPos += 10;
+        
+        // Reset text color and linewidth
+        doc.setTextColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.setFontSize(11);
+        
+        // Add first table - Summary Metrics
+        const summaryData = [
+            ['Total Registrations', String(registrations)],
+            ['Attendance Rate', String(attendanceRate)],
+            ['Task Completion', String(taskCompletion)],
+            ['Logistics Complete', String(logisticsCompletion)]
+        ];
+        
+        console.log('📊 Adding summary table...');
+        doc.autoTable({
+            startY: yPos,
+            head: [['Metric', 'Value']],
+            body: summaryData,
+            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
+            bodyStyles: { textColor: [51, 51, 51] },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            margin: { left: margin, right: margin },
+            columnStyles: {
+                0: { cellWidth: (pageWidth - 2 * margin) * 0.6 },
+                1: { cellWidth: (pageWidth - 2 * margin) * 0.4 }
+            }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 15;
+        
+        // Add second table - Detailed Metrics
+        const detailedData = [
+            ['Initial Attendees', String(initialAttendees)],
+            ['Actual Attendees', String(actualAttendees)],
+            ['Registered', String(registered)],
+            ['Attended', String(attended)],
+            ['Communications Sent', String(commSent)],
+            ['Communications Scheduled', String(commScheduled)],
+            ['Communications Draft', String(commDraft)]
+        ];
+        
+        console.log('📊 Adding detailed table...');
+        doc.autoTable({
+            startY: yPos,
+            head: [['Metric', 'Value']],
+            body: detailedData,
+            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
+            bodyStyles: { textColor: [51, 51, 51] },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            margin: { left: margin, right: margin },
+            columnStyles: {
+                0: { cellWidth: (pageWidth - 2 * margin) * 0.6 },
+                1: { cellWidth: (pageWidth - 2 * margin) * 0.4 }
+            },
+            didDrawPage: function(data) {
+                // Add blue line at bottom
+                doc.setDrawColor(30, 115, 187);
+                doc.setLineWidth(2);
+                doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+                
+                // Add footer text
+                doc.setTextColor(100, 100, 100);
+                doc.setFontSize(9);
+                doc.text('Intellismart - Automated Report', margin, pageHeight - 15);
+                
+                // Add page number on right
+                doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+            }
+        });
+        
+        // Add blue line at bottom of last page
+        doc.setDrawColor(30, 115, 187);
+        doc.setLineWidth(2);
+        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+        
+        // Add footer text on last page
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(9);
+        doc.text('Intellismart - Automated Report', margin, pageHeight - 15);
+        
+        // Add page number on right
+        doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+        
+        // Save the PDF
+        const filename = `${eventName} - Postmortem Automated Report.pdf`;
+        doc.save(filename);
+        console.log('✅ PDF Downloaded:', filename);
+        
+    } catch (error) {
+        console.error('❌ PDF Generation Error:', error.message);
+        console.error('Stack:', error.stack);
+        throw error;
+    }
+}
+
+// Export Log Report as file
+function exportLogReport(eventId) {
+    console.log('📥 exportLogReport called for event:', eventId);
+    
+    if (!eventId) {
+        eventId = currentEventId || window.currentEventId;
+    }
+    
+    if (!eventId) {
+        alert('Event ID is required');
+        return;
+    }
+    
+    // Fetch the log report from API
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/postmortem.php?action=get&event_id=${eventId}`, { headers })
+        .then(r => {
+            if (!r.ok) throw new Error('Failed to fetch log report');
+            return r.json();
+        })
+        .then(async data => {
+            if (!data.success || !data.data) {
+                alert('No log report found to export');
+                return;
+            }
+            
+            const pm = data.data;
+            const eventName = pm.event_name || ('Event ' + eventId);
+            
+            console.log('📄 Exporting Log Report for:', eventName);
+            
+            console.log('📄 Exporting Log Report for:', eventName);
+            
+            // Create simple HTML content for export - matching Finance Report style
+            let htmlContent = `
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Log Report - Event ${eventId}</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 40px; 
+                        color: #333; 
+                        background: white;
+                    }
+                    h1 { 
+                        font-size: 32px; 
+                        margin: 10px 0; 
+                        color: #000;
+                    }
+                    .header-info { 
+                        margin-bottom: 20px; 
+                        font-size: 14px;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin: 20px 0;
+                    }
+                    th { 
+                        background-color: #3b82f6; 
+                        color: white; 
+                        padding: 12px; 
+                        text-align: left; 
+                        font-weight: bold;
+                    }
+                    td { 
+                        padding: 12px; 
+                        border-bottom: 1px solid #e5e7eb;
+                    }
+                    tr:last-child td { 
+                        border-bottom: none;
+                    }
+                    .label { 
+                        font-weight: bold; 
+                        width: 25%; 
+                        background-color: #f9fafb;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Log Report</h1>
+                
+                <div class="header-info">
+                    <div><strong>Event:</strong> ${eventName}</div>
+                    <div><strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}</div>
+                </div>
+                
+                <table>
+                    <tr>
+                        <th colspan="2">Report Details</th>
+                    </tr>
+                    <tr>
+                        <td class="label">Title</td>
+                        <td>${pm.log_title_introduction || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Issue Summary</td>
+                        <td>${pm.log_issue_summary || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Root Cause Analysis</td>
+                        <td>${pm.log_root_cause_analysis || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Impact & Mitigation</td>
+                        <td>${pm.log_impact_mitigation || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Resolution & Recovery</td>
+                        <td>${pm.log_resolution_recovery || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Corrective Measures</td>
+                        <td>${pm.log_corrective_measures || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Feedback & Survey</td>
+                        <td>${pm.log_feedback_survey || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Lessons Learned</td>
+                        <td>${pm.log_lesson_learned || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Review & Measurements</td>
+                        <td>${pm.log_review_measurements || '-'}</td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            `;
+            
+            // Download as PDF file
+            await generateLogReportPDF(eventName, eventId, pm);
+        })
+        .catch(err => {
+            console.error('❌ Error exporting log report:', err);
+            console.error('Error details:', err.message, err.stack);
+            alert('Failed to export log report. Check console for details.');
+        });
+}
+
+// Generate Log Report PDF
+async function generateLogReportPDF(eventName, eventId, pm) {
+    try {
+        console.log('🔧 Starting Log Report PDF generation...');
+        console.log('window.jspdf:', window.jspdf);
+        
+        // Check if jsPDF is available - try different access patterns
+        let jsPDFClass = null;
+        
+        if (window.jspdf && window.jspdf.jsPDF) {
+            // UMD module pattern
+            jsPDFClass = window.jspdf.jsPDF;
+            console.log('✅ Found jsPDF via window.jspdf.jsPDF');
+        } else if (window.jsPDF) {
+            // Alternative pattern
+            jsPDFClass = window.jsPDF;
+            console.log('✅ Found jsPDF via window.jsPDF');
+        } else {
+            throw new Error('jsPDF library not loaded');
+        }
+        
+        const doc = new jsPDFClass();
+        
+        console.log('✅ jsPDF initialized for log report');
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        let yPos = 20;
+        
+        // Try to add logo at top left
+        const logoData = await (async () => {
+            try {
+                const response = await fetch('../assets/smart1.png');
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.log('⚠️ Could not load logo image');
+                return null;
+            }
+        })();
+        
+        if (logoData) {
+            doc.addImage(logoData, 'PNG', margin, 20, 40, 20);
+        }
+        
+        // Add text to the right of logo
+        doc.setTextColor(0, 0, 0);
+        yPos = 18;
+        const textX = margin + 35; // Position text to the right of logo
+        
+        // Event name at top (largest, bold)
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${eventName}`, textX, yPos);
+        
+        yPos += 5;
+        // Log Report label (smaller, normal)
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text('Log Report', textX, yPos);
+        
+        yPos += 4;
+        // Date (smallest, normal)
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, textX, yPos);
+        
+        yPos += 10;
+        
+        // Reset text color and linewidth
+        doc.setTextColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.setFontSize(11);
+        
+        // Add report table
+        const reportData = [
+            ['Title', pm.log_title_introduction || '-'],
+            ['Issue Summary', pm.log_issue_summary || '-'],
+            ['Root Cause Analysis', pm.log_root_cause_analysis || '-'],
+            ['Impact & Mitigation', pm.log_impact_mitigation || '-'],
+            ['Resolution & Recovery', pm.log_resolution_recovery || '-'],
+            ['Corrective Measures', pm.log_corrective_measures || '-'],
+            ['Feedback & Survey', pm.log_feedback_survey || '-'],
+            ['Lessons Learned', pm.log_lesson_learned || '-'],
+            ['Review & Measurements', pm.log_review_measurements || '-']
+        ];
+        
+        console.log('📊 Adding log report table...');
+        doc.autoTable({
+            startY: yPos,
+            head: [['Field', 'Details']],
+            body: reportData,
+            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
+            bodyStyles: { textColor: [51, 51, 51], valign: 'top' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: pageWidth - 90 } },
+            margin: { left: margin, right: margin },
+            didDrawPage: function(data) {
+                // Add blue line at bottom
+                doc.setDrawColor(30, 115, 187);
+                doc.setLineWidth(2);
+                doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+                
+                // Add footer text
+                doc.setTextColor(100, 100, 100);
+                doc.setFontSize(9);
+                doc.text('Intellismart - Log Report', margin, pageHeight - 15);
+                
+                // Add page number on right
+                doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+            }
+        });
+        
+        // Add blue line at bottom of last page
+        doc.setDrawColor(30, 115, 187);
+        doc.setLineWidth(2);
+        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+        
+        // Add footer text on last page
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(9);
+        doc.text('Intellismart - Log Report', margin, pageHeight - 15);
+        
+        // Add page number on right
+        doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+        
+        // Save the PDF
+        const filename = `${eventName} - Postmortem Log Report.pdf`;
+        doc.save(filename);
+        console.log('✅ PDF Downloaded:', filename);
+        
+    } catch (error) {
+        console.error('❌ Log Report PDF Generation Error:', error.message);
+        console.error('Stack:', error.stack);
+        throw error;
+    }
+}
+
+// Helper function to download files
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    console.log('✅ File downloaded:', filename);
+}
+
+window.exportPostmortemPDF = exportPostmortemPDF;
+window.exportLogReport = exportLogReport;
 
 // Alias function for HTML onclick handler
 function exportPostmortemReport(eventId) {
@@ -6323,6 +7153,74 @@ console.log('  - closeAddEmailBlastModal:', typeof window.closeAddEmailBlastModa
 console.log('  - saveEmailBlast:', typeof window.saveEmailBlast);
 console.log('  - editEmailBlast:', typeof window.editEmailBlast);
 console.log('  - deleteEmailBlast:', typeof window.deleteEmailBlast);
+
+// ====== Postmortem Finance Summary Loader ======
+function loadPostmortemFinanceSummary(eventId) {
+    if (!eventId) {
+        console.warn('⚠️ loadPostmortemFinanceSummary: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/finance.php?action=list&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Finance Summary data loaded:', data);
+            
+            if (data.success) {
+                const budget = data.budget || 0;
+                const grandTotal = data.grand_total || 0;
+                const balance = budget - grandTotal;
+                
+                // Update Postmortem Finance Summary elements
+                const budgetElem = document.getElementById('postmortemFinanceBudget');
+                const expenseElem = document.getElementById('postmortemFinanceTotalExpense');
+                const balanceElem = document.getElementById('postmortemFinanceBalance');
+                const statusElem = document.getElementById('postmortemFinanceStatusNote');
+                
+                if (budgetElem) budgetElem.textContent = '₱' + budget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (expenseElem) expenseElem.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                if (balanceElem) {
+                    balanceElem.textContent = '₱' + Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    
+                    // Apply color coding
+                    if (balance > 0) {
+                        balanceElem.className = 'text-lg font-bold text-green-600';
+                    } else if (balance === 0) {
+                        balanceElem.className = 'text-lg font-bold text-orange-500';
+                    } else {
+                        balanceElem.className = 'text-lg font-bold text-red-600';
+                    }
+                }
+                
+                if (statusElem) {
+                    if (balance > 0) {
+                        const percentRemaining = ((balance / budget) * 100).toFixed(1);
+                        statusElem.textContent = `${percentRemaining}% of budget remaining - Good progress`;
+                        statusElem.className = 'text-sm text-green-600';
+                    } else if (balance === 0) {
+                        statusElem.textContent = 'Budget fully utilized';
+                        statusElem.className = 'text-sm text-orange-500';
+                    } else {
+                        const overBudgetAmount = Math.abs(balance);
+                        statusElem.textContent = `Over budget by ₱${overBudgetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - Action needed`;
+                        statusElem.className = 'text-sm text-red-600';
+                    }
+                }
+                
+                console.log('✅ Postmortem Finance Summary updated successfully');
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading postmortem finance summary:', err);
+        });
+}
+window.loadPostmortemFinanceSummary = loadPostmortemFinanceSummary;
+console.log('✅ [FUNCTION] window.loadPostmortemFinanceSummary assigned:', typeof window.loadPostmortemFinanceSummary);
 
 // ====== CRITICAL: Ensure Postmortem Functions Are Globally Accessible ======
 console.log('\n🔒 [SAFETY-WRAP] Ensuring postmortem functions are accessible...');
@@ -6405,7 +7303,7 @@ if (!window.saveLogReport) {
         
         fetch(`../api/postmortem.php?action=save_log_report`, {
             method: 'POST',
-            headers: {'X-User-Role': JSON.parse(localStorage.getItem('admin') || '{}').role || JSON.parse(localStorage.getItem('user') || '{}').role_name},
+            headers: getUserHeadersForFormData(),
             body: formData
         })
         .then(r => r.json())

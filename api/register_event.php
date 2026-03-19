@@ -3,18 +3,65 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-header('Content-Type: application/json');
+// Log start of execution
+error_log('=== REGISTER_EVENT.PHP START ===');
+
+// Start output buffering immediately
+if (!ob_get_level()) {
+    ob_start();
+}
+
+// Set JSON header FIRST
+header('Content-Type: application/json; charset=utf-8');
+
+// Clean any buffered output
 ob_clean();
 
-require_once '../config/db.php';
-require_once '../config/email_config.php';
-require_once '../includes/SMTPMailer.php';
+error_log('Headers set, output buffering enabled');
+
+// Include required files - wrap in try-catch to catch any errors they generate
+try {
+    error_log('Including db.php...');
+    if (!file_exists('../config/db.php')) {
+        throw new Exception('Database config file not found');
+    }
+    require_once '../config/db.php';
+    error_log('db.php included successfully');
+    
+    error_log('Including email_config.php...');
+    if (!file_exists('../config/email_config.php')) {
+        throw new Exception('Email config file not found');
+    }
+    require_once '../config/email_config.php';
+    error_log('email_config.php included successfully');
+    
+    error_log('Including SMTPMailer.php...');
+    if (!file_exists('../includes/SMTPMailer.php')) {
+        throw new Exception('SMTPMailer file not found');
+    }
+    require_once '../includes/SMTPMailer.php';
+    error_log('SMTPMailer.php included successfully');
+} catch (Exception $e) {
+    error_log('ERROR during includes: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Configuration error: ' . $e->getMessage()
+    ]);
+    exit;
+}
+
+error_log('All includes successful, starting registration logic');
 
 try {
     // Get JSON data from request body
-    $input = json_decode(file_get_contents('php://input'), true);
+    $rawInput = file_get_contents('php://input');
+    error_log('Raw input received');
+    
+    $input = json_decode($rawInput, true);
     
     if (!$input) {
+        error_log('JSON decode failed. Raw: ' . substr($rawInput, 0, 200));
         throw new Exception('Invalid JSON input');
     }
 
@@ -151,26 +198,22 @@ try {
             EMAIL_FROM_NAME
         );
         
-        // 📧 Check if user registration emails are enabled
-        if (SMTPMailer::shouldSendEmail('user_registration', null)) {
-            $smtpMailer->sendRegistrationConfirmation(
-                $email,
-                $fullName,
-                $eventName,
-                $registrationCode,
-                $eventDate,
-                $eventLocation
-            );
-            error_log('✓ Registration confirmation email sent to: ' . $email);
-        } else {
-            error_log('📧 User registration emails are DISABLED - skipping email to: ' . $email);
-        }
+        $smtpMailer->sendRegistrationConfirmation(
+            $email,
+            $fullName,
+            $eventName,
+            $registrationCode,
+            $eventDate,
+            $eventLocation
+        );
+        error_log('✓ Registration confirmation email sent to: ' . $email);
     } catch (Exception $e) {
         error_log('Email error: ' . $e->getMessage());
         // Don't fail registration if email fails
     }
 
     // Return success
+    error_log('About to return success response for registration code: ' . $registrationCode);
     http_response_code(200);
     echo json_encode([
         'success' => true,
@@ -179,10 +222,18 @@ try {
     ]);
 
 } catch (Exception $e) {
+    error_log('=== REGISTRATION ERROR ===');
+    error_log('Error message: ' . $e->getMessage());
+    error_log('Error file: ' . $e->getFile());
+    error_log('Error line: ' . $e->getLine());
+    error_log('Error trace: ' . $e->getTraceAsString());
+    
     http_response_code(400);
     echo json_encode([
         'success' => false,
         'message' => $e->getMessage()
     ]);
 }
-?>
+
+// Ensure JSON response is sent even if there were warnings/notices
+die();

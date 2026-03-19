@@ -1091,317 +1091,55 @@ function initializeProfileSettings() {
 /**
  * Load email configuration from database and populate form
  */
-async function loadEmailConfiguration() {
+// ================================================================================
+// EMAIL CONFIGURATION SECTION REMOVED
+// Email configuration is now handled via the dedicated email-configuration.php page
+// ================================================================================
+
+// Load and display current email configuration in settings tab
+async function loadCurrentEmailDisplay() {
     try {
-        const headers = getUserHeaders();
+        const headers = {
+            'Content-Type': 'application/json'
+        };
         
-        console.log('📧 Loading email configuration...');
-        console.log('📧 Headers being sent:', headers);
-        console.log('📧 User Role:', headers['X-User-Role']);
+        // Get user role from localStorage
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userInfo = (admin && admin.id) ? admin : user;
         
-        const response = await fetch('../api/email_config.php', {
+        if (userInfo.role) {
+            headers['X-User-Role'] = userInfo.role;
+        } else if (userInfo.role_name) {
+            headers['X-User-Role'] = userInfo.role_name;
+        }
+        
+        if (userInfo.id) {
+            headers['X-User-Id'] = userInfo.id;
+        } else if (userInfo.user_id) {
+            headers['X-User-Id'] = userInfo.user_id;
+        }
+        
+        const response = await fetch('../api/email-configuration.php', {
             method: 'GET',
             headers: headers
         });
         
-        console.log('📧 Response status:', response.status);
-        
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('📧 Error response:', errorText);
-            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
-        
-        console.log('📧 Response data:', result);
         
         if (result.success && result.data) {
             const config = result.data;
-            
-            console.log('📧 Populating form with config:', config);
-            
-            // Populate form fields
-            const smtpHostElement = document.getElementById('smtpHost');
-            const smtpPortElement = document.getElementById('smtpPort');
-            const smtpUserElement = document.getElementById('smtpUser');
-            const smtpPasswordElement = document.getElementById('smtpPassword');
-            const fromNameElement = document.getElementById('fromName');
-            const fromEmailElement = document.getElementById('fromEmail');
-            
-            if (smtpHostElement) {
-                smtpHostElement.value = config.smtp_host || '';
-                console.log('✅ Set smtpHost to:', config.smtp_host);
+            const currentEmailDisplay = document.getElementById('currentEmailDisplay');
+            if (currentEmailDisplay) {
+                currentEmailDisplay.textContent = config.from_email || 'Not configured';
             }
-            if (smtpPortElement) {
-                smtpPortElement.value = config.smtp_port || 587;
-                console.log('✅ Set smtpPort to:', config.smtp_port);
-            }
-            if (smtpUserElement) {
-                smtpUserElement.value = config.smtp_user || '';
-                console.log('✅ Set smtpUser to:', config.smtp_user);
-            }
-            if (smtpPasswordElement) {
-                smtpPasswordElement.value = config.smtp_password || '';
-                console.log('✅ Set smtpPassword to:', config.smtp_password ? '(masked)' : '(empty)');
-            }
-            if (fromNameElement) {
-                fromNameElement.value = config.from_name || '';
-                console.log('✅ Set fromName to:', config.from_name);
-            }
-            if (fromEmailElement) {
-                fromEmailElement.value = config.from_email || '';
-                console.log('✅ Set fromEmail to:', config.from_email);
-            }
-            
-            // Populate checkboxes using type conversion to handle string/int from DB
-            const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
-            const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
-            const emailRemindersElement = document.getElementById('emailReminders');
-            
-            if (emailOnUserCreateElement) {
-                emailOnUserCreateElement.checked = config.email_on_user_create == 1;
-                console.log('✅ Set emailOnUserCreate to:', config.email_on_user_create == 1);
-            }
-            if (emailOnEventCreateElement) {
-                emailOnEventCreateElement.checked = config.email_on_event_create == 1;
-                console.log('✅ Set emailOnEventCreate to:', config.email_on_event_create == 1);
-            }
-            if (emailRemindersElement) {
-                emailRemindersElement.checked = config.email_reminders == 1;
-                console.log('✅ Set emailReminders to:', config.email_reminders == 1);
-            }
-            
-            console.log('✅ Email configuration loaded successfully');
-            showEmailStatus('success', 'Email configuration loaded successfully');
-        } else {
-            console.warn('⚠️ No data in response:', result);
-            showEmailStatus('error', result.message || 'Failed to load configuration');
         }
     } catch (error) {
-        console.error('❌ Error loading email configuration:', error);
-        showEmailStatus('error', 'Error loading configuration: ' + error.message);
-    }
-}
-
-/**
- * Save email configuration to database
- */
-async function saveEmailConfiguration() {
-    try {
-        // Get form values - with null checks for checkboxes
-        const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
-        const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
-        const emailRemindersElement = document.getElementById('emailReminders');
-        
-        const formData = {
-            smtp_host: document.getElementById('smtpHost').value.trim(),
-            smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
-            smtp_user: document.getElementById('smtpUser').value.trim(),
-            smtp_password: document.getElementById('smtpPassword').value.trim(),
-            from_name: document.getElementById('fromName').value.trim(),
-            from_email: document.getElementById('fromEmail').value.trim(),
-            email_on_user_create: emailOnUserCreateElement ? (emailOnUserCreateElement.checked ? 1 : 0) : 1,
-            email_on_event_create: emailOnEventCreateElement ? (emailOnEventCreateElement.checked ? 1 : 0) : 1,
-            email_reminders: emailRemindersElement ? (emailRemindersElement.checked ? 1 : 0) : 1
-        };
-        
-        console.log('📧 Saving configuration:', formData);
-        
-        // Validate required fields
-        const errors = [];
-        if (!formData.smtp_host) errors.push('SMTP Host is required');
-        if (!formData.smtp_user) errors.push('SMTP Username is required');
-        if (!formData.smtp_password) errors.push('SMTP Password is required');
-        if (!formData.from_name) errors.push('From Name is required');
-        if (!isValidEmail(formData.from_email)) errors.push('Valid From Email is required');
-        
-        if (errors.length > 0) {
-            showEmailStatus('error', 'Validation failed: ' + errors.join(', '));
-            console.error('📧 Validation errors:', errors);
-            return;
-        }
-        
-        // Show loading status
-        const statusDiv = document.getElementById('emailStatusMessage');
-        if (statusDiv) {
-            statusDiv.innerHTML = '⏳ Saving configuration...';
-            statusDiv.style.display = 'block';
-            statusDiv.style.backgroundColor = '#fef3c7';
-            statusDiv.style.borderLeft = '4px solid #f59e0b';
-            statusDiv.style.color = '#92400e';
-        }
-        
-        const headers = getUserHeaders();
-        headers['Content-Type'] = 'application/json';
-        
-        console.log('📧 Sending request with headers:', headers);
-        
-        const response = await fetch('../api/email_config.php', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(formData)
-        });
-        
-        console.log('📧 Save response status:', response.status);
-        
-        const result = await response.json();
-        
-        console.log('📧 Save response data:', result);
-        
-        if (result.success) {
-            showEmailStatus('success', '✅ Email configuration saved successfully!');
-            // Reload to show saved values
-            setTimeout(() => {
-                loadEmailConfiguration();
-            }, 1000);
-        } else {
-            const errorMsg = result.errors ? result.errors.join(', ') : result.message;
-            showEmailStatus('error', '❌ Failed to save: ' + errorMsg);
-            console.error('📧 Save failed:', result);
-        }
-    } catch (error) {
-        console.error('Error saving email configuration:', error);
-        showEmailStatus('error', '❌ Error saving configuration: ' + error.message);
-    }
-}
-
-/**
- * Test SMTP connection
- */
-async function testEmailConnection() {
-    try {
-        const smtpHost = document.getElementById('smtpHost').value.trim();
-        const smtpPort = parseInt(document.getElementById('smtpPort').value) || 587;
-        const smtpUser = document.getElementById('smtpUser').value.trim();
-        const smtpPassword = document.getElementById('smtpPassword').value.trim();
-        
-        console.log('🧪 Testing SMTP connection with:', {
-            smtpHost,
-            smtpPort,
-            smtpUser,
-            passwordLength: smtpPassword.length
-        });
-        
-        if (!smtpHost || !smtpUser || !smtpPassword) {
-            showEmailStatus('error', '❌ Please fill in SMTP Host, Username, and Password before testing');
-            console.warn('🧪 Missing required fields for test');
-            return;
-        }
-        
-        showEmailStatus('pending', '⏳ Testing SMTP connection...');
-        
-        const headers = getUserHeaders();
-        headers['Content-Type'] = 'application/json';
-        
-        const testData = {
-            smtp_host: smtpHost,
-            smtp_port: smtpPort,
-            smtp_user: smtpUser,
-            smtp_password: smtpPassword
-        };
-        
-        console.log('🧪 Sending test request with headers:', headers);
-        console.log('🧪 Request body:', testData);
-        
-        const response = await fetch('../api/email_config.php?action=test', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(testData)
-        });
-        
-        console.log('🧪 Test response status:', response.status);
-        console.log('🧪 Test response headers:', response.headers);
-        
-        const result = await response.json();
-        
-        console.log('🧪 Test result:', result);
-        
-        if (result.success) {
-            showEmailStatus('success', `✅ ${result.message} (Connecting to ${result.host}:${result.port})`);
-            console.log('🧪 ✅ SMTP connection successful');
-        } else {
-            let errorMsg = result.message || 'Connection failed';
-            if (result.provider_help) {
-                errorMsg += ' - ' + result.provider_help.help;
-            }
-            showEmailStatus('error', '❌ ' + errorMsg);
-            console.error('🧪 SMTP connection failed:', result);
-        }
-    } catch (error) {
-        console.error('Error testing SMTP connection:', error);
-        console.error('🧪 Error details:', {
-            message: error.message,
-            stack: error.stack
-        });
-        showEmailStatus('error', '❌ Error testing connection: ' + error.message);
-    }
-}
-
-/**
- * Display status message for email configuration
- */
-function showEmailStatus(type, message) {
-    const statusDiv = document.getElementById('emailStatusMessage');
-    if (!statusDiv) return;
-    
-    statusDiv.style.display = 'block';
-    statusDiv.textContent = message;
-    
-    switch (type) {
-        case 'success':
-            statusDiv.style.backgroundColor = '#d1fae5';
-            statusDiv.style.borderLeft = '4px solid #10b981';
-            statusDiv.style.color = '#065f46';
-            break;
-        case 'error':
-            statusDiv.style.backgroundColor = '#fee2e2';
-            statusDiv.style.borderLeft = '4px solid #ef4444';
-            statusDiv.style.color = '#7f1d1d';
-            break;
-        case 'pending':
-            statusDiv.style.backgroundColor = '#fef3c7';
-            statusDiv.style.borderLeft = '4px solid #f59e0b';
-            statusDiv.style.color = '#92400e';
-            break;
-    }
-}
-
-/**
- * Validate email format
- */
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-/**
- * Initialize email configuration settings
- */
-function initializeEmailConfiguration() {
-    console.log('🔧 Initializing Email Configuration...');
-    loadEmailConfiguration();
-    
-    // Set up button handlers
-    const emailConfigTab = document.getElementById('email-config');
-    if (emailConfigTab) {
-        // Find all buttons and attach appropriate handlers
-        const buttons = emailConfigTab.querySelectorAll('button');
-        console.log('📍 Found buttons:', buttons.length);
-        buttons.forEach(btn => {
-            const btnText = btn.textContent.trim();
-            console.log('📍 Button text:', btnText);
-            if (btnText.includes('Test Connection') || btnText.includes('🔍')) {
-                btn.onclick = testEmailConnection;
-                console.log('✅ Attached testEmailConnection to button');
-            } else if (btnText.includes('Save') || btnText.includes('💾')) {
-                btn.onclick = saveEmailConfiguration;
-                console.log('✅ Attached saveEmailConfiguration to button');
-            } else if (btnText.includes('Reload') || btnText.includes('Update') || btnText.includes('🔄')) {
-                btn.onclick = loadEmailConfiguration;
-                console.log('✅ Attached loadEmailConfiguration to button');
-            }
-        });
+        console.error('Error loading current email display:', error);
     }
 }
 
@@ -5152,6 +4890,9 @@ function closeEventDetailsModal() {
         modal.classList.remove('active');
     }
     
+    // Stop dashboard auto-refresh when closing
+    stopDashboardAutoRefresh();
+    
     // Clear the current event ID
     currentEventId = null;
     window.currentEventId = null;  // Also clear from window object
@@ -5499,7 +5240,7 @@ function renderEventTasksTable(tasks, tableBody) {
             <td style="padding: 12px 16px; color: #111827; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.task_name || '-')}</td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.party_responsible || '-')}</td>
             <td style="padding: 12px 16px; word-break: break-word;">
-                <select onchange="updateEventTaskStatus(${task.task_id}, this.value)" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-weight: 500; width: 130px; ${statusStyle} cursor: pointer;">
+                <select data-task-id="${task.task_id}" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-weight: 500; width: 130px; ${statusStyle} cursor: pointer; position: relative; z-index: 1;">
                     <option value="Pending" ${statusText === 'Pending' ? 'selected' : ''}>Pending</option>
                     <option value="In Progress" ${statusText === 'In Progress' ? 'selected' : ''}>In Progress</option>
                     <option value="Done" ${statusText === 'Done' ? 'selected' : ''}>Done</option>
@@ -5519,6 +5260,21 @@ function renderEventTasksTable(tasks, tableBody) {
         tableBody.appendChild(row);
     });
     console.log('[Tasks] ✓ All rows rendered in table');
+    
+    // Attach event listeners to status dropdowns
+    console.log('[Tasks] Attaching change listeners to select elements...');
+    const selects = tableBody.querySelectorAll('select');
+    console.log('[Tasks] Found', selects.length, 'select elements');
+    
+    selects.forEach((select, index) => {
+        select.addEventListener('change', function(e) {
+            const taskId = parseInt(this.getAttribute('data-task-id'), 10);
+            const newStatus = this.value;
+            console.log('[Tasks] [' + index + '] Select changed - taskId:', taskId, 'status:', newStatus);
+            updateEventTaskStatus(taskId, newStatus);
+        });
+    });
+    console.log('[Tasks] ✓ Event listeners attached');
 }
 
 // Switch between List and Calendar views
@@ -5763,7 +5519,7 @@ function addEventTask(eventId) {
 
 // Update task status
 async function updateEventTaskStatus(taskId, newStatus) {
-    console.log('[Tasks] Updating task', taskId, 'status to:', newStatus);
+    console.log('[Tasks] updateEventTaskStatus called with taskId:', taskId, 'newStatus:', newStatus);
     
     // Store values globally for modal submission
     window.pendingTaskStatusUpdate = {
@@ -5776,11 +5532,42 @@ async function updateEventTaskStatus(taskId, newStatus) {
     const statusDisplay = document.getElementById('modalStatusDisplay');
     const remarksInput = document.getElementById('taskRemarksInput');
     
+    console.log('[Tasks] Modal elements check:', {
+        modal: !!modal,
+        statusDisplay: !!statusDisplay,
+        remarksInput: !!remarksInput
+    });
+    
     if (modal && statusDisplay && remarksInput) {
+        console.log('[Tasks] Setting modal content...');
         statusDisplay.textContent = newStatus;
         remarksInput.value = '';
-        remarksInput.focus();
+        
+        // Use both methods to ensure visibility
+        modal.classList.add('active');
         modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+        
+        console.log('[Tasks] Modal classList:', modal.className);
+        console.log('[Tasks] Modal display style:', modal.style.display);
+        console.log('[Tasks] Modal computed style:', window.getComputedStyle(modal).display);
+        
+        // Scroll modal into view
+        modal.scrollIntoView({ behavior: 'auto', block: 'center' });
+        
+        // Small delay before focus to ensure render
+        setTimeout(() => {
+            remarksInput.focus();
+            console.log('[Tasks] ✓ Modal displayed and focused');
+        }, 100);
+    } else {
+        console.error('[Tasks] ✗ Could not display modal - missing elements:', {
+            modal: !!modal,
+            statusDisplay: !!statusDisplay,
+            remarksInput: !!remarksInput
+        });
     }
 }
 
@@ -5873,9 +5660,13 @@ async function editEventTask(taskId) {
 
 // Modal functions for task status remarks
 function closeTaskStatusRemarksModal() {
+    console.log('[Tasks] Closing remarks modal');
     const modal = document.getElementById('taskStatusRemarksModal');
     if (modal) {
+        modal.classList.remove('active');
         modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
+        modal.style.opacity = '0';
     }
     window.pendingTaskStatusUpdate = null;
 }
@@ -11784,10 +11575,8 @@ function switchTab(tabName) {
             }
         }
         else if (tabName === 'email-config') {
-            // Load email configuration
-            if (typeof initializeEmailConfiguration === 'function') {
-                initializeEmailConfiguration();
-            }
+            // Load and display current email configuration
+            loadCurrentEmailDisplay();
         }
         return;
     }
@@ -11896,10 +11685,15 @@ function switchTab(tabName) {
     } else if (tabName === 'postmortem') {
         if (currentEventId) {
             window.currentEventId = currentEventId;
-            // Automatically generate the postmortem report when viewing this tab
-            if (typeof generateAutomatedReport === 'function') {
-                generateAutomatedReport();
+            console.log('[Postmortem] Loading postmortem data for event:', currentEventId);
+            // Load postmortem data
+            if (typeof loadPostmortemData === 'function') {
+                loadPostmortemData(currentEventId);
             }
+            // Initialize view to show Automated Report metrics by default
+            switchPostmortemView('automated');
+        } else {
+            console.warn('[Postmortem] currentEventId is not set');
         }
     } else if (tabName === 'kpi') {
         console.log('🎯 KPI TAB CLICKED - Loading KPI data for event:', currentEventId);
@@ -11937,6 +11731,127 @@ function switchTab(tabName) {
             }
         }
     }
+}
+
+// Switch between postmortem views (Automated Report or Log Report)
+function switchPostmortemView(viewType) {
+    console.log('📊 Switching postmortem view to:', viewType);
+    
+    const automatedBtn = document.getElementById('automatedReportBtn');
+    const logBtn = document.getElementById('logReportBtn');
+    const exportBtn = document.getElementById('exportReportBtn');
+    const createBtn = document.getElementById('createLogReportBtn');
+    const metricsView = document.getElementById('postmortemMetricsView');
+    const createView = document.getElementById('postmortemCreateReportView');
+    const logListView = document.getElementById('postmortemLogReportView');
+    
+    if (viewType === 'automated') {
+        // Show Automated Report view
+        if (metricsView) metricsView.style.display = 'block';
+        if (createView) createView.style.display = 'none';
+        if (logListView) logListView.style.display = 'none';
+        
+        // Show Export button, hide Create button
+        if (exportBtn) exportBtn.style.display = 'inline-block';
+        if (createBtn) createBtn.style.display = 'none';
+        
+        // Update button styling
+        if (automatedBtn) automatedBtn.classList.add('active');
+        if (logBtn) logBtn.classList.remove('active');
+    } else if (viewType === 'log') {
+        // Show Log Report list view
+        if (metricsView) metricsView.style.display = 'none';
+        if (createView) createView.style.display = 'none';
+        if (logListView) logListView.style.display = 'block';
+        
+        // Hide Export button, show Create button
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (createBtn) createBtn.style.display = 'inline-block';
+        
+        // Update button styling
+        if (automatedBtn) automatedBtn.classList.remove('active');
+        if (logBtn) logBtn.classList.add('active');
+        
+        // Load and display the log reports
+        console.log('📥 loadLogReportData() - loading reports for event:', currentEventId);
+        loadLogReportData(currentEventId);
+    } else if (viewType === 'createForm') {
+        // Show Log Report creation form view
+        if (metricsView) metricsView.style.display = 'none';
+        if (createView) createView.style.display = 'block';
+        if (logListView) logListView.style.display = 'none';
+        
+        // Hide Export button, show Create button
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (createBtn) createBtn.style.display = 'inline-block';
+        
+        // Update button styling  
+        if (automatedBtn) automatedBtn.classList.remove('active');
+        if (logBtn) logBtn.classList.add('active');
+    }
+}
+
+// Load and display log reports from API
+function loadLogReportData(eventId) {
+    console.log('📥 loadLogReportData() called for event:', eventId);
+    
+    if (!eventId) {
+        console.error('❌ Event ID is missing');
+        const listContainer = document.getElementById('logReportsList');
+        if (listContainer) listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Event ID not found</p>';
+        return;
+    }
+    
+    const headers = getUserHeaders();
+    const apiUrl = `${API_BASE}/postmortem.php?action=get&event_id=${eventId}`;
+    
+    console.log('🌐 API URL:', apiUrl);
+    
+    fetch(apiUrl, { headers })
+        .then(r => {
+            console.log('📩 API Response Status:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('📦 API Response Data:', data);
+            
+            const listContainer = document.getElementById('logReportsList');
+            if (!listContainer) {
+                console.error('❌ logReportsList container not found');
+                return;
+            }
+            
+            // Check if we have report data
+            if (data.success && data.data && (data.data.log_report_created || data.data.log_title_introduction)) {
+                const pm = data.data;
+                console.log('✅ Log report found, title:', pm.log_title_introduction);
+                
+                let html = `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h4 class="text-base font-semibold text-gray-900">${pm.log_title_introduction || 'Log Report'}</h4>
+                                <p class="text-sm text-gray-500 mt-1">Created: ${pm.created_at ? new Date(pm.created_at).toLocaleString() : 'N/A'}</p>
+                            </div>
+                            <button onclick="window.exportLogReport && window.exportLogReport(${eventId})" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors ml-4">
+                                📥 Export
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                listContainer.innerHTML = html;
+                console.log('🎨 HTML updated with report');
+            } else {
+                console.log('ℹ️ No log report found');
+                listContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No log reports created yet. Click "Create" to add one.</p>';
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading log reports:', err);
+            const listContainer = document.getElementById('logReportsList');
+            if (listContainer) listContainer.innerHTML = '<p class="text-red-500 text-center py-8">Error loading reports</p>';
+        });
 }
 
 // Load event details from API
@@ -11991,6 +11906,13 @@ function displayEventDetailsData(event) {
     
     // Load real data for dashboard from APIs
     loadDashboardTaskData();
+    loadDashboardBudgetData(currentEventId);
+    loadDashboardLogisticsData(currentEventId);
+    loadDashboardLogisticsItems(currentEventId);
+    loadDashboardTimeline(currentEventId, event);
+    
+    // Start auto-refresh of dashboard every 30 seconds
+    startDashboardAutoRefresh();
     
     // ============ BASIC INFORMATION ============
     document.getElementById('detailsEventTitle').value = event.event_name || '-';
@@ -13921,21 +13843,6 @@ function handleMarketingUpload(event, assetType) {
     const file = event.target.files[0];
     if (!file || !window.currentEventId) return;
     
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    const previewMap = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    
-    // Show file info while uploading
-    const nameDisplay = document.getElementById(fileNameMap[assetType]);
-    nameDisplay.textContent = `Uploading ${file.name}...`;
-    
     // Upload the file
     const formData = new FormData();
     formData.append('action', 'upload');
@@ -13949,7 +13856,7 @@ function handleMarketingUpload(event, assetType) {
         body: formData
     };
     
-    // Add custom headers for authorization (don't set Content-Type - browser will handle it for FormData)
+    // Add custom headers for authorization
     const customHeaders = {};
     if (headers['X-User-Role']) customHeaders['X-User-Role'] = headers['X-User-Role'];
     if (headers['X-User-Id']) customHeaders['X-User-Id'] = headers['X-User-Id'];
@@ -13965,203 +13872,135 @@ function handleMarketingUpload(event, assetType) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show file info
-            const typeLabel = getFileTypeLabel(data.mime_type);
-            const fileInfo = `
-                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 8px;">
-                    <p style="margin: 0; color: #1f2937; font-weight: 500; font-size: 14px;">${file.name}</p>
-                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 12px;">${typeLabel}</p>
-                    <div style="margin-top: 8px;">
-                        <a href="../${data.file_path}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px; font-weight: 500;">Preview</a>
-                    </div>
-                </div>
-            `;
-            document.getElementById(previewMap[assetType]).innerHTML = fileInfo;
-            nameDisplay.textContent = file.name;
-            showNotification(`${assetType.replace('_', ' ').toUpperCase()} uploaded successfully`, 'success');
+            showNotification(`${assetType.replace('_', ' ')} uploaded successfully`, 'success');
             // Reload assets from database to ensure consistency
             loadMarketingAssets();
         } else {
-            nameDisplay.textContent = 'Error uploading file';
             showNotification('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Upload error:', error);
-        nameDisplay.textContent = 'Upload failed';
         showNotification('Upload failed', 'error');
     });
-}
-
-function getFileTypeLabel(mimeType) {
-    const typeMap = {
-        'image/svg+xml': 'image/svg+xml',
-        'image/png': 'image/png',
-        'image/jpeg': 'image/jpeg',
-        'image/jpg': 'image/jpeg',
-        'image/gif': 'image/gif',
-        'image/webp': 'image/webp',
-        'application/pdf': 'application/pdf',
-        'text/plain': 'text/plain'
-    };
-    return typeMap[mimeType] || mimeType;
-}
-
-function deleteMarketingAsset(assetType) {
-    if (!confirm('Delete this asset?')) return;
     
-    const previewMap = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    
-    // TODO: Implement delete via API
-    document.getElementById(previewMap[assetType]).innerHTML = '';
-    document.getElementById(fileNameMap[assetType]).textContent = 'No file chosen';
+    // Reset the input
+    event.target.value = '';
 }
 
 function loadMarketingAssets() {
     if (!window.currentEventId) return;
     
     const headers = getUserHeaders ? getUserHeaders() : {};
-    headers['Content-Type'] = 'application/json';
+    const fetchOptions = { headers };
     
-    fetch(`${API_BASE}/marketing-assets.php?action=list&event_id=${window.currentEventId}`, { headers })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayMarketingAssets(data.data);
-            }
-        })
-        .catch(error => console.error('Error loading assets:', error));
-}
-
-function displayMarketingAssets(assets) {
-    const mapType = {
-        'poster': 'posterPreview',
-        'banner': 'bannerPreview',
-        'social_pack': 'socialPreview'
-    };
-    const fileNameMap = {
-        'poster': 'posterFileName',
-        'banner': 'bannerFileName',
-        'social_pack': 'socialFileName'
-    };
-    
-    // Clear all previews first
-    for (const type of ['poster', 'banner', 'social_pack']) {
-        document.getElementById(mapType[type]).innerHTML = '';
-        document.getElementById(fileNameMap[type]).textContent = '';
-    }
-    
-    // Group assets by type and get the most recent
-    const assetsByType = {};
-    for (const asset of assets) {
-        if (!assetsByType[asset.asset_type]) {
-            assetsByType[asset.asset_type] = asset;
-        }
-    }
-    
-    // Display the most recent asset for each type
-    for (const type of ['poster', 'banner', 'social_pack']) {
-        const asset = assetsByType[type];
-        if (asset) {
-            const typeLabel = getFileTypeLabel(asset.mime_type);
-            const isImage = asset.mime_type && asset.mime_type.startsWith('image/');
-            const fileInfo = `
-                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 8px; cursor: ${isImage ? 'pointer' : 'default'};" 
-                     onclick="${isImage ? `openImagePreviewModal('${asset.file_path}', '${asset.filename.replace(/'/g, "\\'")}')` : ''}">
-                    <p style="margin: 0; color: #1f2937; font-weight: 500; font-size: 14px;">${asset.filename}</p>
-                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 12px;">${typeLabel}</p>
-                    <div style="margin-top: 8px;">
-                        ${isImage ? '<span style="color: #3b82f6; text-decoration: none; font-size: 12px; font-weight: 500; cursor: pointer;">Preview</span>' : '<span style="color: #6b7280; font-size: 12px;">📄 Non-image file</span>'}
-                    </div>
+    fetch(`${API_BASE}/marketing-assets.php?action=list&event_id=${window.currentEventId}`, fetchOptions)
+    .then(response => response.json())
+    .then(data => {
+        const previewsGrid = document.getElementById('marketingPreviewsGrid');
+        if (!previewsGrid) return;
+        
+        if (data.success && data.data && data.data.length > 0) {
+            previewsGrid.innerHTML = data.data.map(asset => `
+                <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f3f4f6; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 8px 16px rgba(30, 115, 187, 0.3)'; this.style.transform='scale(1.02)';" onmouseout="this.style.boxShadow=''; this.style.transform='scale(1)';"> 
+                    <img src="../${asset.file_path}" alt="${asset.asset_type}" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" onclick="previewMarketingAsset('${asset.file_path}', '${asset.asset_type}')">
+                    <button type="button" 
+                            onclick="event.stopPropagation(); deleteMarketingAsset('${asset.asset_id}'); return false;"
+                            style="position: absolute; top: 4px; right: 4px; background: #ef5350; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s; font-size: 18px; padding: 0; line-height: 1; z-index: 10;"
+                            onmouseover="this.style.background='#d32f2f'; this.style.transform='scale(1.1);'"
+                            onmouseout="this.style.background='#ef5350'; this.style.transform='scale(1);'">
+                        ×
+                    </button>
                 </div>
-            `;
-            document.getElementById(mapType[type]).innerHTML = fileInfo;
-            document.getElementById(fileNameMap[type]).textContent = asset.filename;
+            `).join('');
+        } else {
+            previewsGrid.innerHTML = '<div style="text-align: center; color: #999; padding: 24px;">No assets uploaded yet</div>';
         }
+    })
+    .catch(error => {
+        console.error('Error loading assets:', error);
+        const previewsGrid = document.getElementById('marketingPreviewsGrid');
+        if (previewsGrid) {
+            previewsGrid.innerHTML = '<div style="text-align: center; color: #e74c3c; padding: 24px;">Error loading assets</div>';
+        }
+    });
+}
+
+function previewMarketingAsset(filePath, assetType) {
+    const modal = document.getElementById('imagePreviewModal');
+    const img = document.getElementById('previewModalImage');
+    const title = document.getElementById('previewModalTitle');
+    
+    if (modal && img && title) {
+        title.textContent = assetType.replace('_', ' ').toUpperCase();
+        img.src = '../' + filePath;
+        window.currentPreviewPath = filePath;
+        modal.classList.add('active');
     }
 }
 
-function deleteMarketingAssetFromDB(assetId, assetType) {
+function deleteMarketingAsset(assetId) {
     if (!confirm('Delete this asset?')) return;
     
     const headers = getUserHeaders ? getUserHeaders() : {};
-    headers['Content-Type'] = 'application/json';
-    
-    fetch(`${API_BASE}/marketing-assets.php`, {
+    const fetchOptions = {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({
-            action: 'delete',
-            event_id: window.currentEventId,
-            asset_id: assetId
-        })
-    })
+        body: JSON.stringify({ action: 'delete', asset_id: assetId, event_id: window.currentEventId })
+    };
+    
+    fetch(`${API_BASE}/marketing-assets.php`, fetchOptions)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showNotification('Asset deleted', 'success');
+            showNotification('Asset deleted successfully', 'success');
             loadMarketingAssets();
+        } else {
+            showNotification('Error: ' + data.message, 'error');
         }
     })
-    .catch(error => console.error('Error:', error));
-}
-
-function handlePosterUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('posterFileName').textContent = file.name;
-    }
-}
-
-function handleBannerUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('bannerFileName').textContent = file.name;
-    }
-}
-
-function handleSocialUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        document.getElementById('socialFileName').textContent = file.name;
-    }
+    .catch(error => {
+        console.error('Delete error:', error);
+        showNotification('Delete failed', 'error');
+    });
 }
 
 function renderGiveawaysTable(items) {
     const tbody = document.getElementById('giveawaysTableBody');
     
     if (!items || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No giveaways yet. Click "Add Giveaway" to create one.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No giveaways yet. Click "Add Giveaway" to create one.</td></tr>';
         return;
     }
     
     tbody.innerHTML = items.map(item => {
         return `
-        <tr style="border-bottom: 1px solid #e8e8e8;">
-            <td class="px-4 py-3 text-sm text-gray-900">${item.name || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${item.location || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${((item.bundle_inclusion || '').substring(0, 40)) || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${item.estimated_price ? '₱' + parseFloat(item.estimated_price).toFixed(2) : '-'}</td>
-            <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
-                <button onclick="editGiveaway(${item.giveaway_id})" 
-                        style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Edit giveaway">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
-                </button>
-                <button onclick="deleteGiveaway(${item.giveaway_id})" 
-                        style="background: transparent; border: none; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
-                        title="Delete giveaway">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
-                </button>
+        <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900">${item.name || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-700">${item.location || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-700">${((item.bundle_inclusion || '').substring(0, 40)) || '-'}</td>
+            <td class="px-6 py-4 text-sm font-semibold text-gray-900">${item.estimated_price ? '₱' + parseFloat(item.estimated_price).toFixed(2) : '-'}</td>
+            <td class="px-6 py-4 text-center">
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                    <button onclick="editGiveaway(${item.giveaway_id})" 
+                            style="padding: 6px 10px; background: none; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
+                            onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e40af'"
+                            onmouseout="this.style.background='none'; this.style.borderColor='#3b82f6'"
+                            title="Edit giveaway">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button onclick="deleteGiveaway(${item.giveaway_id})" 
+                            style="padding: 6px 10px; background: none; border: 1px solid #ef4444; color: #ef4444; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
+                            onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'"
+                            onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'"
+                            title="Delete giveaway">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
+                </div>
             </td>
         </tr>
     `}).join('');
@@ -14636,9 +14475,19 @@ function updateLogisticsStatus(logisticsId, newStatus) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            console.log('✅ Logistics status updated successfully');
             loadLogistics();
+            // Also refresh dashboard data to reflect the change
+            if (typeof loadDashboardLogisticsData === 'function') {
+                loadDashboardLogisticsData(eventId);
+            }
+            if (typeof loadDashboardLogisticsItems === 'function') {
+                loadDashboardLogisticsItems(eventId);
+            }
+            showNotification('Status updated successfully', 'success');
         } else {
-            showNotification('Error updating status', 'error');
+            console.error('Error updating status:', data.message);
+            showNotification('Error updating status: ' + (data.message || 'Unknown error'), 'error');
             loadLogistics();
         }
     })
@@ -14808,19 +14657,24 @@ function loadExpenses() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                console.log('[Finance] Expenses loaded:', data.data);
                 renderExpensesTable(data.data);
                 updateGrandTotal(data.grand_total || 0);
                 updateBudgetDisplay(data.budget || 0, data.grand_total || 0, data.balance || 0);
                 updateModalBudgetDisplay(data.budget || 0, data.balance || 0);
             } else {
                 console.error('[Finance] Error:', data.message);
+                const tableBody = document.getElementById('expensesTableBody');
+                if (tableBody) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No expenses recorded</td></tr>';
+                }
             }
         })
         .catch(error => {
             console.error('[Finance] Error loading:', error);
             const tableBody = document.getElementById('expensesTableBody');
             if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Error loading expenses</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No expenses recorded</td></tr>';
             }
         });
     
@@ -14917,6 +14771,7 @@ function loadBudgetInput(eventId) {
                 const budgetInput = document.getElementById('budgetInput');
                 if (budgetInput) {
                     budgetInput.value = data.budget || 0;
+                    budgetInput.disabled = false;  // Enable the input
                 }
             }
         })
@@ -15892,3 +15747,154 @@ if (!window.saveEventDetails) {
         console.warn('⚠️ saveEventDetails stub - event-details.js not loaded yet');
     };
 }
+
+
+// Load budget data for dashboard KPIs
+function loadDashboardBudgetData(eventId) {
+    if (!eventId) {
+        return;
+    }
+    
+    fetch(`${API_BASE}/finance.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const budget = parseFloat(data.budget) || 0;
+            const grandTotal = parseFloat(data.grand_total) || 0;
+            const balance = budget - grandTotal;
+            const expenseCount = (data.data && Array.isArray(data.data)) ? data.data.length : 0;
+            
+            const formattedTotal = grandTotal.toFixed(2);
+            const formattedBudget = budget.toFixed(2);
+            const formattedBalance = balance.toFixed(2);
+            
+            // Update KPI Cards
+            const budgetEl = document.getElementById('dashBudget');
+            const budgetDetailEl = document.getElementById('dashBudgetDetail');
+            
+            if (budgetEl) {
+                budgetEl.textContent = '₱' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (budgetDetailEl) {
+                budgetDetailEl.textContent = expenseCount + ' EXPENSE LINE ITEMS';
+            }
+            
+            // Update Finance Summary Section
+            const financeBudgetEl = document.getElementById('dashFinanceBudget');
+            const financeTotalEl = document.getElementById('dashFinanceTotalExpense');
+            const financeBalanceEl = document.getElementById('dashFinanceBalance');
+            const financeNoteEl = document.getElementById('financeStatusNote');
+            
+            if (financeBudgetEl) {
+                financeBudgetEl.textContent = '₱' + formattedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (financeTotalEl) {
+                financeTotalEl.textContent = '₱' + formattedTotal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            if (financeBalanceEl) {
+                const balanceAmount = '₱' + formattedBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                financeBalanceEl.textContent = balanceAmount;
+                if (balance < 0) {
+                    financeBalanceEl.style.color = '#dc2626';
+                } else if (balance === 0) {
+                    financeBalanceEl.style.color = '#f59e0b';
+                } else {
+                    financeBalanceEl.style.color = '#16a34a';
+                }
+            }
+            if (financeNoteEl) {
+                if (balance < 0) {
+                    financeNoteEl.textContent = '⚠️ Over Budget by ₱' + Math.abs(balance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    financeNoteEl.style.color = '#dc2626';
+                } else if (balance === 0) {
+                    financeNoteEl.textContent = '⚡ Budget fully utilized';
+                    financeNoteEl.style.color = '#f59e0b';
+                } else {
+                    financeNoteEl.textContent = '✓ ' + (budget > 0 ? Math.round((balance / budget) * 100) : 0) + '% budget remaining';
+                    financeNoteEl.style.color = '#16a34a';
+                }
+            }
+            
+            console.log('[Dashboard] Finance Summary updated - Budget: ₱' + formattedBudget + ' | Expense: ₱' + formattedTotal + ' | Balance: ₱' + formattedBalance);
+        }
+    })
+    .catch(error => {
+        console.error('[Dashboard] Error loading budget:', error);
+    });
+}
+
+// Load logistics data for dashboard KPIs
+function loadDashboardLogisticsData(eventId) {
+    if (!eventId) {
+        return;
+    }
+    
+    fetch(`${API_BASE}/logistics.php?action=list&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && Array.isArray(data.data)) {
+            const logisticsData = data.data;
+            const totalItems = logisticsData.length;
+            const deliveredItems = logisticsData.filter(item => {
+                const status = item.status ? item.status.toLowerCase() : '';
+                return status === 'delivered';
+            }).length;
+            
+            const readinessPercent = totalItems > 0 ? Math.round((deliveredItems / totalItems) * 100) : 0;
+            
+            const logisticsEl = document.getElementById('dashLogistics');
+            const logisticsDetailEl = document.getElementById('dashLogisticsDetail');
+            
+            if (logisticsEl) {
+                logisticsEl.textContent = readinessPercent + '%';
+            }
+            if (logisticsDetailEl) {
+                logisticsDetailEl.textContent = totalItems + ' LOGISTICS ITEMS TRACKED';
+            }
+            
+            console.log('[Dashboard] Logistics KPI updated to: ' + readinessPercent + '% (' + totalItems + ' items, ' + deliveredItems + ' delivered)');
+        }
+    })
+    .catch(error => {
+        console.error('[Dashboard] Error loading logistics:', error);
+    });
+}
+
+// Global variable to track dashboard refresh interval
+var dashboardRefreshInterval = null;
+
+// Auto-refresh Dashboard Data every 30 seconds
+function startDashboardAutoRefresh() {
+    console.log('🔄 Starting dashboard auto-refresh...');
+    
+    // Clear any existing interval
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+    }
+    
+    // Set up new interval to refresh every 8 seconds (8000ms) - truly automatic
+    dashboardRefreshInterval = setInterval(() => {
+        if (window.currentEventId) {
+            console.log('🔄 Auto-refreshing dashboard data...');
+            loadDashboardTaskData();
+            loadDashboardBudgetData(window.currentEventId);
+            loadDashboardLogisticsData(window.currentEventId);
+            loadDashboardLogisticsItems(window.currentEventId);
+            // Note: Timeline doesn't refresh as often since it changes less frequently
+        }
+    }, 8000); // 8 seconds - frequent automatic refresh
+}
+
+// Stop dashboard auto-refresh
+function stopDashboardAutoRefresh() {
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+        dashboardRefreshInterval = null;
+        console.log('⛔ Dashboard auto-refresh stopped');
+    }
+}
+
