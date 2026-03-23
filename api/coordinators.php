@@ -335,6 +335,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $contact_number = $_POST['contact_number'] ?? '';
             $company = $_POST['company'] ?? '';
             $job_title = $_POST['job_title'] ?? '';
+            $address = $_POST['address'] ?? '';
             $image_file = $_FILES['image'] ?? null;
         } else {
             // JSON - use already-decoded data
@@ -343,6 +344,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $contact_number = $rawData['contact_number'] ?? '';
             $company = $rawData['company'] ?? '';
             $job_title = $rawData['job_title'] ?? '';
+            $address = $rawData['address'] ?? '';
             $image_file = null;
         }
         
@@ -422,8 +424,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
-            // Simple UPDATE - just core columns
-            $query = "UPDATE coordinators SET coordinator_name = ?, email = ?, contact_number = ? WHERE coordinator_id = ?";
+            // Simple UPDATE - include all profile fields
+            $query = "UPDATE coordinators SET coordinator_name = ?, email = ?, contact_number = ?, company = ?, address = ? WHERE coordinator_id = ?";
             $stmt = $conn->prepare($query);
             if (!$stmt) {
                 error_log("UPDATE prepare failed: " . $conn->error);
@@ -432,7 +434,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             
-            $stmt->bind_param('sssi', $coordinator_name, $email, $contact_number, $coordinator_id);
+            $company = trim($company) ?: null;
+            $address = trim($address) ?: null;
+            $stmt->bind_param('sssssi', $coordinator_name, $email, $contact_number, $company, $address, $coordinator_id);
             
             if (!$stmt->execute()) {
                 error_log("UPDATE execute failed: " . $stmt->error);

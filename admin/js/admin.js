@@ -889,7 +889,7 @@ async function saveProfileSettings() {
         
         // Add image if user selected one
         if (window.profileImageFile) {
-            formData.append('profile_image', window.profileImageFile);
+            formData.append('image', window.profileImageFile);
             console.log('[PROFILE-SETTINGS] Image file attached for upload');
         }
         
@@ -913,6 +913,9 @@ async function saveProfileSettings() {
         
         if (data.success) {
             console.log('[PROFILE-SETTINGS] Profile saved to database successfully');
+            
+            // Show success notification
+            showNotification('✓ Successfully saved changes', 'success');
             
             // Update localStorage with new profile data
             const updatedProfile = {
@@ -948,15 +951,14 @@ async function saveProfileSettings() {
             // Reload profile to show changes
             await loadProfileSettings();
             
-            alert('Profile updated successfully!');
             console.log('[PROFILE-SETTINGS] Profile update complete');
         } else {
-            alert('Error saving profile: ' + (data.message || 'Unknown error'));
+            showNotification('Error saving profile: ' + (data.message || 'Unknown error'), 'error');
             console.error('[PROFILE-SETTINGS] API returned false success:', data);
         }
     } catch (e) {
         console.error('[PROFILE-SETTINGS] Error saving profile:', e);
-        alert('Error saving profile: ' + e.message);
+        showNotification('Error saving profile: ' + e.message, 'error');
     }
 }
 
