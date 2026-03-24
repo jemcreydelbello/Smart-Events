@@ -240,20 +240,19 @@ try {
         }
         elseif ($action === 'lookup') {
             ensureCatalogueTableExists($conn);
-            // Show past/completed events from the events table that haven't been PUBLISHED to catalogue yet
-            // UNION with unpublished manual events from the catalogue table (is_manual=1 AND is_published=0)
+            // Show past/completed events from the events table that don't exist in catalogue
+            // UNION with unpublished events from the catalogue table (prioritizes catalogue over events table)
             $query = "(SELECT NULL as catalogue_id, e.event_id, e.event_name, DATE(e.start_event) as event_date, TIME(e.start_event) as start_time, TIME(e.end_event) as end_time, e.location, e.image_url, e.is_private, e.description
                       FROM events e
                       WHERE e.end_event < NOW()
                       AND e.start_event IS NOT NULL
                       AND e.start_event != '0000-00-00 00:00:00'
                       AND e.end_event != '0000-00-00 00:00:00'
-                      AND e.event_id NOT IN (SELECT event_id FROM catalogue WHERE event_id IS NOT NULL AND is_published = 1))
+                      AND e.event_id NOT IN (SELECT event_id FROM catalogue WHERE event_id IS NOT NULL))
                       UNION
                       (SELECT c.catalogue_id, c.event_id, c.event_name, c.event_date, NULL as start_time, NULL as end_time, c.location, c.image_url, c.is_private, c.description
                       FROM catalogue c
-                      WHERE c.is_manual = 1
-                      AND c.is_published = 0)
+                      WHERE c.is_published = 0)
                       ORDER BY event_date DESC";
             
             $stmt = $conn->prepare($query);

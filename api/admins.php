@@ -304,11 +304,18 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updateStmt->close();
             
             http_response_code(200);
-            echo json_encode([
+            $responseData = [
                 'success' => true,
                 'message' => 'Admin updated successfully',
                 'admin_id' => $admin_id
-            ]);
+            ];
+            
+            // Include the image filename if an image was uploaded
+            if ($imageFilename) {
+                $responseData['data'] = ['admin_image' => $imageFilename];
+            }
+            
+            echo json_encode($responseData);
             exit;
         }
         
