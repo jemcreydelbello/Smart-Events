@@ -1503,7 +1503,12 @@ function loadMarketingAssetsForGallery(eventId) {
     fetch(`../api/marketing-assets.php?action=list&event_id=${eventId}`)
     .then(response => response.json())
     .then(data => {
+        console.log('📦 Marketing Assets API Response:', data);
+        console.log('➡️ Event ID:', eventId);
+        
         if (data.success && data.data) {
+            console.log('✅ Assets found:', data.data.length);
+            
             // Organize assets by type
             const assetsByType = {
                 poster: [],
@@ -1514,37 +1519,53 @@ function loadMarketingAssetsForGallery(eventId) {
             // Categorize assets
             data.data.forEach(asset => {
                 const type = asset.asset_type || 'poster';
+                console.log('📎 Processing asset:', asset.asset_type, asset.file_path);
                 if (assetsByType.hasOwnProperty(type)) {
                     assetsByType[type].push(asset);
+                    console.log('✓ Added to', type, '- Total:', assetsByType[type].length);
+                } else {
+                    console.warn('⚠️ Unknown asset type:', type);
                 }
             });
+            
+            console.log('📊 Assets by type:', assetsByType);
             
             // Populate poster gallery
             const posterGallery = document.getElementById('posterGallery');
             if (posterGallery) {
-                posterGallery.innerHTML = assetsByType.poster.length > 0 
+                const posterHTML = assetsByType.poster.length > 0 
                     ? assetsByType.poster.map(asset => createClientAssetElement(asset)).join('')
                     : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No posters available</p>';
+                posterGallery.innerHTML = posterHTML;
+                console.log('🖼️ Poster gallery updated with', assetsByType.poster.length, 'items');
             }
             
             // Populate banner gallery
             const bannerGallery = document.getElementById('bannerGallery');
             if (bannerGallery) {
-                bannerGallery.innerHTML = assetsByType.banner.length > 0 
+                const bannerHTML = assetsByType.banner.length > 0 
                     ? assetsByType.banner.map(asset => createClientAssetElement(asset)).join('')
                     : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No banners available</p>';
+                bannerGallery.innerHTML = bannerHTML;
+                console.log('🎯 Banner gallery updated with', assetsByType.banner.length, 'items');
             }
             
             // Populate social pack gallery
             const socialPackGallery = document.getElementById('socialPackGallery');
             if (socialPackGallery) {
-                socialPackGallery.innerHTML = assetsByType.social_pack.length > 0 
+                const socialHTML = assetsByType.social_pack.length > 0 
                     ? assetsByType.social_pack.map(asset => createClientAssetElement(asset)).join('')
                     : '<p class="col-span-3 text-xs text-gray-400 text-center py-3">No social packs available</p>';
+                socialPackGallery.innerHTML = socialHTML;
+                console.log('📱 Social pack gallery updated with', assetsByType.social_pack.length, 'items');
             }
+        } else {
+            console.warn('❌ No data or error:', data);
         }
     })
-    .catch(error => console.error('Error loading marketing assets:', error));
+    .catch(error => {
+        console.error('❌ Error loading marketing assets:', error);
+    });
 }
 
 function createClientAssetElement(asset) {

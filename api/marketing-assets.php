@@ -116,13 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
     
-    if (!checkEventAccess($conn, $event_id, $userInfo)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Access denied']);
-        exit;
-    }
-    
+    // List action is public - allow any user to view marketing assets
     if ($action === 'list') {
+        error_log("📦 API: Fetching marketing assets for event_id: $event_id");
         $query = "SELECT * FROM event_marketing_assets WHERE event_id = ? ORDER BY asset_type, created_at DESC";
         $stmt = $conn->prepare($query);
         $stmt->bind_param('i', $event_id);
@@ -132,9 +128,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $items = [];
         while ($row = $result->fetch_assoc()) {
             $items[] = $row;
+            error_log("✓ Found asset: " . $row['asset_type'] . " - " . $row['file_path']);
         }
         
+        error_log("📊 Total assets found: " . count($items));
         echo json_encode(['success' => true, 'data' => $items]);
+        exit;
+    }
+    
+    // For other actions, require authentication
+    if (!checkEventAccess($conn, $event_id, $userInfo)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        exit;
     }
 }
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
