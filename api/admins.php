@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($action === 'list') {
             // Get all admin users from admins table
             // Note: admin_image is now safe to select since it's VARCHAR(255) storing only filename, not BLOB
-            $query = "SELECT admin_id as user_id, email, full_name, admin_image, created_at, status
+            $query = "SELECT admin_id as user_id, email, full_name, admin_image, company, contact_number, address, created_at, status
                       FROM admins 
                       ORDER BY created_at DESC";
             $result = $conn->query($query);
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             
             // Don't select admin_image to avoid returning huge BLOB data in JSON
-            $query = "SELECT admin_id as user_id, email, full_name, admin_image, created_at, status
+            $query = "SELECT admin_id as user_id, email, full_name, admin_image, company, contact_number, address, created_at, status
                       FROM admins 
                       WHERE admin_id = ?";
             
@@ -281,21 +281,26 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
+            // Get additional profile fields from POST/FormData
+            $company = trim($_POST['company'] ?? '') ?: null;
+            $contact_number = trim($_POST['contact_number'] ?? '') ?: null;
+            $address = trim($_POST['address'] ?? '') ?: null;
+            
             // Prepare update statement
             if ($imageFilename) {
-                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, admin_image = ?, updated_at = NOW() WHERE admin_id = ?";
+                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, admin_image = ?, company = ?, contact_number = ?, address = ?, updated_at = NOW() WHERE admin_id = ?";
                 $updateStmt = $conn->prepare($updateQuery);
                 if (!$updateStmt) {
                     throw new Exception('Database error: ' . $conn->error);
                 }
-                $updateStmt->bind_param('sssi', $full_name, $email, $imageFilename, $admin_id);
+                $updateStmt->bind_param('sssssei', $full_name, $email, $imageFilename, $company, $contact_number, $address, $admin_id);
             } else {
-                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, updated_at = NOW() WHERE admin_id = ?";
+                $updateQuery = "UPDATE admins SET full_name = ?, email = ?, company = ?, contact_number = ?, address = ?, updated_at = NOW() WHERE admin_id = ?";
                 $updateStmt = $conn->prepare($updateQuery);
                 if (!$updateStmt) {
                     throw new Exception('Database error: ' . $conn->error);
                 }
-                $updateStmt->bind_param('ssi', $full_name, $email, $admin_id);
+                $updateStmt->bind_param('sssssi', $full_name, $email, $company, $contact_number, $address, $admin_id);
             }
             
             if (!$updateStmt->execute()) {

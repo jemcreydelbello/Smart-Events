@@ -1012,6 +1012,9 @@ async function saveProfileSettings() {
         if (data.success) {
             console.log('[PROFILE-SETTINGS] Profile saved to database successfully');
             
+            // Show success notification
+            showNotification('✓ Successfully saved changes', 'success');
+            
             // Update localStorage with new profile data
             const updatedProfile = {
                 ...profile,
@@ -1046,7 +1049,6 @@ async function saveProfileSettings() {
             // Reload profile to show changes
             await loadProfileSettings();
             
-            showNotification('Profile updated successfully!', 'success');
             console.log('[PROFILE-SETTINGS] Profile update complete');
         } else {
             showNotification('Error saving profile: ' + (data.message || 'Unknown error'), 'error');
