@@ -1,4 +1,7 @@
 <?php
+// CRITICAL: Start output buffering BEFORE anything else
+ob_start();
+
 // Error handling - ensure all output is JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
@@ -10,6 +13,8 @@ if (!headers_sent()) {
 
 // Set custom error handler
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error in $errfile:$errline - $errstr");
+    ob_clean();  // CRITICAL: Clear any accidental output
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error: ' . $errstr]);
     exit;
@@ -17,6 +22,8 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 // Set exception handler
 set_exception_handler(function($exception) {
+    error_log("Exception: " . $exception->getMessage());
+    ob_clean();  // CRITICAL: Clear any accidental output
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Exception: ' . $exception->getMessage()]);
     exit;

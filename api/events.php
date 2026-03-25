@@ -1,10 +1,14 @@
 <?php
+// CRITICAL: Start output buffering BEFORE anything else
+ob_start();
+
 // Error handling - ensure all output is JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     error_log("PHP Error in $errfile:$errline - $errstr");
+    ob_clean();  // CRITICAL: Clear any accidental output
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
     exit;
@@ -12,6 +16,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 set_exception_handler(function($exception) {
     error_log("Exception: " . $exception->getMessage());
+    ob_clean();  // CRITICAL: Clear any accidental output
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'API Error: ' . $exception->getMessage()]);
     exit;
@@ -1393,42 +1398,119 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     if ($action === 'remove_coordinator') {
         $coordinator_id = intval($data['coordinator_id'] ?? 0);
         
+        // DEBUG: Log incoming data
+        error_log("=== REMOVE_COORDINATOR DEBUG ===");
+        error_log("Incoming data: " . json_encode($data));
+        error_log("Event ID: $event_id, Coordinator ID: $coordinator_id");
+        error_log("Data event_id: " . ($data['event_id'] ?? 'NOT SET'));
+        error_log("Data coordinator_id: " . ($data['coordinator_id'] ?? 'NOT SET'));
+        
         if (!$coordinator_id) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Coordinator ID required']);
             exit;
         }
         
-        // Check if event_coordinators table exists
-        $tableExist = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
-        if (!$tableExist || $tableExist->num_rows == 0) {
-            // Fallback: update events table directly for legacy single coordinator
-            $updateQuery = "UPDATE events SET coordinator_id = NULL WHERE event_id = ? AND coordinator_id = ?";
-            $stmt = $conn->prepare($updateQuery);
-            if (!$stmt) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
-                exit;
-            }
-            $stmt->bind_param('ii', $event_id, $coordinator_id);
-        } else {
-            // Remove from junction table
-            $deleteQuery = "DELETE FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
-            $stmt = $conn->prepare($deleteQuery);
-            if (!$stmt) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
-                exit;
-            }
-            $stmt->bind_param('ii', $event_id, $coordinator_id);
+        if (!$event_id) {
+            error_log("ERROR: event_id is 0 or not set!");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Event ID required']);
+            exit;
         }
         
-        if ($stmt->execute()) {
+        // CRITICAL: Only remove the coordinator assignment, NOT the event itself
+        // Check if event_coordinators junction table exists (many-to-many support)
+        $tableExist = $conn->query("SHOW TABLES LIKE 'event_coordinators'");
+        error_log("Event_coordinators table exists: " . (($tableExist && $tableExist->num_rows > 0) ? 'YES' : 'NO'));
+        
+        try {
+            // First, verify event exists before any operations
+            $preCheckQuery = "SELECT event_id, event_name FROM events WHERE event_id = ? LIMIT 1";
+            $preCheckStmt = $conn->prepare($preCheckQuery);
+            $preCheckStmt->bind_param('i', $event_id);
+            $preCheckStmt->execute();
+            $preCheckResult = $preCheckStmt->get_result();
+            $eventExists = $preCheckResult->num_rows > 0;
+            $eventName = $eventExists ? $preCheckResult->fetch_assoc()['event_name'] : 'UNKNOWN';
+            error_log("Event exists before removal: $eventExists (Name: $eventName)");
+            
+            if (!$eventExists) {
+                throw new Exception("Event $event_id does not exist before removal!");
+            }
+            
+            if ($tableExist && $tableExist->num_rows > 0) {
+                // Use junction table - Remove only from event_coordinators
+                $deleteQuery = "DELETE FROM event_coordinators WHERE event_id = ? AND coordinator_id = ?";
+                error_log("Executing: DELETE FROM event_coordinators WHERE event_id = $event_id AND coordinator_id = $coordinator_id");
+                $stmt = $conn->prepare($deleteQuery);
+                if (!$stmt) {
+                    throw new Exception('Failed to prepare delete statement: ' . $conn->error);
+                }
+                $stmt->bind_param('ii', $event_id, $coordinator_id);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to remove coordinator from event_coordinators: ' . $stmt->error);
+                }
+                
+                $affected = $stmt->affected_rows;
+                error_log("Deletion successful - $affected rows affected in event_coordinators");
+            } else {
+                // Fallback: Update events table directly (legacy single-coordinator mode)
+                // ONLY set coordinator_id to NULL, do NOT delete the event
+                $updateQuery = "UPDATE events SET coordinator_id = NULL WHERE event_id = ? AND coordinator_id = ?";
+                error_log("Executing: UPDATE events SET coordinator_id = NULL WHERE event_id = $event_id AND coordinator_id = $coordinator_id");
+                $stmt = $conn->prepare($updateQuery);
+                if (!$stmt) {
+                    throw new Exception('Failed to prepare update statement: ' . $conn->error);
+                }
+                $stmt->bind_param('ii', $event_id, $coordinator_id);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to update events table: ' . $stmt->error);
+                }
+                
+                $affected = $stmt->affected_rows;
+                error_log("Update successful - $affected rows affected in events table");
+            }
+            
+            // Verify event still exists after operation
+            $verifyQuery = "SELECT event_id, event_name FROM events WHERE event_id = ? LIMIT 1";
+            $verifyStmt = $conn->prepare($verifyQuery);
+            $verifyStmt->bind_param('i', $event_id);
+            $verifyStmt->execute();
+            $verifyResult = $verifyStmt->get_result();
+            $stillExists = $verifyResult->num_rows > 0;
+            
+            if ($verifyResult->num_rows > 0) {
+                $verifyData = $verifyResult->fetch_assoc();
+                error_log("Event verification PASSED - Event still exists: ID=$event_id, Name={$verifyData['event_name']}");
+            } else {
+                error_log("CRITICAL ERROR: Event $event_id NO LONGER EXISTS after coordinator removal!");
+                // Try to find it in trash/archived
+                $archiveCheck = "SELECT event_id FROM events WHERE archived = 1 AND event_id = ?";
+                $archStmt = $conn->prepare($archiveCheck);
+                $archStmt->bind_param('i', $event_id);
+                $archStmt->execute();
+                if ($archStmt->get_result()->num_rows > 0) {
+                    error_log("Event found in archived table!");
+                }
+            }
+            
+            if (!$stillExists) {
+                error_log("CRITICAL ERROR: Event $event_id was deleted/removed while removing coordinator $coordinator_id");
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'CRITICAL ERROR: Event was deleted. Check system logs.']);
+                exit;
+            }
+            
+            error_log("=== REMOVE_COORDINATOR COMPLETED SUCCESSFULLY ===");
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Coordinator removed successfully']);
-        } else {
+            echo json_encode(['success' => true, 'message' => 'Coordinator removed successfully (event preserved)']);
+        } catch (Exception $e) {
+            error_log("Exception in remove_coordinator: " . $e->getMessage());
+            error_log("=== REMOVE_COORDINATOR FAILED ===");
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to remove coordinator: ' . $stmt->error]);
+            echo json_encode(['success' => false, 'message' => 'Failed to remove coordinator: ' . $e->getMessage()]);
         }
         exit;
     }

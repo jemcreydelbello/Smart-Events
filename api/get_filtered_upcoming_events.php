@@ -83,6 +83,31 @@ switch($eventType) {
         LIMIT 50";
         break;
         
+    case 'all':
+        // All public events (both upcoming and past) - for when there are past events to display
+        $query = "SELECT 
+            e.event_id as id,
+            e.event_name,
+            DATE(e.start_event) as event_date,
+            TIME(e.start_event) as start_time,
+            TIME(e.end_event) as end_time,
+            e.location,
+            e.description,
+            e.image_url,
+            e.is_private,
+            e.capacity,
+            COALESCE(COUNT(r.registration_id), 0) as current_registrations,
+            e.registration_start,
+            e.registration_end,
+            CASE WHEN COALESCE(COUNT(r.registration_id), 0) >= e.capacity THEN 1 ELSE 0 END as is_registration_closed
+        FROM events e
+        LEFT JOIN registrations r ON e.event_id = r.event_id
+        WHERE e.is_private = 0
+        GROUP BY e.event_id
+        ORDER BY e.start_event DESC
+        LIMIT 100";
+        break;
+        
     case 'upcoming':
     default:
         // Future events

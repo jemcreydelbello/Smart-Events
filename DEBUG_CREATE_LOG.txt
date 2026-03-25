@@ -658,3 +658,41 @@ POST data:
   [is_private] = 0
 CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryokdWEsgZb96XXMw8
 ---
+[2026-03-25 03:41:20] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsitee
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-18 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-18 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryPA2lQOmRZaXAPVfj
+---
+[2026-03-25 03:41:26] POST REQUEST DEBUG
+REQUEST_METHOD: POST
+POST keys: action, event_id, event_name, location, start_event, end_event, registration_start, registration_end, capacity, description, registration_link, website_link, is_private
+POST data:
+  [action] = update_event
+  [event_id] = 46
+  [event_name] = Engineering Department Strategy Offsite
+  [location] = Mountain Lodge Conference Center
+  [start_event] = 2026-03-18 10:00:00
+  [end_event] = 2026-03-25 12:00:00
+  [registration_start] = 2026-03-18 08:00:00
+  [registration_end] = 2026-03-25 11:00:00
+  [capacity] = 75
+  [description] = Two-day offsite to review Q1 progress, plan Q2 roa...
+  [registration_link] = registration.sample.com
+  [website_link] = website.com
+  [is_private] = 0
+CONTENT_TYPE: multipart/form-data; boundary=----WebKitFormBoundaryFyDAQCp1r5ic2TvH
+---

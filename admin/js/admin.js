@@ -2788,9 +2788,10 @@ function setupEventModalTabs(event) {
         console.log('[MODAL SETUP] ✓ Tasks listener attached');
     }
     
-    console.log('[MODAL SETUP] ✓ All listeners attached, showing dashboard by default');
-    // Show dashboard tab by default
-    switchEventTab('dashboard', event);
+    console.log('[MODAL SETUP] ✓ All listeners attached, restoring last selected tab');
+    // Show last selected tab or default to dashboard
+    const lastTab = localStorage.getItem('lastEventTab') || 'dashboard';
+    switchEventTab(lastTab, event);
     console.log('═══════════════════════════════════════════');
 }
 
@@ -2799,6 +2800,9 @@ function switchEventTab(tabName, event) {
     console.log('[MODAL TAB SWITCH] 🔀 SWITCHING TO TAB:', tabName);
     console.log('[MODAL TAB SWITCH] Event ID:', event?.event_id);
     console.log('[MODAL TAB SWITCH] Event name:', event?.event_name);
+    
+    // Save selected tab to localStorage
+    localStorage.setItem('lastEventTab', tabName);
     
     const dashboardBtn = document.getElementById('eventDashboardTab');
     const detailsBtn = document.getElementById('eventDetailsTab');
@@ -3704,12 +3708,13 @@ function exportParticipants() {
 function addParticipant() {
     console.log('Opening add attendee modal for global participants');
     
-    // Reset form
+    // Reset form and flags
     document.getElementById('addAttendeeForm').reset();
     document.getElementById('addAttendeeEventId').value = '';  // Clear event ID - this is for global participants
     document.getElementById('addAttendeeEventField').style.display = 'block';  // Show event selection
     document.getElementById('addAttendeeErrorMessage').style.display = 'none';
     document.getElementById('addAttendeeSuccessMessage').style.display = 'none';
+    window.isAddAttendeeFormSubmitting = false;  // Reset submission flag
     
     // Load events for the dropdown
     loadEventsForAttendeeModal();
@@ -3827,15 +3832,19 @@ function generateEventAttendeesPdf(eventName, allData) {
 function addEventAttendee(eventId) {
     console.log('Opening add attendee modal for event:', eventId);
     
-    // Reset form
+    // Reset form and flags
     document.getElementById('addAttendeeForm').reset();
     document.getElementById('addAttendeeEventId').value = eventId;
     document.getElementById('addAttendeeEventField').style.display = 'none';  // Hide event selection when event is pre-selected
     document.getElementById('addAttendeeErrorMessage').style.display = 'none';
     document.getElementById('addAttendeeSuccessMessage').style.display = 'none';
+    window.isAddAttendeeFormSubmitting = false;  // Reset submission flag
     
     // Show modal
     document.getElementById('addAttendeeModal').classList.add('active');
+    
+    // Initialize form validation and disable submit button
+    initializeAttendeeFormValidation();
     
     // Focus on first field (First Name)
     setTimeout(() => document.getElementById('addAttendeeFirstName').focus(), 100);
@@ -3848,6 +3857,28 @@ function closeAddAttendeeModal() {
     document.getElementById('addAttendeeErrorMessage').style.display = 'none';
     document.getElementById('addAttendeeSuccessMessage').style.display = 'none';
     document.getElementById('addAttendeeEventField').style.display = 'none';  // Hide event field
+    
+    // Clear all validation feedback displays
+    const feedbackElements = document.querySelectorAll('[id$="ValidationFeedback"]');
+    feedbackElements.forEach(el => {
+        el.style.display = 'none';
+        el.textContent = '';
+    });
+    
+    const statusElements = document.querySelectorAll('[id$="ValidationStatus"]');
+    statusElements.forEach(el => {
+        el.textContent = '';
+        el.style.color = '#999';
+    });
+    
+    // Clear field border colors
+    const inputFields = ['addAttendeeEventSelect', 'addAttendeeFirstName', 'addAttendeeSurname', 'addAttendeeCompany', 'addAttendeeJobTitle', 'addAttendeeEmail', 'addAttendeePhone'];
+    inputFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.style.borderColor = '#ddd';
+        }
+    });
 }
 
 // Show error message in add attendee modal
@@ -3891,61 +3922,234 @@ async function loadEventsForAttendeeModal() {
     }
 }
 
+// Attendee form validation rules
+const attendeeValidationRules = {
+    event: {
+        name: 'Event',
+        validate: () => {
+            let eventId = document.getElementById('addAttendeeEventId').value;
+            if (!eventId) {
+                eventId = document.getElementById('addAttendeeEventSelect').value;
+            }
+            return eventId && eventId.trim() !== '';
+        },
+        errorMessage: 'Select an event to continue',
+        successMessage: 'Event selected'
+    },
+    firstName: {
+        name: 'First Name',
+        validate: () => {
+            const value = document.getElementById('addAttendeeFirstName').value.trim();
+            return value.length > 0 && value.length <= 100;
+        },
+        errorMessage: 'First name is required',
+        successMessage: 'First name looks good'
+    },
+    lastName: {
+        name: 'Last Name',
+        validate: () => {
+            const value = document.getElementById('addAttendeeSurname').value.trim();
+            return value.length > 0 && value.length <= 100;
+        },
+        errorMessage: 'Last name is required',
+        successMessage: 'Last name looks good'
+    },
+    company: {
+        name: 'Company',
+        validate: () => {
+            const value = document.getElementById('addAttendeeCompany').value.trim();
+            return value.length > 0 && value.length <= 200;
+        },
+        errorMessage: 'Company name is required',
+        successMessage: 'Company looks good'
+    },
+    jobTitle: {
+        name: 'Job Title',
+        validate: () => {
+            const value = document.getElementById('addAttendeeJobTitle').value.trim();
+            return value.length > 0 && value.length <= 100;
+        },
+        errorMessage: 'Job title is required',
+        successMessage: 'Job title looks good'
+    },
+    email: {
+        name: 'Email Address',
+        validate: () => {
+            const value = document.getElementById('addAttendeeEmail').value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(value);
+        },
+        errorMessage: 'Enter a valid email address',
+        successMessage: 'Email is valid'
+    },
+    phone: {
+        name: 'Contact Number',
+        validate: () => {
+            const value = document.getElementById('addAttendeePhone').value.trim();
+            // Remove all non-digit characters and check if at least 7 digits remain
+            const digitsOnly = value.replace(/\D/g, '');
+            return digitsOnly.length >= 7;
+        },
+        errorMessage: 'Phone must contain at least 7 digits',
+        successMessage: 'Phone is valid'
+    }
+};
+
+// Validate a single attendee form field
+function validateAttendeeField(fieldName) {
+    const rule = attendeeValidationRules[fieldName];
+    if (!rule) return false;
+    
+    const isValid = rule.validate();
+    const statusEl = document.getElementById(fieldName + 'ValidationStatus');
+    const feedbackEl = document.getElementById(fieldName + 'ValidationFeedback');
+    
+    if (!statusEl || !feedbackEl) return isValid;
+    
+    if (isValid) {
+        // Valid state
+        statusEl.textContent = '✓';
+        statusEl.style.color = '#16a34a';
+        feedbackEl.textContent = rule.successMessage;
+        feedbackEl.style.background = '#dcfce7';
+        feedbackEl.style.color = '#16a34a';
+        feedbackEl.style.border = '1px solid #bbf7d0';
+        feedbackEl.style.display = 'block';
+        
+        // Update input field border
+        const inputEl = getAttendeeInputElement(fieldName);
+        if (inputEl) {
+            inputEl.style.borderColor = '#16a34a';
+        }
+    } else {
+        // Invalid state
+        statusEl.textContent = '✗';
+        statusEl.style.color = '#dc2626';
+        feedbackEl.textContent = rule.errorMessage;
+        feedbackEl.style.background = '#fee2e2';
+        feedbackEl.style.color = '#dc2626';
+        feedbackEl.style.border = '1px solid #fecaca';
+        feedbackEl.style.display = 'block';
+        
+        // Update input field border
+        const inputEl = getAttendeeInputElement(fieldName);
+        if (inputEl) {
+            inputEl.style.borderColor = '#dc2626';
+        }
+    }
+    
+    updateAddAttendeeSubmitButton();
+    return isValid;
+}
+
+// Get the input element for a field name
+function getAttendeeInputElement(fieldName) {
+    const fieldMap = {
+        'event': 'addAttendeeEventSelect',
+        'firstName': 'addAttendeeFirstName',
+        'lastName': 'addAttendeeSurname',
+        'company': 'addAttendeeCompany',
+        'jobTitle': 'addAttendeeJobTitle',
+        'email': 'addAttendeeEmail',
+        'phone': 'addAttendeePhone'
+    };
+    
+    const elementId = fieldMap[fieldName];
+    return elementId ? document.getElementById(elementId) : null;
+}
+
+// Check if all required attendee fields are valid
+function areAllAttendeeFieldsValid() {
+    const requiredFields = ['event', 'firstName', 'lastName', 'company', 'jobTitle', 'email', 'phone'];
+    return requiredFields.every(field => attendeeValidationRules[field].validate());
+}
+
+// Update the state of the submit button based on form validity
+function updateAddAttendeeSubmitButton() {
+    const submitBtn = document.getElementById('addAttendeeSubmitBtn');
+    if (!submitBtn) return;
+    
+    const isValid = areAllAttendeeFieldsValid();
+    
+    if (isValid) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+    }
+}
+
+// Initialize attendee form validation
+function initializeAttendeeFormValidation() {
+    // Add validation listeners to all form fields
+    const eventSelect = document.getElementById('addAttendeeEventSelect');
+    if (eventSelect) {
+        eventSelect.addEventListener('change', () => validateAttendeeField('event'));
+    }
+    
+    const firstNameEl = document.getElementById('addAttendeeFirstName');
+    if (firstNameEl) {
+        firstNameEl.addEventListener('input', () => validateAttendeeField('firstName'));
+    }
+    
+    const lastNameEl = document.getElementById('addAttendeeSurname');
+    if (lastNameEl) {
+        lastNameEl.addEventListener('input', () => validateAttendeeField('lastName'));
+    }
+    
+    const companyEl = document.getElementById('addAttendeeCompany');
+    if (companyEl) {
+        companyEl.addEventListener('input', () => validateAttendeeField('company'));
+    }
+    
+    const jobTitleEl = document.getElementById('addAttendeeJobTitle');
+    if (jobTitleEl) {
+        jobTitleEl.addEventListener('input', () => validateAttendeeField('jobTitle'));
+    }
+    
+    const emailEl = document.getElementById('addAttendeeEmail');
+    if (emailEl) {
+        emailEl.addEventListener('input', () => validateAttendeeField('email'));
+    }
+    
+    const phoneEl = document.getElementById('addAttendeePhone');
+    if (phoneEl) {
+        phoneEl.addEventListener('input', () => validateAttendeeField('phone'));
+    }
+    
+    // Initial state: disable submit button
+    updateAddAttendeeSubmitButton();
+}
+
 // Handle add attendee form submission
 function handleAddAttendeeSubmit(event) {
     event.preventDefault();
     
-    let eventId = document.getElementById('addAttendeeEventId').value;
-    
-    // If no event preset, check if one was selected in dropdown
-    if (!eventId) {
-        eventId = document.getElementById('addAttendeeEventSelect').value;
-    }
-    
-    // Validate event selection
-    if (!eventId) {
-        showAddAttendeeError('Please select an event');
+    // Validate all fields before submission
+    if (!areAllAttendeeFieldsValid()) {
+        showAddAttendeeError('Please fill in all required fields correctly');
         return;
     }
     
-    // Get name components
+    // Mark that we're in submission mode so discard modal won't appear
+    window.isAddAttendeeFormSubmitting = true;
+    
+    // Get form values
+    let eventId = document.getElementById('addAttendeeEventId').value;
     const firstName = document.getElementById('addAttendeeFirstName').value.trim();
     const middleName = document.getElementById('addAttendeeMiddleName').value.trim();
     const surname = document.getElementById('addAttendeeSurname').value.trim();
-    
-    // Combine into full name
-    let fullName = firstName;
-    if (middleName) {
-        fullName += ' ' + middleName;
-    }
-    fullName += ' ' + surname;
-    
     const email = document.getElementById('addAttendeeEmail').value.trim();
     const company = document.getElementById('addAttendeeCompany').value.trim();
     const jobTitle = document.getElementById('addAttendeeJobTitle').value.trim();
     const phone = document.getElementById('addAttendeePhone').value.trim();
     
-    // Validate all required fields
-    console.log('🔍 Field validation:');
-    console.log('  eventId:', eventId, eventId ? '✓' : '✗ EMPTY');
-    console.log('  firstName:', firstName, firstName ? '✓' : '✗ EMPTY');
-    console.log('  surname:', surname, surname ? '✓' : '✗ EMPTY');
-    console.log('  email:', email, email ? '✓' : '✗ EMPTY');
-    console.log('  company:', company, company ? '✓' : '✗ EMPTY');
-    console.log('  jobTitle:', jobTitle, jobTitle ? '✓' : '✗ EMPTY');
-    console.log('  phone:', phone, phone ? '✓' : '✗ EMPTY');
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showAddAttendeeError('Invalid email address');
-        return;
-    }
-    
-    // Validate phone (must be at least 7 digits/characters)
-    if (phone.length < 7) {
-        showAddAttendeeError('Phone number must be at least 7 digits');
-        return;
+    // If no event preset, check if one was selected in dropdown
+    if (!eventId) {
+        eventId = document.getElementById('addAttendeeEventSelect').value;
     }
     
     const submitBtn = document.getElementById('addAttendeeSubmitBtn');
@@ -3975,8 +4179,8 @@ function handleAddAttendeeSubmit(event) {
     }
     
     // Send to API
-    // All attendees added through this form are automatically considered walk-in attendees
-    // Walk-in attendees are marked as ATTENDED since they're physically present
+    // Attendees added through this form are registered but not yet attended
+    // They will appear in the "Initial List" until they check in
     const requestPayload = {
         event_id: parseInt(eventId),
         first_name: firstName,
@@ -3986,8 +4190,8 @@ function handleAddAttendeeSubmit(event) {
         company: company,
         job_title: jobTitle,
         participant_phone: phone,
-        status: 'ATTENDED',  // Walk-in = already attended
-        is_walkIn: 1  // Always 1 for attendees added via Add Attendee modal
+        status: 'REGISTERED',  // Registered but not yet attended - will be marked attended on check-in
+        is_walkIn: 0  // Added through admin form (not self-registered)
     };
     
     console.log('📤 Sending to API:', JSON.stringify(requestPayload, null, 2));
@@ -3998,42 +4202,88 @@ function handleAddAttendeeSubmit(event) {
         body: JSON.stringify(requestPayload)
     })
     .then(response => {
-        console.log('Response status:', response.status);
-        return response.json().then(data => ({status: response.status, data: data}));
+        console.log('📡 HTTP Response status:', response.status);
+        console.log('📡 Response OK?:', response.ok);
+        
+        // Try to parse response as JSON
+        return response.text().then(text => {
+            console.log('📡 Raw response text:', text);
+            try {
+                const data = JSON.parse(text);
+                return { status: response.status, ok: response.ok, data: data };
+            } catch (parseError) {
+                console.error('❌ Failed to parse JSON response:', parseError);
+                console.error('Response text was:', text);
+                throw new Error('Server returned invalid JSON: ' + text.substring(0, 100));
+            }
+        });
     })
-    .then(({status, data}) => {
+    .then(({status, ok, data}) => {
         console.log('📥 API Response Status:', status);
+        console.log('📥 API Response OK:', ok);
         console.log('📥 API Response Data:', data);
+        
+        // Check if response has success flag
+        if (!data || typeof data.success === 'undefined') {
+            console.error('❌ Invalid API response - missing success flag');
+            showAddAttendeeError('Server error: Invalid response format');
+            window.isAddAttendeeFormSubmitting = false;
+            return;
+        }
         
         if (data.success) {
             console.log('✓ Attendee added successfully:', data);
             showAddAttendeeSuccess('Attendee added successfully! Registration code: ' + (data.registration_code || 'Generated'));
             
-            // Clear form and reload attendees after a short delay
+            // Clear form first to prevent discard modal from showing
+            document.getElementById('addAttendeeFirstName').value = '';
+            document.getElementById('addAttendeeMiddleName').value = '';
+            document.getElementById('addAttendeeSurname').value = '';
+            document.getElementById('addAttendeeCompany').value = '';
+            document.getElementById('addAttendeeJobTitle').value = '';
+            document.getElementById('addAttendeeEmail').value = '';
+            document.getElementById('addAttendeePhone').value = '';
+            
+            // Reset submission flag
+            window.isAddAttendeeFormSubmitting = false;
+            
+            // Close modal and reload attendees after a short delay
             setTimeout(() => {
-                closeAddAttendeeModal();
+                // Modal will close directly without discard confirmation since form is now empty
+                document.getElementById('addAttendeeModal').classList.remove('active');
                 
                 // Determine which context we're in and reload accordingly
                 if (window.currentEventId) {
                     // We're in the full-page admin context
+                    console.log('🔄 Reloading attendees for event:', window.currentEventId);
                     loadEventAttendees({event_id: window.currentEventId}, false);
                 } else if (typeof loadParticipants === 'function') {
                     // We're in the participants page
+                    console.log('🔄 Reloading participants list');
                     loadParticipants();
+                } else {
+                    console.warn('⚠️  No reload function found (currentEventId:', window.currentEventId, ', loadParticipants exists:', typeof loadParticipants);
                 }
             }, 1500);
         } else {
-            showAddAttendeeError(data.message || 'Failed to add attendee');
+            // API returned success: false with error message
+            const errorMsg = data.message || 'Unknown error from server';
+            console.error('❌ API returned error:', errorMsg);
+            showAddAttendeeError(errorMsg);
+            window.isAddAttendeeFormSubmitting = false;
         }
     })
     .catch(error => {
         console.error('🔴 Fetch Error:', error);
         showAddAttendeeError('Error: ' + error.message);
+        window.isAddAttendeeFormSubmitting = false;
     })
     .finally(() => {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
     });
+    
+    return false;
 }
 
 // View event attendee details
@@ -4379,6 +4629,8 @@ function renderTasksCalendar() {
             dayCell.style.minHeight = '80px';
             dayCell.style.fontSize = '13px';
             dayCell.style.transition = 'background-color 0.2s ease';
+            dayCell.style.overflow = 'hidden';
+            dayCell.style.width = '100%';
             dayCell.onmouseover = function() { this.style.background = '#f0f9ff'; };
             dayCell.onmouseout = function() { 
                 const today = new Date();
@@ -4402,47 +4654,40 @@ function renderTasksCalendar() {
             dayNum.style.fontSize = '13px';
             dayCell.appendChild(dayNum);
             
-            // Tasks for this day
+            // Tasks for this day - show as summary text with truncation
             const dayTasks = tasksByDate[day] || [];
             if (dayTasks.length > 0) {
                 const tasksContainer = document.createElement('div');
                 tasksContainer.style.fontSize = '11px';
                 tasksContainer.style.flex = '1';
                 tasksContainer.style.overflow = 'hidden';
+                tasksContainer.style.minWidth = '0';
                 
-                dayTasks.slice(0, 2).forEach(task => {
-                    const taskElement = document.createElement('div');
-                    taskElement.textContent = task.task_name;
-                    taskElement.style.background = '#fef3c7';
-                    taskElement.style.color = '#78350f';
-                    taskElement.style.padding = '2px 4px';
-                    taskElement.style.borderRadius = '2px';
-                    taskElement.style.marginBottom = '2px';
-                    taskElement.style.whiteSpace = 'nowrap';
-                    taskElement.style.overflow = 'hidden';
-                    taskElement.style.textOverflow = 'ellipsis';
-                    taskElement.style.fontWeight = '500';
-                    taskElement.style.cursor = 'pointer';
-                    taskElement.onclick = (e) => {
-                        e.stopPropagation();
-                        showTasksDayDetails(day, dayTasks);
-                    };
-                    tasksContainer.appendChild(taskElement);
-                });
+                // Create summary text from all tasks
+                const taskNames = dayTasks.map(t => t.task_name).join(', ');
+                const taskSummary = document.createElement('div');
+                taskSummary.textContent = taskNames;
+                taskSummary.style.background = '#fef3c7';
+                taskSummary.style.color = '#78350f';
+                taskSummary.style.padding = '3px 4px';
+                taskSummary.style.borderRadius = '3px';
+                taskSummary.style.fontSize = '11px';
+                taskSummary.style.fontWeight = '500';
+                taskSummary.style.cursor = 'pointer';
+                taskSummary.style.overflow = 'hidden';
+                taskSummary.style.textOverflow = 'ellipsis';
+                taskSummary.style.whiteSpace = 'nowrap';
+                taskSummary.style.display = 'block';
+                taskSummary.style.width = '100%';
+                taskSummary.style.boxSizing = 'border-box';
+                taskSummary.style.minWidth = '0';
+                taskSummary.title = taskNames; // Show full text on hover
+                taskSummary.onclick = (e) => {
+                    e.stopPropagation();
+                    showTasksDayDetails(day, dayTasks);
+                };
                 
-                if (dayTasks.length > 2) {
-                    const moreElement = document.createElement('div');
-                    moreElement.textContent = `+${dayTasks.length - 2} more`;
-                    moreElement.style.fontSize = '10px';
-                    moreElement.style.color = '#6b7280';
-                    moreElement.style.cursor = 'pointer';
-                    moreElement.onclick = (e) => {
-                        e.stopPropagation();
-                        showTasksDayDetails(day, dayTasks);
-                    };
-                    tasksContainer.appendChild(moreElement);
-                }
-                
+                tasksContainer.appendChild(taskSummary);
                 dayCell.appendChild(tasksContainer);
             }
             
@@ -4681,8 +4926,8 @@ function closeAddTaskModal() {
     if (modal) {
         modal.classList.remove('active');
         
-        // Reset modal title and button
-        const heading = modal.querySelector('.text-2xl');
+        // Reset modal title and button - find h2 element directly
+        const heading = modal.querySelector('h2');
         const submitBtn = modal.querySelector('button[type="submit"]');
         
         if (heading) heading.textContent = 'Add Task';
@@ -4694,6 +4939,9 @@ function closeAddTaskModal() {
     
     // Clear editing flag
     window.editingTaskId = null;
+    
+    // Clear suppress flag
+    window.suppressTaskConfirmation = false;
 }
 
 // ========== TASK COORDINATOR LOOKUP FUNCTIONS ==========
@@ -5146,6 +5394,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✓ ' + successMsg + ':', data);
                 if (data.success) {
                     showNotification(successMsg + ': ' + taskName, 'success');
+                    
+                    // Set flag to suppress discard confirmation on close
+                    window.suppressTaskConfirmation = true;
                     closeAddTaskModal();
                     
                     // Clear editing flag
@@ -5926,13 +6177,13 @@ async function editEventTask(taskId) {
             // Store task ID for update
             window.editingTaskId = taskId;
             
-            // Change modal title and button
+            // Change modal title and button - find h2 element directly
             const modal = document.getElementById('addTaskModal');
-            const heading = modal.querySelector('.text-2xl');
+            const heading = modal.querySelector('h2');
             const submitBtn = document.querySelector('#addTaskForm button[type="submit"]');
             
-            heading.textContent = 'Edit Task';
-            submitBtn.textContent = 'Update';
+            if (heading) heading.textContent = 'Edit Task';
+            if (submitBtn) submitBtn.textContent = 'Update';
             
             // Open modal
             modal.classList.add('active');
@@ -11745,29 +11996,6 @@ function viewEventDetails(eventId) {
     url.searchParams.set('id', eventId);
     window.history.pushState({ eventId: eventId }, '', url);
     
-    // Reset event details tabs to dashboard
-    const eventTabContents = document.querySelectorAll('.event-tab-content');
-    eventTabContents.forEach(tab => {
-        tab.classList.remove('active');
-        tab.classList.add('hidden');
-    });
-    
-    // Reset tab buttons
-    document.querySelectorAll('.event-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Activate dashboard tab as default
-    const dashboardTab = document.getElementById('dashboard');
-    const dashboardBtn = document.querySelector('[data-tab="dashboard"]');
-    if (dashboardTab) {
-        dashboardTab.classList.remove('hidden');
-        dashboardTab.classList.add('active');
-    }
-    if (dashboardBtn) {
-        dashboardBtn.classList.add('active');
-    }
-    
     // Switch to event details page
     DashboardManager.switchPage('event-details');
     
@@ -11778,6 +12006,11 @@ function viewEventDetails(eventId) {
         sidebarLinks.forEach(link => link.classList.remove('active'));
         eventsLink.classList.add('active');
     }
+    
+    // Restore last selected tab or default to dashboard
+    const lastTab = localStorage.getItem('lastEventMainTab') || 'dashboard';
+    console.log('[TAB RESTORATION] Restoring tab:', lastTab);
+    switchTab(lastTab);
     
     loadEventDetails();
 }
@@ -11907,6 +12140,13 @@ function switchTab(tabName) {
             }
         }
         return;
+    }
+    
+    // Save selected event tab to localStorage for event tabs (not settings tabs)
+    const eventTabs = ['dashboard', 'details', 'attendees', 'tasks', 'kpi', 'emails', 'program', 'marketing', 'logistics', 'finance', 'postmortem'];
+    if (eventTabs.includes(tabName)) {
+        localStorage.setItem('lastEventMainTab', tabName);
+        console.log('[TAB PERSISTENCE] Saved event tab:', tabName);
     }
     
     // Update tab visibility based on user role
@@ -13232,7 +13472,7 @@ function confirmRemoveCoordinator() {
     
     // Make API call to remove coordinator
     fetch(`${API_BASE}/events.php`, {
-        method: 'DELETE',
+        method: 'PUT',
         headers: {
             ...getUserHeaders(),
             'Content-Type': 'application/json'
@@ -13289,7 +13529,7 @@ function confirmRemoveOtherInformation() {
     
     // Make API call to remove metadata
     fetch(`${API_BASE}/metadata.php`, {
-        method: 'DELETE',
+        method: 'POST',
         headers: {
             ...getUserHeaders(),
             'Content-Type': 'application/json'
@@ -13297,7 +13537,7 @@ function confirmRemoveOtherInformation() {
         body: JSON.stringify({
             metadata_id: metadataId,
             event_id: eventId,
-            action: 'delete_metadata'
+            action: 'delete'
         })
     })
     .then(response => {

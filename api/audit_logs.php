@@ -1,5 +1,29 @@
 <?php
-header('Content-Type: application/json');
+// CRITICAL: Start output buffering BEFORE anything else
+ob_start();
+
+// Error handling - ensure all output is JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+header('Content-Type: application/json; charset=utf-8');
+
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error in $errfile:$errline - $errstr");
+    ob_clean();  // CRITICAL: Clear any accidental output
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
+    exit;
+});
+
+set_exception_handler(function($exception) {
+    error_log("Exception: " . $exception->getMessage());
+    ob_clean();  // CRITICAL: Clear any accidental output
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'API Error: ' . $exception->getMessage()]);
+    exit;
+});
+
 require_once '../config/db.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';

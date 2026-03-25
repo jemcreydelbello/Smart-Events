@@ -1,11 +1,34 @@
 <?php
+// CRITICAL: Output buffering and error handling MUST come first
+// Start output buffering to catch any accidental output
+ob_start();
+
 // Error handling - ensure all output is JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
+
+// Set error handler that outputs JSON instead of HTML
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
-    exit;
+    // Log the error
+    error_log("PHP Error [$errno]: $errstr in $errfile on line $errline");
+    
+    // Don't throw on mail/SMTP errors - they should be handled gracefully without blocking registration
+    if (stripos($errstr, 'mail') !== false || stripos($errstr, 'smtp') !== false) {
+        error_log("⚠ Mail/SMTP error suppressed - registration can still succeed");
+        return true;  // Error was handled
+    }
+    
+    // Don't stop execution for notices/warnings, only for fatal errors
+    if (error_reporting() & $errno) {
+        // Clear any output before JSON
+        ob_clean();
+        
+        // Return JSON error
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
+        exit;
+    }
+    return false;
 });
 
 require_once '../config/db.php';
@@ -62,6 +85,16 @@ function getUserInfo() {
     return $userInfo;
 }
 
+// Helper function to safely output JSON response
+function respondWithJSON($data, $httpCode = 200) {
+    // Clear output buffer to ensure clean JSON response
+    ob_clean();
+    http_response_code($httpCode);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data);
+    exit;
+}
+
 // Helper function to check event access based on role
 function checkEventAccess($conn, $event_id, $userInfo) {
     // Admins have access to all events
@@ -86,6 +119,24 @@ function checkEventAccess($conn, $event_id, $userInfo) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    // Validate database connection is established
+    if (!isset($conn) || !$conn) {
+        error_log('❌ FATAL: Database connection not initialized in GET handler');
+        respondWithJSON([
+            'success' => false, 
+            'message' => 'Database connection failed'
+        ], 500);
+    }
+    
+    // Check connection for any errors
+    if ($conn->connect_error) {
+        error_log('❌ FATAL: Database connection error: ' . $conn->connect_error);
+        respondWithJSON([
+            'success' => false, 
+            'message' => 'Database connection error: ' . $conn->connect_error
+        ], 500);
+    }
+    
     $action = $_GET['action'] ?? 'list'; // Default to 'list' if not specified
     
     if ($action === 'list') {
@@ -99,9 +150,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($event_id) {
             // Check if user has access to this event
             if (!checkEventAccess($conn, $event_id, $userInfo)) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Access denied']);
-                exit;
+                respondWithJSON([
+                    'success' => false, 
+                    'message' => 'Access denied'
+                ], 403);
             }
             
             $query = "SELECT DISTINCT u.user_id, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.middle_name, ''), ' ', COALESCE(u.last_name, '')) as full_name, u.first_name, u.middle_name, u.last_name, u.email, u.department_id, d.department_name,
@@ -203,12 +255,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         } catch (Exception $e) {
             error_log("Participants API error: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Error fetching participants: ' . $e->getMessage()]);
-            exit;
+            error_log("Stack trace: " . $e->getTraceAsString());
+            respondWithJSON([
+                'success' => false, 
+                'message' => 'Error fetching participants: ' . $e->getMessage()
+            ], 500);
         }
         
-        echo json_encode(['success' => true, 'data' => $participants]);
+        respondWithJSON([
+            'success' => true, 
+            'data' => $participants
+        ], 200);
     }
     elseif ($action === 'search') {
         $search = '%' . ($_GET['q'] ?? '') . '%';
@@ -265,12 +322,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $participants[] = $row;
             }
             
-            echo json_encode(['success' => true, 'data' => $participants]);
+            respondWithJSON([
+                'success' => true, 
+                'data' => $participants
+            ], 200);
         } catch (Exception $e) {
             error_log("Participants search error: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Error searching participants: ' . $e->getMessage()]);
-            exit;
+            respondWithJSON([
+                'success' => false, 
+                'message' => 'Error searching participants: ' . $e->getMessage()
+            ], 500);
         }
     }
     elseif ($action === 'get_departments') {
@@ -297,9 +358,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
     } else {
         // Unknown action
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Unknown action: ' . $action]);
-        exit;
+        respondWithJSON([
+            'success' => false, 
+            'message' => 'Unknown action: ' . $action
+        ], 400);
     }
 }
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -328,9 +390,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!$registration_code) {
                 error_log('ERROR: No registration code provided');
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Registration code is required']);
-                exit;
+                respondWithJSON(['success' => false, 'message' => 'Registration code is required'], 400);
             }
             
             // Get registration details by code (case-insensitive)
@@ -348,17 +408,13 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare($query);
             if (!$stmt) {
                 error_log('Prepare failed: ' . $conn->error);
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-                exit;
+                respondWithJSON(['success' => false, 'message' => 'Prepare failed: ' . $conn->error], 500);
             }
             
             $stmt->bind_param('s', $registration_code);
             if (!$stmt->execute()) {
                 error_log('Execute failed: ' . $stmt->error);
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Query failed: ' . $stmt->error]);
-                exit;
+                respondWithJSON(['success' => false, 'message' => 'Query failed: ' . $stmt->error], 500);
             }
             
             $result = $stmt->get_result();
@@ -375,20 +431,16 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         error_log('  - ' . $debug_row['registration_code']);
                     }
                 }
-                http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Registration code not found: ' . $registration_code]);
-                exit;
+                respondWithJSON(['success' => false, 'message' => 'Registration code not found: ' . $registration_code], 404);
             }
             
             $registration = $result->fetch_assoc();
             error_log('SUCCESS: Found registration: ' . json_encode($registration));
             
-            http_response_code(200);
-            echo json_encode([
+            respondWithJSON([
                 'success' => true,
                 'data' => $registration
-            ]);
-            exit;
+            ], 200);
         }
         
         // Handle new registration from client-side
@@ -407,41 +459,69 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Create full name from three components for email and display
         $participant_name = trim($first_name . ' ' . $middle_name . ' ' . $last_name);
         
+        error_log('═══════════════════════════════════════');
+        error_log('📋 PARSED FORM DATA');
+        error_log('Event ID: ' . $event_id . (($event_id > 0) ? ' ✓' : ' ✗ INVALID'));
+        error_log('First Name: ' . $first_name . (($first_name) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Middle Name: ' . ($middle_name ?: '(empty)'));
+        error_log('Last Name: ' . $last_name . (($last_name) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Full Name: ' . $participant_name);
+        error_log('Email: ' . $participant_email . (($participant_email) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Company: ' . $company . (($company) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Job Title: ' . $job_title . (($job_title) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Phone: ' . $participant_phone . (($participant_phone) ? ' ✓' : ' ✗ EMPTY'));
+        error_log('Status: ' . $status);
+        error_log('Is Walk-in: ' . $is_walkIn);
+        error_log('═══════════════════════════════════════');
+        
         // Validate required fields (employee_code is optional, not stored anywhere)
         if (!$event_id || !$first_name || !$last_name || !$participant_email || !$company || !$job_title || !$participant_phone) {
+            error_log('❌ VALIDATION FAILED - Missing required fields');
             throw new Exception('Event ID, first name, last name, email, company, job title, and phone are required');
         }
         
         // Validate email format
         if (!filter_var($participant_email, FILTER_VALIDATE_EMAIL)) {
+            error_log('❌ EMAIL VALIDATION FAILED: ' . $participant_email);
             throw new Exception('Invalid email address');
         }
         
+        error_log('✓ Email validation passed');
+        
         // Check if event exists
+        error_log('🔍 Checking if event exists (ID: ' . $event_id . ')');
         $event_check = "SELECT event_id FROM events WHERE event_id = ?";
         $stmt = $conn->prepare($event_check);
         if (!$stmt) {
+            error_log('❌ Event check prepare failed: ' . $conn->error);
             throw new Exception('Prepare failed: ' . $conn->error);
         }
         
         $stmt->bind_param('i', $event_id);
         if (!$stmt->execute()) {
+            error_log('❌ Event check execute failed: ' . $stmt->error);
             throw new Exception('Event check failed: ' . $stmt->error);
         }
         
         if ($stmt->get_result()->num_rows === 0) {
+            error_log('❌ EVENT NOT FOUND: ID ' . $event_id);
             throw new Exception('Event not found');
         }
         
+        error_log('✓ Event exists');
+        
         // Check if user already exists with this email
+        error_log('🔍 Checking if user exists with email: ' . $participant_email);
         $user_check = "SELECT user_id FROM users WHERE email = ?";
         $stmt = $conn->prepare($user_check);
         if (!$stmt) {
+            error_log('❌ User check prepare failed: ' . $conn->error);
             throw new Exception('Prepare user check failed: ' . $conn->error);
         }
         
         $stmt->bind_param('s', $participant_email);
         if (!$stmt->execute()) {
+            error_log('❌ User check execute failed: ' . $stmt->error);
             throw new Exception('User check failed: ' . $stmt->error);
         }
         
@@ -450,7 +530,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows > 0) {
             $user_row = $result->fetch_assoc();
             $user_id = $user_row['user_id'];
+            error_log('ℹ User already exists - ID: ' . $user_id);
         } else {
+            error_log('ℹ User does not exist - creating new user');
             // Create new participant/user
             // Department_id is not provided in new registration form
             $department_id = null;
@@ -459,27 +541,33 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insert_user = "INSERT INTO users (first_name, middle_name, last_name, email, company, job_title, contact_number, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_user);
             if (!$stmt) {
+                error_log('❌ User insert prepare failed: ' . $conn->error);
                 throw new Exception('Prepare user insert failed: ' . $conn->error);
             }
             
             $stmt->bind_param('sssssssi', $first_name, $middle_name, $last_name, $participant_email, $company, $job_title, $participant_phone, $department_id);
             
             if (!$stmt->execute()) {
+                error_log('❌ USER CREATION FAILED: ' . $stmt->error);
                 throw new Exception('Failed to create participant account: ' . $stmt->error);
             }
             
             $user_id = $conn->insert_id;
+            error_log('✓ New user created - ID: ' . $user_id);
         }
         
         // Check if already registered for this event
+        error_log('🔍 Checking if user is already registered for event ' . $event_id);
         $reg_check = "SELECT registration_id, registration_code FROM registrations WHERE user_id = ? AND event_id = ?";
         $stmt = $conn->prepare($reg_check);
         if (!$stmt) {
+            error_log('❌ Registration check prepare failed: ' . $conn->error);
             throw new Exception('Prepare registration check failed: ' . $conn->error);
         }
         
         $stmt->bind_param('ii', $user_id, $event_id);
         if (!$stmt->execute()) {
+            error_log('❌ Registration check execute failed: ' . $stmt->error);
             throw new Exception('Registration check failed: ' . $stmt->error);
         }
         
@@ -487,39 +575,53 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($existing_reg) {
             // Already registered - return success with existing code
             error_log('ℹ User already registered for this event - returning existing registration.');
+            error_log('  Registration ID: ' . $existing_reg['registration_id']);
+            error_log('  Registration Code: ' . $existing_reg['registration_code']);
             
-            echo json_encode([
+            respondWithJSON([
                 'success' => true, 
                 'message' => 'You are already registered for this event!',
                 'registration_id' => $existing_reg['registration_id'],
                 'registration_code' => $existing_reg['registration_code'],
                 'already_registered' => true
-            ]);
-            exit;
+            ], 200);
         }
+        
+        error_log('✓ User not yet registered for this event - proceeding with new registration');
         
         // Create registration record with stronger code generation
         // Generate a more robust registration code: REG-[8 random hex chars]
         $random_suffix = bin2hex(random_bytes(6)); // Generates 12 hex characters
         $registration_code = 'REG-' . strtoupper($random_suffix);
         
+        error_log('═══════════════════════════════════════');
+        error_log('📝 Creating Registration Record');
         error_log('Generated registration code: ' . $registration_code);
+        error_log('User ID: ' . $user_id);
+        error_log('Event ID: ' . $event_id);
+        error_log('Status: ' . $status);
         error_log('Walk-in flag: ' . $is_walkIn);
+        error_log('═══════════════════════════════════════');
         
         $insert_registration = "INSERT INTO registrations (user_id, event_id, registration_code, status, is_walkIn, registered_at) 
                                VALUES (?, ?, ?, ?, ?, NOW())";
         $stmt = $conn->prepare($insert_registration);
         if (!$stmt) {
+            error_log('❌ Prepare registration insert failed: ' . $conn->error);
             throw new Exception('Prepare registration insert failed: ' . $conn->error);
         }
         
         $stmt->bind_param('iissi', $user_id, $event_id, $registration_code, $status, $is_walkIn);
         
         if (!$stmt->execute()) {
+            error_log('❌ Failed to create registration: ' . $stmt->error);
             throw new Exception('Failed to create registration: ' . $stmt->error);
         }
         
-        error_log('Registration saved successfully with code: ' . $registration_code);
+        // CRITICAL: Capture registration ID immediately after insert
+        $registration_id = $conn->insert_id;
+        error_log('✓ Registration saved successfully with ID: ' . $registration_id);
+        error_log('✓ Registration Code (insert_id): ' . $conn->insert_id);
         
         // Fetch event details for email
         $event_query = "SELECT event_name, start_event, end_event, location, is_private 
@@ -575,16 +677,28 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('✓ But registration still successful - check email configuration');
         }
         
-        echo json_encode([
+        error_log('═══════════════════════════════════════');
+        error_log('✓✓✓ REGISTRATION COMPLETE ✓✓✓');
+        error_log('Registration ID: ' . $registration_id);
+        error_log('Registration Code: ' . $registration_code);
+        error_log('User: ' . $participant_name);
+        error_log('Email: ' . $participant_email);
+        error_log('Event ID: ' . $event_id);
+        error_log('═══════════════════════════════════════');
+        
+        respondWithJSON([
             'success' => true, 
             'message' => 'Registration successful! Check your email for confirmation.',
-            'registration_id' => $conn->insert_id,
+            'registration_id' => $registration_id,
             'registration_code' => $registration_code
-        ]);
+        ], 200);
         
     } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        error_log('═══════════════════════════════════════');
+        error_log('❌ EXCEPTION CAUGHT IN PARTICIPANTS API (POST)');
+        error_log('Error Message: ' . $e->getMessage());
+        error_log('═══════════════════════════════════════');
+        respondWithJSON(['success' => false, 'message' => $e->getMessage()], 400);
     }
 }
 elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
@@ -726,18 +840,16 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             'already_checked_in' => ($rows_affected === 0 && $registration_data['current_status'] === $status)
         ];
         
-        http_response_code(200);
-        echo json_encode([
+        respondWithJSON([
             'success' => true,
             'message' => 'Registration status is ' . $status,
             'data' => $response_data
-        ]);
+        ], 200);
         
     } catch (Exception $e) {
         error_log('EXCEPTION: ' . $e->getMessage());
         error_log('═══════════════════════════════════════');
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        respondWithJSON(['success' => false, 'message' => $e->getMessage()], 400);
     }
 }
 elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
@@ -776,15 +888,13 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
             throw new Exception('Participant not found');
         }
         
-        http_response_code(200);
-        echo json_encode([
+        respondWithJSON([
             'success' => true,
             'message' => 'Participant deleted successfully'
-        ]);
+        ], 200);
         
     } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        respondWithJSON(['success' => false, 'message' => $e->getMessage()], 400);
     }
 }
 ?>

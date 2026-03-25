@@ -474,11 +474,29 @@
             }
         }
 
-        // Load upcoming events - all filtering logic moved to server-side
+        // Load upcoming events - check for past events first, if they exist show all events
         async function loadUpcomingEvents() {
             try {
-                // Call generic server-side API with type parameter for filtering and logic
-                const response = await fetch('../api/get_filtered_upcoming_events.php?type=upcoming');
+                // First, check if there are any past events
+                const checkPastResponse = await fetch('../api/get_filtered_upcoming_events.php?type=all');
+                const checkPastData = await checkPastResponse.json();
+                
+                // Determine if there are past events by checking if all events count is greater than upcoming events
+                let usedType = 'upcoming'; // Default to upcoming
+                
+                if (checkPastData.success && checkPastData.events.length > 0) {
+                    // Check if there are past events by comparing total events vs upcoming events
+                    const upcomingResponse = await fetch('../api/get_filtered_upcoming_events.php?type=upcoming');
+                    const upcomingData = await upcomingResponse.json();
+                    
+                    // If all events count is greater than upcoming events count, there are past events
+                    if (checkPastData.events.length > (upcomingData.events ? upcomingData.events.length : 0)) {
+                        usedType = 'all'; // Use all events if past events exist
+                    }
+                }
+                
+                // Now fetch either all or upcoming based on what we determined
+                const response = await fetch(`../api/get_filtered_upcoming_events.php?type=${usedType}`);
                 const data = await response.json();
                 
                 const container = document.getElementById('upcomingEventsContainer');
