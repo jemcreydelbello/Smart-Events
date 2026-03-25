@@ -628,6 +628,7 @@
   <script src="./js/catalogue-lookup.js?v=11"></script>
   <script src="./js/edit-modal-v2.js"></script>
   <script src="./js/event-layout-manager.js?v=1"></script>
+  <script src="./js/app-pass-manual.js"></script>
   
   <!-- Define helper function for inline scripts -->
   <script>
@@ -668,6 +669,342 @@
         return headers;
       } catch (error) {
         return { 'Content-Type': 'application/json' };
+      }
+    }
+
+    // ============ EMAIL CONFIGURATION FUNCTIONS ============
+    
+    // Switch between email config view and form
+    function switchEmailConfigView(viewType) {
+      const configView = document.getElementById('email-config-view');
+      const configForm = document.getElementById('email-config-form');
+      
+      if (viewType === 'form') {
+        configView.style.display = 'none';
+        configForm.style.display = 'block';
+        loadCurrentConfiguration();
+        // Update preview after form loads and fields are populated
+        setTimeout(() => {
+          console.log('📧 Triggering preview update...');
+          updateEmailPreview();
+        }, 150);
+      } else {
+        configForm.style.display = 'none';
+        configView.style.display = 'block';
+        loadCurrentConfiguration();
+      }
+    }
+
+    // Show email configuration status message
+    function showStatus(type, message) {
+      const statusDiv = document.getElementById('emailConfigStatus');
+      if (!statusDiv) return;
+      
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message ${type}`;
+      statusDiv.style.display = 'block';
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 4000);
+      }
+    }
+
+    // Load current email configuration
+    async function loadCurrentConfiguration() {
+      try {
+        const response = await fetch(`../api/email-configuration.php`, {
+          method: 'GET',
+          headers: getUserHeaders()
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const config = result.data;
+          
+          // Update display fields
+          const currentFromEmailEl = document.getElementById('currentEmailDisplay');
+          if (currentFromEmailEl) {
+            currentFromEmailEl.textContent = config.from_email || 'Not configured';
+          }
+          
+          // Pre-fill form fields
+          const smtpUsernameInput = document.getElementById('smtpUsernameInput');
+          const fromNameInput = document.getElementById('fromNameInput');
+          const smtpServiceSelect = document.getElementById('smtpServiceSelect');
+          
+          if (smtpUsernameInput) smtpUsernameInput.value = config.smtp_username || '';
+          if (fromNameInput) fromNameInput.value = config.from_name || '';
+          
+          // Set service dropdown based on smtp_host
+          if (smtpServiceSelect) {
+            if (config.smtp_host === 'smtp.gmail.com') {
+              smtpServiceSelect.value = 'gmail';
+            }
+          }
+          
+          // Update preview after loading values
+          updateEmailPreview();
+        }
+      } catch (error) {
+        console.error('Error loading configuration:', error);
+        showStatus('error', 'Error loading configuration: ' + error.message);
+      }
+    }
+
+    // Validate email field - no spaces, must have @
+    function validateEmailField() {
+      const emailInput = document.getElementById('smtpUsernameInput');
+      if (!emailInput) return;
+      
+      const email = emailInput.value;
+      
+      // Check for spaces
+      if (email.includes(' ')) {
+        emailInput.setCustomValidity('Email cannot contain spaces');
+        emailInput.style.borderColor = '#ef4444';
+        emailInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+        console.warn('❌ Email contains spaces');
+        return false;
+      }
+      
+      // Check for @ symbol
+      if (!email.includes('@')) {
+        emailInput.setCustomValidity('Email must contain @ symbol');
+        emailInput.style.borderColor = '#ef4444';
+        emailInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+        console.warn('❌ Email missing @ symbol');
+        return false;
+      }
+      
+      // Valid email
+      emailInput.setCustomValidity('');
+      emailInput.style.borderColor = '#ddd';
+      emailInput.style.boxShadow = 'none';
+      console.log('✅ Email is valid:', email);
+      return true;
+    }
+
+    // Update email preview based on user input
+    function updateEmailPreview() {
+      try {
+        // Get input elements
+        const displayNameInput = document.getElementById('fromNameInput');
+        const emailAddressInput = document.getElementById('smtpUsernameInput');
+        
+        // Get preview elements
+        const previewDisplayName = document.getElementById('previewDisplayName');
+        const previewEmailAddr = document.getElementById('previewEmailAddr');
+        
+        // If any element is missing, return silently
+        if (!displayNameInput || !emailAddressInput || !previewDisplayName || !previewEmailAddr) {
+          return;
+        }
+        
+        // Get current values
+        const displayName = displayNameInput.value.trim() || 'Smart Events Team';
+        const emailAddress = emailAddressInput.value.trim() || 'noreply@smartevents.com';
+        
+        // Update preview elements in real-time
+        previewDisplayName.textContent = displayName;
+        previewEmailAddr.textContent = emailAddress;
+        
+        // Also reload profile picture
+        if (typeof loadEmailPreviewProfilePicture !== 'undefined') {
+          loadEmailPreviewProfilePicture();
+        }
+        
+        // Log the update
+        console.log('✅ Email preview updated: ' + displayName + ' <' + emailAddress + '>');
+        
+      } catch (error) {
+        console.error('❌ Error:', error);
+      }
+    }
+
+    // Update SMTP host based on selected service (hidden field, just for reference)
+    function updateSmtpHostBasedOnService() {
+      // SMTP host is auto-determined in saveEmailConfiguration based on service selection
+      // No UI field to update
+    }
+
+    // Save email configuration
+    async function saveEmailConfiguration() {
+      try {
+        const service = 'gmail'; // Always use Gmail
+        const appPassword = document.getElementById('appPasswordInput').value.trim();
+        const fromName = document.getElementById('fromNameInput').value.trim();
+        const smtpUsername = document.getElementById('smtpUsernameInput').value.trim();
+
+        // Validation
+        if (!smtpUsername) {
+          showStatus('error', 'Please enter Email Address');
+          return;
+        }
+        
+        // Strict email validation - no spaces and must have @
+        if (smtpUsername.includes(' ')) {
+          showStatus('error', 'Email cannot contain spaces');
+          return;
+        }
+        if (!smtpUsername.includes('@')) {
+          showStatus('error', 'Email must contain @ symbol');
+          return;
+        }
+        
+        // Basic email format validation
+        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(smtpUsername)) {
+          showStatus('error', 'Please enter a valid email address (e.g., email@domain.com)');
+          return;
+        }
+        
+        if (!appPassword) {
+          showStatus('error', 'Please enter app password');
+          return;
+        }
+        if (!fromName) {
+          showStatus('error', 'Please enter Display Name (From Name)');
+          return;
+        }
+
+        showStatus('pending', 'Saving configuration...');
+
+        // Determine SMTP host based on service
+        let smtpHost = '';
+        if (service === 'gmail') {
+          smtpHost = 'smtp.gmail.com';
+        }
+
+        const configData = {
+          mailer_type: service,
+          smtp_host: smtpHost,
+          smtp_port: 587,
+          smtp_username: smtpUsername,
+          smtp_password: appPassword,
+          from_email: smtpUsername,
+          from_name: fromName,
+          encryption: 'tls',
+          is_active: 1
+        };
+
+        const response = await fetch(`../api/email-configuration.php`, {
+          method: 'POST',
+          headers: getUserHeaders(),
+          body: JSON.stringify(configData)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          showStatus('success', 'Email configuration saved! Now testing...');
+          
+          // Store the email for test modal
+          window.emailConfigForTest = {
+            smtpUsername: smtpUsername,
+            fromName: fromName,
+            appPassword: appPassword,
+            smtpHost: smtpHost
+          };
+          
+          // Show test email modal after a brief delay
+          setTimeout(() => {
+            document.getElementById('testEmailAddress').textContent = smtpUsername;
+            document.getElementById('testEmailModal').style.display = 'flex';
+            document.getElementById('testEmailStatus').style.display = 'none';
+            document.getElementById('testEmailStatus').innerHTML = '';
+            document.getElementById('sendTestEmailBtn').disabled = false;
+            document.getElementById('sendTestEmailBtn').textContent = 'Send Test Email';
+          }, 500);
+        } else {
+          showStatus('error', result.message || 'Failed to save configuration');
+        }
+      } catch (error) {
+        console.error('Error saving configuration:', error);
+        showStatus('error', 'Error: ' + error.message);
+      }
+    }
+
+    // Test email functions
+    function closeTestEmailModal() {
+      document.getElementById('testEmailModal').style.display = 'none';
+      document.getElementById('testEmailStatus').innerHTML = '';
+      document.getElementById('testEmailStatus').style.display = 'none';
+    }
+
+    async function sendTestEmail() {
+      const statusDiv = document.getElementById('testEmailStatus');
+      const sendBtn = document.getElementById('sendTestEmailBtn');
+      const config = window.emailConfigForTest;
+
+      if (!config) {
+        statusDiv.innerHTML = '<p style="color: #dc2626; font-size: 12px; margin: 0;">Error: Configuration not found</p>';
+        statusDiv.style.display = 'block';
+        return;
+      }
+
+      // Get admin name from the display element
+      const userNameDisplay = document.getElementById('userNameDisplay');
+      const adminName = userNameDisplay ? userNameDisplay.textContent.trim() : 'System Administrator';
+
+      // Disable button and show loading
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      statusDiv.innerHTML = '<p style="color: #0891b2; font-size: 12px; margin: 0;">Sending test email...</p>';
+      statusDiv.style.display = 'block';
+
+      try {
+        const response = await fetch(`../api/test-email-configuration.php`, {
+          method: 'POST',
+          headers: getUserHeaders(),
+          body: JSON.stringify({
+            smtp_host: config.smtpHost,
+            smtp_port: 587,
+            smtp_username: config.smtpUsername,
+            smtp_password: config.appPassword,
+            from_email: config.smtpUsername,
+            from_name: config.fromName,
+            encryption: 'tls',
+            admin_name: adminName
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          statusDiv.innerHTML = '<p style="color: #16a34a; font-size: 12px; margin: 0; display: flex; align-items: center; gap: 6px;"> Test email sent successfully!</p>';
+          statusDiv.style.display = 'block';
+          sendBtn.textContent = 'Email Sent ✓';
+          
+          // Close after 2 seconds
+          setTimeout(() => {
+            closeTestEmailModal();
+            loadCurrentConfiguration();
+            switchEmailConfigView('view');
+          }, 2000);
+        } else {
+          statusDiv.innerHTML = '<p style="color: #dc2626; font-size: 12px; margin: 0;">' + (result.message || 'Failed to send test email') + '</p>';
+          statusDiv.style.display = 'block';
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send Test Email';
+        }
+      } catch (error) {
+        console.error('Error sending test email:', error);
+        statusDiv.innerHTML = '<p style="color: #dc2626; font-size: 12px; margin: 0;">Error: ' + error.message + '</p>';
+        statusDiv.style.display = 'block';
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Test Email';
       }
     }
   </script>
@@ -782,6 +1119,61 @@
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
+    }
+
+    /* Email Configuration Styles */
+    .input-field {
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: #2563eb !important;
+      background-color: #fff !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .status-message {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      animation: slideDown 0.3s ease;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      font-weight: 500;
+    }
+
+    .status-message.success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .status-message.error {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .status-message.pending {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     @keyframes slideDown {
@@ -3286,29 +3678,274 @@ try {
 
             <!-- Email Configuration Tab -->
             <div id="email-config" class="settings-tab-content" style="display: none;">
-              <div class="space-y-6">
-                <div>
-                  <h3 class="text-xl font-bold text-gray-900">Email Configuration</h3>
-                  <p class="text-sm text-gray-600 mt-1">View and manage the email address used by Smart Events for sending system notifications and communications.</p>
-                </div>
+              <!-- Email Config View -->
+              <div id="email-config-view">
+                <div class="space-y-6">
+                  <div>
+                    <h3 class="text-xl font-bold text-gray-900">Email Configuration</h3>
+                    <p class="text-sm text-gray-600 mt-1">View and manage the email address used by Smart Events for sending system notifications and communications.</p>
+                  </div>
 
-                <!-- Current Email Display -->
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
-                  <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0">
-                      <svg class="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div class="flex-1">
-                      <h4 class="font-semibold text-gray-900 mb-1">Current Email Address</h4>
-                      <p class="text-sm text-gray-600 mb-3">This is the email address configured for sending system notifications:</p>
-                      <div class="bg-white rounded border border-blue-200 p-3 text-center mb-4">
-                        <p id="currentEmailDisplay" class="text-base font-mono text-blue-600">Loading...</p>
+                  <!-- Current Email Display Card -->
+                  <div class="bg-white rounded-lg border border-gray-200 mb-6 overflow-hidden">
+                    <!-- First Row: Email Icon + Text Headers -->
+                    <div class="flex gap-4 p-6 bg-gray-50 border-b border-gray-200">
+                      <div class="flex-shrink-0 mt-1">
+                        <svg class="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
                       </div>
-                      <button onclick="window.location.href='email-configuration.php'" style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">Change Email Configuration</button>
+                      <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-900 mb-1">Current Email Address</p>
+                        <p class="text-sm text-gray-600">This is the email address configured for sending system notifications:</p>
+                      </div>
+                    </div>
+
+                    <!-- Second Row: Email Address Container -->
+                    <div class="px-6 py-4 border-b border-gray-200 bg-blue-50" style="display: flex; justify-content: center; align-items: center;">
+                      <p id="currentEmailDisplay" class="text-lg font-mono text-blue-600 font-semibold">Loading...</p>
+                    </div>
+
+                    <!-- Third Row: Change Button -->
+                    <div class="px-6 py-4" style="display: flex; justify-content: flex-end; align-items: center;">
+                      <button onclick="switchEmailConfigView('form')" style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">Change Email Configuration</button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Email Config Form View -->
+              <div id="email-config-form" style="display: none;">
+                <div class="space-y-6">
+                  <div>
+                    <h3 class="text-xl font-bold text-gray-900">Change Email Configuration</h3>
+                    <p class="text-sm text-gray-600 mt-1">Update your SMTP settings for sending system emails</p>
+                  </div>
+
+                  <!-- Email Provider Notice -->
+                  <div style="padding: 12px 16px; background-color: #fff7ed; border-radius: 4px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px;">
+                    <svg style="width: 18px; height: 18px; color: #ea580c; flex-shrink: 0; margin-top: 2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <p style="font-size: 13px; color: #92400e; margin: 0; font-weight: 500;">This system can only support using Gmail as its email provider.</p>
+                  </div>
+
+                  <!-- Email Preview Template -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div style="margin-bottom: 12px;">
+                      <p class="text-sm font-semibold text-gray-700 mb-2">Email Preview</p>
+                      <p style="font-size: 12px; color: #666; margin: 0;">This shows how your emails will appear in recipients' inboxes with your display name and email address.</p>
+                    </div>
+                    <style>
+                      #emailPreviewTable tr:hover {
+                        background-color: transparent !important;
+                      }
+                      #emailPreviewTable td:hover {
+                        background-color: transparent !important;
+                      }
+                    </style>
+                    <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden;">
+                      <table id="emailPreviewTable" style="width: 100%; border-collapse: collapse;">
+                        <!-- First Row: Empty column and Subject -->
+                        <tr>
+                          <td style="width: 50px; padding: 12px 0 0 0;"></td>
+                          <td style="padding: 12px 16px 0 16px; background: white;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <div style="font-weight: 500; font-size: 15px; color: #202124;">
+                                <span id="previewSubject">Sample Email Subject</span>
+                              </div>
+                              <div style="background: #e8eaed; color: #5f6368; padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0;">Inbox ×</div>
+                            </div>
+                          </td>
+                        </tr>
+                        <!-- Second Row: Profile Picture and Sender Info -->
+                        <tr>
+                          <td style="width: 50px; padding: 12px 0 12px 16px; vertical-align: top;">
+                            <!-- Profile Picture -->
+                            <div id="previewProfilePicture" style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: #5f6368; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 600; font-size: 16px; color: white;">
+                              A
+                            </div>
+                          </td>
+                          <td style="padding: 12px 16px; vertical-align: top;">
+                            <!-- Sender Details Table -->
+                            <table style="width: 100%; border-collapse: collapse;">
+                              <!-- Display Name and Email -->
+                              <tr>
+                                <td style="padding: 0; margin-bottom: 4px;">
+                                  <span id="previewDisplayName" style="font-weight: 500; font-size: 13px; color: #202124;">Display Name</span>
+                                  <span style="color: #80868b; font-size: 13px;"> &lt;<span id="previewEmailAddr" style="color: #80868b;">email@address.com</span>&gt;</span>
+                                </td>
+                              </tr>
+                              <!-- To Me -->
+                              <tr>
+                                <td style="padding: 4px 0 0 0;">
+                                  <div style="color: #80868b; font-size: 13px;">to me</div>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+
+                  <script>
+                    // Load admin profile picture
+                    function loadEmailPreviewProfilePicture() {
+                      try {
+                        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        const userInfo = (admin && admin.email) ? admin : user;
+                        const previewDiv = document.getElementById('previewProfilePicture');
+                        
+                        console.log('Loading profile picture for:', userInfo.full_name, 'Image:', userInfo.admin_image || userInfo.coordinator_image);
+                        
+                        if (previewDiv && userInfo) {
+                          // Check for admin_image or coordinator_image
+                          let imageUrl = userInfo.admin_image || userInfo.coordinator_image;
+                          
+                          if (imageUrl && imageUrl.trim() !== '') {
+                            // Ensure proper path - if it's just a filename, prepend the uploads path
+                            if (!imageUrl.includes('/')) {
+                              imageUrl = '../uploads/admins/' + imageUrl;
+                            }
+                            console.log('Attempting to load image from:', imageUrl);
+                            
+                            // Create a fallback function in case image fails
+                            const showInitials = () => {
+                              const initials = ((userInfo.full_name || 'Admin').split(' ')[0][0] || 'A').toUpperCase();
+                              previewDiv.innerHTML = initials;
+                              previewDiv.style.background = '#5f6368';
+                              previewDiv.style.color = 'white';
+                              console.log('Image failed to load, showing initials:', initials);
+                            };
+                            
+                            // Create image element
+                            const img = document.createElement('img');
+                            img.src = imageUrl;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '50%';
+                            img.alt = 'Admin';
+                            
+                            img.onload = () => {
+                              console.log('Image loaded successfully');
+                              previewDiv.innerHTML = '';
+                              previewDiv.appendChild(img);
+                            };
+                            
+                            img.onerror = () => {
+                              console.error('Failed to load image from:', imageUrl);
+                              showInitials();
+                            };
+                            
+                            // Set a timeout fallback
+                            setTimeout(() => {
+                              if (previewDiv.innerHTML.includes('<img') || previewDiv.innerHTML === imageUrl) {
+                                // Image is still loading or pending, wait a bit more
+                              }
+                            }, 2000);
+                            
+                            // Start loading
+                            previewDiv.innerHTML = '';
+                            previewDiv.appendChild(img);
+                          } else {
+                            // Show initials
+                            const initials = ((userInfo.full_name || 'Admin').split(' ')[0][0] || 'A').toUpperCase();
+                            previewDiv.textContent = initials;
+                            previewDiv.style.background = '#5f6368';
+                            previewDiv.style.color = 'white';
+                            console.log('No image URL found, showing initials:', initials);
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error loading preview profile picture:', error);
+                      }
+                    }
+                    
+                    // Load immediately
+                    loadEmailPreviewProfilePicture();
+                    
+                    // Reload after a short delay to ensure localStorage is populated
+                    setTimeout(loadEmailPreviewProfilePicture, 100);
+                    setTimeout(loadEmailPreviewProfilePicture, 500);
+                    
+                    // Reload when switching to email config form
+                    if (typeof switchEmailConfigView !== 'undefined') {
+                      const originalSwitchEmailConfigView = window.switchEmailConfigView;
+                      window.switchEmailConfigView = function(viewType) {
+                        originalSwitchEmailConfigView(viewType);
+                        if (viewType === 'form') {
+                          setTimeout(loadEmailPreviewProfilePicture, 50);
+                        }
+                      };
+                    }
+                  </script>
+
+                  <!-- Status Message -->
+                  <div id="emailConfigStatus" class="status-message"></div>
+
+                  <!-- Display Name, Email Address and App Password Row -->
+                  <div style="display: flex; gap: 40px; align-items: flex-start; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
+                    <!-- Display Name Field -->
+                    <div class="mb-6">
+                      <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Display Name (From Name)</label>
+                      <input type="text" id="fromNameInput" class="input-field" placeholder="Display Name" style="display: block; width: 350px; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;" oninput="updateEmailPreview()">
+                      <p style="font-size: 12px; color: #666; margin-top: 4px;">This name will appear as the sender in emails recipients receive.</p>
+                    </div>
+
+                    <!-- Email Address Field -->
+                    <div class="mb-6">
+                      <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Email Address</label>
+                      <input type="email" id="smtpUsernameInput" class="input-field" placeholder="your-email@gmail.com" style="display: block; width: 350px; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;" 
+                             pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+"
+                             title="Email must contain @ and no spaces"
+                             required
+                             oninput="updateEmailPreview()"
+                             onchange="validateEmailField()">
+                    </div>
+
+                    <!-- App Password -->
+                    <div class="mb-6">
+                      <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">App Password</label>
+                      <input type="password" id="appPasswordInput" class="input-field" placeholder="Enter your app password" style="display: block; width: 350px; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.2s;">
+                      <p style="font-size: 12px; color: #666; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg><a onclick="openAppPasswordGuideModal()" style="color: #ea580c; text-decoration: none; cursor: pointer; font-weight: 500;">How to get an app password →</a></p>
+                    </div>
+                  </div>
+
+                  <!-- Buttons -->
+                  <div style="display: flex; gap: 8px; padding-top: 16px; justify-content: flex-end;">
+                    <button type="button" onclick="switchEmailConfigView('view')" style="padding: 10px 24px; border: 1px solid #ddd; color: #374151; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb';" onmouseout="this.style.backgroundColor='white';">Back</button>
+                    <button onclick="saveEmailConfiguration()" style="padding: 10px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">Save Configuration</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Test Email Configuration Modal -->
+            <div id="testEmailModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+              <div style="background: white; border-radius: 8px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" style="margin: 0 auto; margin-bottom: 12px;">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <path d="m22 7l-10 5L2 7"></path>
+                  </svg>
+                  <h3 style="font-size: 18px; font-weight: 600; color: #202124; margin: 0; margin-bottom: 8px;">Test Email Configuration</h3>
+                  <p style="font-size: 13px; color: #666; margin: 0;">Send a test email to verify your configuration works</p>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                  <p style="font-size: 12px; color: #666; margin: 0; line-height: 1.4;">A test email will be sent to:</p>
+                  <p id="testEmailAddress" style="font-size: 13px; color: #202124; font-weight: 600; margin: 4px 0 0 0; word-break: break-all;"></p>
+                </div>
+
+                <div id="testEmailStatus" style="margin-bottom: 16px; display: none;"></div>
+
+                <div style="display: flex; gap: 8px;">
+                  <button onclick="closeTestEmailModal()" style="flex: 1; padding: 10px 16px; border: 1px solid #ddd; color: #374151; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;">Cancel</button>
+                  <button id="sendTestEmailBtn" onclick="sendTestEmail()" style="flex: 1; padding: 10px 16px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: opacity 0.2s;">Send Test Email</button>
                 </div>
               </div>
             </div>

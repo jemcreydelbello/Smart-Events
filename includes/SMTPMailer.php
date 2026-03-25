@@ -579,7 +579,7 @@ EOT;
         
         <div class="footer">
             <p>This is an automated email. Please do not reply with sensitive information.</p>
-            <p>&copy; Intellismart Technology Inc. Event System</p>
+            <p>&copy; Smart Event System</p>
         </div>
     </div>
 </body>

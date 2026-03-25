@@ -1307,6 +1307,14 @@ function navigateToPage(page) {
     
     localStorage.setItem('adminLastPage', page);
     
+    // If navigating to settings, also save the current active settings tab
+    if (page === 'settings') {
+        const activeSettingsTab = document.querySelector('.settings-tab-content.active');
+        if (activeSettingsTab) {
+            localStorage.setItem('adminLastSettingsTab', activeSettingsTab.id);
+        }
+    }
+    
     // Update active nav link (includes buttons with data-page attribute)
     const navElements = document.querySelectorAll('[data-page]');
     navElements.forEach(el => {
@@ -1363,8 +1371,9 @@ function navigateToPage(page) {
             loadActionTypes();
         }
         else if (page === 'settings') {
-            // Load settings page - default to users-settings tab (profile)
-            switchTab('users-settings');
+            // Load settings page - default to users-settings tab (profile) or restore last active tab
+            const lastSettingsTab = localStorage.getItem('adminLastSettingsTab') || 'users-settings';
+            switchTab(lastSettingsTab);
             initializeProfileSettings();
         }
     } else {
@@ -11558,6 +11567,14 @@ function switchTab(tabName) {
         document.querySelectorAll('.settings-tab-btn').forEach(btn => {
             if (btn.getAttribute('data-tab') === tabName) {
                 btn.classList.add('active');
+                // Save the active settings tab to localStorage
+                if (tabName.includes('-settings') || tabName === 'email-config') {
+                    localStorage.setItem('adminLastSettingsTab', tabName);
+                }
+                // Reset email config view to 'view' mode when switching to email-config tab
+                if (tabName === 'email-config' && typeof switchEmailConfigView === 'function') {
+                    switchEmailConfigView('view');
+                }
             }
         });
         
@@ -11576,7 +11593,13 @@ function switchTab(tabName) {
         }
         else if (tabName === 'email-config') {
             // Load and display current email configuration
-            loadCurrentEmailDisplay();
+            // Prefer the new loadCurrentConfiguration if available (index.html Settings tab)
+            if (typeof loadCurrentConfiguration === 'function') {
+                loadCurrentConfiguration();
+            } else {
+                // Fallback to loadCurrentEmailDisplay for standalone pages
+                loadCurrentEmailDisplay();
+            }
         }
         return;
     }
