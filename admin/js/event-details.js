@@ -4806,6 +4806,7 @@ window.searchAttendeesImpl = searchAttendees;
 
 // Export attendees to PDF
 function exportAttendees() {
+    const eventId = window.currentEventId;
     const allAttendees = [...attendeesData.initial, ...attendeesData.actual];
     
     if (allAttendees.length === 0) {
@@ -4813,6 +4814,28 @@ function exportAttendees() {
         return;
     }
     
+    if (!eventId) {
+        showNotification('Event not found', 'error');
+        return;
+    }
+    
+    // Fetch event details from API to get reliable event name
+    const headers = getUserHeaders();
+    fetch(`../api/events.php?action=detail&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            let eventName = data.data?.event_name || data.data?.title || 'Event Attendees';
+            generateAttendeesPdf(eventName, allAttendees);
+        })
+        .catch(error => {
+            console.error('Error fetching event details:', error);
+            // Fallback to default event name if API fails
+            generateAttendeesPdf('Event Attendees', allAttendees);
+        });
+}
+
+// Generate attendees PDF with event name
+function generateAttendeesPdf(eventName, allAttendees) {
     try {
         if (typeof window.jspdf === 'undefined') {
             alert('PDF library not available. Please try again.');
@@ -4823,9 +4846,6 @@ function exportAttendees() {
         const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        
-        // Get event name
-        const eventName = window.currentEventData?.title || window.selectedEventTitle || 'Event Attendees';
         
         // ========== PAGE 1: HEADER & SUMMARY ==========
         
@@ -5007,7 +5027,7 @@ function exportAttendees() {
         });
         
         // ========== DOWNLOAD ==========
-        const filename = `attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        const filename = `${eventName} - Attendees Report.pdf`;
         doc.save(filename);
         
         console.log('✓ Professional PDF exported successfully');
@@ -6653,168 +6673,288 @@ function exportPostmortemPDF() {
 async function generatePostmortemPDF(eventName, eventId, registrations, attendanceRate, taskCompletion, logisticsCompletion, initialAttendees, actualAttendees, registered, attended, commSent, commScheduled, commDraft) {
     try {
         console.log('🔧 Starting PDF generation...');
-        console.log('window.jspdf:', window.jspdf);
         
-        // Check if jsPDF is available - try different access patterns
+        // Check if jsPDF is available
         let jsPDFClass = null;
-        
         if (window.jspdf && window.jspdf.jsPDF) {
-            // UMD module pattern
             jsPDFClass = window.jspdf.jsPDF;
-            console.log('✅ Found jsPDF via window.jspdf.jsPDF');
         } else if (window.jsPDF) {
-            // Alternative pattern
             jsPDFClass = window.jsPDF;
-            console.log('✅ Found jsPDF via window.jsPDF');
         } else {
-            throw new Error('jsPDF library not loaded. Available: ' + Object.keys(window).filter(k => k.includes('pdf') || k.includes('js')).join(', '));
+            throw new Error('jsPDF library not loaded');
         }
         
         const doc = new jsPDFClass();
-        
-        console.log('✅ jsPDF initialized');
-        
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        let yPos = 20;
+        const margin = 14;
+        let yPos = 0;
         
-        // Try to add logo at top left
-        const logoData = await (async () => {
-            try {
-                const response = await fetch('../assets/smart1.png');
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            } catch (e) {
-                console.log('⚠️ Could not load logo image');
-                return null;
-            }
-        })();
+        // ========== PROFESSIONAL HEADER SECTION (MATCHING ATTENDEES) ==========
+        // Add blue header background
+        doc.setFillColor(30, 115, 187);
+        doc.rect(0, yPos, pageWidth, 50, 'F');
         
-        if (logoData) {
-            doc.addImage(logoData, 'PNG', margin, 10, 30, 20);
-        }
+        // Add decorative orange accent bar
+        doc.setFillColor(237, 128, 40);
+        doc.rect(0, yPos + 48, pageWidth, 4, 'F');
         
-        // Add text to the right of logo
-        doc.setTextColor(0, 0, 0);
-        yPos = 18;
-        const textX = margin + 35; // Position text to the right of logo
+        // Logo/Company name (left side)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('Intellismart', 16, yPos + 15);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.text('Event Management System', 16, yPos + 20);
         
-        // Event name at top (largest, bold)
+        // Main heading (centered on right)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont(undefined, 'bold');
+        doc.text('POSTMORTEM REPORTS', 70, yPos + 28);
+        
+        // Subheading (light blue, centered)
+        doc.setTextColor(230, 240, 250);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text('Professional Analysis & Log Documentation', 70, yPos + 35);
+        
+        // Event name (white text)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text(`Event: ${eventName}`, 70, yPos + 42);
+        
+        yPos += 65;
+        
+        // ========== REPORT SUMMARY HEADING ==========
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('REPORT SUMMARY', 14, yPos);
+        
+        yPos += 8;
+        
+        // Extract numeric values
+        const regCount = parseInt(registrations) || 0;
+        const attendedCount = parseInt(attended) || 0;
+        const noshow = regCount - attendedCount;
+        const attendanceNum = parseFloat(attendanceRate) || 0;
+        const taskCompNum = parseFloat(taskCompletion) || 0;
+        const logisticsNum = parseFloat(logisticsCompletion) || 0;
+        
+        // ========== KPI BOXES (4 in a row - matching attendees style) ==========
+        const boxWidth = 40;
+        const boxHeight = 16;
+        const boxGap = 5;
+        const baseX = 14;
+        
+        // Box 1: Registrations
+        doc.setFillColor(230, 240, 250);
+        doc.setDrawColor(30, 115, 187);
+        doc.setLineWidth(0.5);
+        doc.rect(baseX, yPos, boxWidth, boxHeight, 'FD');
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('REGISTRATIONS', baseX + 2, yPos + 5);
+        doc.setFont(undefined, 'normal');
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        doc.text(`${eventName}`, textX, yPos);
+        doc.text(String(regCount), baseX + 2, yPos + 12);
+        
+        // Box 2: Attendance Rate
+        doc.setFillColor(230, 250, 240);
+        doc.setDrawColor(16, 185, 129);
+        doc.rect(baseX + boxWidth + boxGap, yPos, boxWidth, boxHeight, 'FD');
+        doc.setTextColor(16, 185, 129);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('ATTENDANCE RATE', baseX + boxWidth + boxGap + 2, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(attendanceNum.toFixed(1)) + '%', baseX + boxWidth + boxGap + 2, yPos + 12);
+        
+        // Box 3: Task Completion
+        doc.setFillColor(250, 245, 230);
+        doc.setDrawColor(237, 128, 40);
+        doc.rect(baseX + (boxWidth + boxGap) * 2, yPos, boxWidth, boxHeight, 'FD');
+        doc.setTextColor(237, 128, 40);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('TASK COMPLETION', baseX + (boxWidth + boxGap) * 2 + 2, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(taskCompNum.toFixed(0)) + '%', baseX + (boxWidth + boxGap) * 2 + 2, yPos + 12);
+        
+        // Box 4: Logistics Completion
+        doc.setFillColor(245, 235, 250);
+        doc.setDrawColor(168, 85, 247);
+        doc.rect(baseX + (boxWidth + boxGap) * 3, yPos, boxWidth, boxHeight, 'FD');
+        doc.setTextColor(168, 85, 247);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text('LOGISTICS', baseX + (boxWidth + boxGap) * 3 + 2, yPos + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(String(logisticsNum.toFixed(0)) + '%', baseX + (boxWidth + boxGap) * 3 + 2, yPos + 12);
+        
+        yPos += 22;
+        
+        // Generation timestamp
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        doc.text(`Generated: ${dateStr} at ${timeStr}`, 14, yPos);
+        
+        yPos += 8;
+        
+        // ========== EVENT DYNAMICS SECTION ==========
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Event Dynamics', 14, yPos);
         
         yPos += 5;
-        // Postmortem Report label (smaller, normal)
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
-        doc.text('Postmortem Report', textX, yPos);
         
-        yPos += 4;
-        // Date (smallest, normal)
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, textX, yPos);
-        
-        yPos += 10;
-        
-        // Reset text color and linewidth
-        doc.setTextColor(0, 0, 0);
-        doc.setLineWidth(0.5);
-        doc.setFontSize(11);
-        
-        // Add first table - Summary Metrics
-        const summaryData = [
-            ['Total Registrations', String(registrations)],
-            ['Attendance Rate', String(attendanceRate)],
-            ['Task Completion', String(taskCompletion)],
-            ['Logistics Complete', String(logisticsCompletion)]
+        // Event Dynamics Table
+        const dynTableData = [
+          ['Initial Attendees', String(initialAttendees)],
+          ['Actual Attendees', String(actualAttendees)]
         ];
         
-        console.log('📊 Adding summary table...');
         doc.autoTable({
-            startY: yPos,
-            head: [['Metric', 'Value']],
-            body: summaryData,
-            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
-            bodyStyles: { textColor: [51, 51, 51] },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            margin: { left: margin, right: margin },
-            columnStyles: {
-                0: { cellWidth: (pageWidth - 2 * margin) * 0.6 },
-                1: { cellWidth: (pageWidth - 2 * margin) * 0.4 }
-            }
+          startY: yPos,
+          head: [['Metric', 'Count']],
+          body: dynTableData,
+          theme: 'grid',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            lineColor: [180, 190, 200],
+            lineWidth: 0.3,
+            font: 'helvetica',
+            textColor: [40, 40, 40]
+          },
+          headStyles: {
+            fillColor: [30, 115, 187],
+            textColor: 255,
+            fontStyle: 'bold',
+            font: 'helvetica',
+            halign: 'center',
+            valign: 'middle',
+            lineColor: [30, 115, 187]
+          },
+          bodyStyles: {
+            valign: 'middle',
+            font: 'helvetica',
+            minCellHeight: 7
+          },
+          alternateRowStyles: {
+            fillColor: [248, 250, 252]
+          },
+          columnStyles: {
+            1: { halign: 'center' }
+          }
         });
         
-        yPos = doc.lastAutoTable.finalY + 15;
+        yPos = doc.lastAutoTable.finalY + 8;
         
-        // Add second table - Detailed Metrics
-        const detailedData = [
-            ['Initial Attendees', String(initialAttendees)],
-            ['Actual Attendees', String(actualAttendees)],
-            ['Registered', String(registered)],
-            ['Attended', String(attended)],
-            ['Communications Sent', String(commSent)],
-            ['Communications Scheduled', String(commScheduled)],
-            ['Communications Draft', String(commDraft)]
+        // ========== FINANCE SUMMARY SECTION ==========
+        doc.setTextColor(30, 115, 187);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Finance Summary', 14, yPos);
+        
+        yPos += 5;
+        
+        // Finance data (default values, can be passed as parameters later)
+        const budgetAmount = 0;
+        const expenseAmount = 0;
+        const balanceAmount = budgetAmount - expenseAmount;
+        
+        // Finance Summary Table
+        const finTableData = [
+          ['Budget', `P ${budgetAmount.toFixed(2)}`],
+          ['Expense', `P ${expenseAmount.toFixed(2)}`],
+          ['Balance', `P ${balanceAmount.toFixed(2)}`]
         ];
         
-        console.log('📊 Adding detailed table...');
         doc.autoTable({
-            startY: yPos,
-            head: [['Metric', 'Value']],
-            body: detailedData,
-            headStyles: { fillColor: [30, 115, 187], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
-            bodyStyles: { textColor: [51, 51, 51] },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            margin: { left: margin, right: margin },
-            columnStyles: {
-                0: { cellWidth: (pageWidth - 2 * margin) * 0.6 },
-                1: { cellWidth: (pageWidth - 2 * margin) * 0.4 }
-            },
-            didDrawPage: function(data) {
-                // Add blue line at bottom
-                doc.setDrawColor(30, 115, 187);
-                doc.setLineWidth(2);
-                doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
-                
-                // Add footer text
-                doc.setTextColor(100, 100, 100);
-                doc.setFontSize(9);
-                doc.text('Intellismart - Automated Report', margin, pageHeight - 15);
-                
-                // Add page number on right
-                doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
-            }
+          startY: yPos,
+          head: [['Description', 'Amount']],
+          body: finTableData,
+          theme: 'grid',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            lineColor: [180, 190, 200],
+            lineWidth: 0.3,
+            font: 'helvetica',
+            textColor: [40, 40, 40]
+          },
+          headStyles: {
+            fillColor: [30, 115, 187],
+            textColor: 255,
+            fontStyle: 'bold',
+            font: 'helvetica',
+            halign: 'center',
+            valign: 'middle',
+            lineColor: [30, 115, 187]
+          },
+          bodyStyles: {
+            valign: 'middle',
+            font: 'helvetica',
+            minCellHeight: 7
+          },
+          alternateRowStyles: {
+            fillColor: [248, 250, 252]
+          },
+          columnStyles: {
+            1: { halign: 'right' }
+          }
         });
         
-        // Add blue line at bottom of last page
+        yPos = doc.lastAutoTable.finalY + 8;
+        
+        // ========== FOOTER SECTION (MATCHING ATTENDEES) ==========
+        // Footer divider line (BLUE)
         doc.setDrawColor(30, 115, 187);
-        doc.setLineWidth(2);
-        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+        doc.setLineWidth(0.5);
+        doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
         
-        // Add footer text on last page
+        // Footer text (left) - GRAY
         doc.setTextColor(100, 100, 100);
-        doc.setFontSize(9);
-        doc.text('Intellismart - Automated Report', margin, pageHeight - 15);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.text('Intellismart Event Management System', 14, pageHeight - 12);
         
-        // Add page number on right
-        doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+        // Page number (right) - GRAY
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(8);
+        const totalPages = doc.internal.getNumberOfPages();
+        doc.text(`Page ${totalPages} of ${totalPages}`, pageWidth - 35, pageHeight - 12);
         
-        // Save the PDF
-        const filename = `${eventName} - Postmortem Automated Report.pdf`;
+        // Copyright text - GRAY
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'normal');
+        doc.text('© 2026 Intellismart. All rights reserved.', 14, pageHeight - 6);
+        
+        // Save PDF
+        const filename = `${eventName} - Postmortem Report.pdf`;
         doc.save(filename);
-        console.log('✅ PDF Downloaded:', filename);
+        console.log('✅ Postmortem PDF Downloaded:', filename);
         
     } catch (error) {
         console.error('❌ PDF Generation Error:', error.message);
-        console.error('Stack:', error.stack);
-        throw error;
+        alert('Failed to generate postmortem report: ' + error.message);
     }
 }
 
@@ -6910,141 +7050,227 @@ function exportLogReport(reportId) {
         });
 }
 
-// Generate Log Report PDF
+// Helper function for justified text with first-line indentation  
+function renderLogTextWithIndentation(doc, text, startX, startY, maxWidth, lineHeight, pageHeight) {
+    let yPos = startY;
+    const indentMM = 10; // indentation in mm (paragraph indent)
+    const words = String(text).trim().split(/\s+/);
+    
+    if (words.length === 0) return yPos;
+    
+    let lineWords = [];
+    let lineNumber = 0;
+    
+    for (let i = 0; i < words.length; i++) {
+        lineWords.push(words[i]);
+        
+        const isFirstLine = lineNumber === 0;
+        const xOffset = isFirstLine ? indentMM : 0;
+        const availableWidth = maxWidth - xOffset;
+        const testLine = lineWords.join(' ');
+        const testWidth = doc.getTextWidth(testLine);
+        
+        if (testWidth > availableWidth && lineWords.length > 1) {
+            lineWords.pop();
+            i--;
+            
+            const xPos = startX + xOffset;
+            renderJustifiedLineForLog(doc, lineWords, xPos, yPos, availableWidth);
+            
+            yPos += lineHeight;
+            if (yPos > pageHeight - 30) {
+                doc.addPage();
+                yPos = 14;
+                lineNumber = 0;
+                lineWords = [];
+                continue;
+            }
+            
+            lineWords = [];
+            lineNumber++;
+        }
+    }
+    
+    if (lineWords.length > 0) {
+        const isFirstLine = lineNumber === 0;
+        const xOffset = isFirstLine ? indentMM : 0;
+        const xPos = startX + xOffset;
+        const lineText = lineWords.join(' ');
+        doc.text(lineText, xPos, yPos);
+        yPos += lineHeight;
+    }
+    
+    return yPos;
+}
+
+// Helper function to render justified line in log
+function renderJustifiedLineForLog(doc, words, xPos, yPos, maxWidth) {
+    if (words.length === 0) return;
+    if (words.length === 1) {
+        doc.text(words[0], xPos, yPos);
+        return;
+    }
+    
+    // Calculate word widths
+    const wordWidths = words.map(w => doc.getTextWidth(w));
+    const totalWordWidth = wordWidths.reduce((a, b) => a + b, 0);
+    
+    // Calculate space distribution
+    const totalSpaceNeeded = maxWidth - totalWordWidth;
+    const gaps = words.length - 1;
+    const spacePerGap = gaps > 0 ? totalSpaceNeeded / gaps : 0;
+    
+    // Render words with calculated spacing
+    let currentX = xPos;
+    words.forEach((word, index) => {
+        doc.text(word, currentX, yPos);
+        if (index < words.length - 1) {
+            currentX += wordWidths[index] + spacePerGap;
+        }
+    });
+}
+
+
+// Generate Log Report PDF with Professional Styling (Matching Attendees)
 async function generateLogReportPDF(eventName, eventId, reportData, logReportId) {
     try {
         console.log('🔧 Starting Log Report PDF generation...');
-        console.log('window.jspdf:', window.jspdf);
         
-        // Check if jsPDF is available - try different access patterns
+        // Check if jsPDF is available
         let jsPDFClass = null;
-        
         if (window.jspdf && window.jspdf.jsPDF) {
-            // UMD module pattern
             jsPDFClass = window.jspdf.jsPDF;
-            console.log('✅ Found jsPDF via window.jspdf.jsPDF');
         } else if (window.jsPDF) {
-            // Alternative pattern
             jsPDFClass = window.jsPDF;
-            console.log('✅ Found jsPDF via window.jsPDF');
         } else {
             throw new Error('jsPDF library not loaded');
         }
         
         const doc = new jsPDFClass();
-        
-        console.log('✅ jsPDF initialized for log report');
-        
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        let yPos = 20;
+        const margin = 14;
+        let yPos = 0;
         
-        // Try to add logo at top left
-        const logoData = await (async () => {
-            try {
-                const response = await fetch('../assets/smart1.png');
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            } catch (e) {
-                console.log('⚠️ Could not load logo image');
-                return null;
-            }
-        })();
+        // ========== PROFESSIONAL HEADER SECTION (MATCHING ATTENDEES) ==========
+        // Add blue header background
+        doc.setFillColor(30, 115, 187);
+        doc.rect(0, yPos, pageWidth, 50, 'F');
         
-        if (logoData) {
-            doc.addImage(logoData, 'PNG', margin, 20, 40, 20);
-        }
+        // Add decorative orange accent bar
+        doc.setFillColor(237, 128, 40);
+        doc.rect(0, yPos + 48, pageWidth, 4, 'F');
         
-        // Add text to the right of logo
-        doc.setTextColor(0, 0, 0);
-        yPos = 18;
-        const textX = margin + 35; // Position text to the right of logo
-        
-        // Event name at top (largest, bold)
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(`${eventName}`, textX, yPos);
-        
-        yPos += 5;
-        // Log Report label with ID (smaller, normal)
+        // Logo/Company name (left side)
+        doc.setTextColor(255, 255, 255);
         doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('Intellismart', 16, yPos + 15);
+        doc.setFontSize(8);
         doc.setFont(undefined, 'normal');
-        const reportLabel = logReportId ? `Log Report #${logReportId}` : 'Log Report';
-        doc.text(reportLabel, textX, yPos);
+        doc.text('Event Management System', 16, yPos + 20);
         
-        yPos += 4;
-        // Date (smallest, normal)
+        // Main heading (centered on right)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont(undefined, 'bold');
+        doc.text('LOG REPORT', 70, yPos + 28);
+        
+        // Subheading (light blue, centered)
+        doc.setTextColor(230, 240, 250);
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
-        doc.text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, textX, yPos);
+        doc.text('Professional Event Documentation & Analysis', 70, yPos + 35);
         
-        yPos += 10;
+        // Event name (white text)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text(`Event: ${eventName}`, 70, yPos + 42);
         
-        // Reset text color and linewidth
-        doc.setTextColor(0, 0, 0);
-        doc.setLineWidth(0.5);
+        yPos += 65;
+        
+        // ========== LOG REPORT DETAILS TABLE ==========
+        doc.setTextColor(30, 115, 187);
         doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('REPORT DETAILS', 14, yPos);
         
-        // Add report table using the reportData passed as parameter
-        console.log('📊 Adding log report table...');
-        doc.autoTable({
-            startY: yPos,
-            head: [['Field', 'Details']],
-            body: reportData,
-            headStyles: { 
-                fillColor: [30, 115, 187], 
-                textColor: [255, 255, 255], 
-                fontStyle: 'bold', 
-                fontSize: 12,
-                halign: 'left',
-                valign: 'middle'
-            },
-            bodyStyles: { 
-                textColor: [51, 51, 51], 
-                valign: 'top',
-                fontSize: 10,
-                overflow: 'linebreak',
-                cellPadding: 8
-            },
-            alternateRowStyles: { 
-                fillColor: [245, 245, 245] 
-            },
-            columnStyles: { 
-                0: { cellWidth: 45, fontStyle: 'bold', halign: 'left' }, 
-                1: { cellWidth: pageWidth - (2 * margin) - 45, halign: 'left' } 
-            },
-            margin: { left: margin, right: margin, top: 10 },
-            pageBreak: 'auto',
-            didDrawPage: function(data) {
-                // Add blue line at bottom
-                doc.setDrawColor(30, 115, 187);
-                doc.setLineWidth(2);
-                doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
-                
-                // Add footer text
-                doc.setTextColor(100, 100, 100);
-                doc.setFontSize(9);
-                doc.text('Intellismart - Log Report', margin, pageHeight - 15);
-                
-                // Add page number on right
-                doc.text('Page ' + doc.getNumberOfPages(), pageWidth - margin - 20, pageHeight - 15);
+        yPos += 5;
+        
+        // Render report details with proper formatting
+        const lineHeight = 3.5;
+        const leftMargin = 18;
+        const maxWidth = pageWidth - 28;
+        
+        reportData.forEach((row, rowIndex) => {
+            const fieldName = row[0];
+            const fieldValue = row[1];
+            
+            // Draw field name (left column - bold)
+            doc.setTextColor(30, 115, 187);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'bold');
+            doc.text(fieldName + ':', 14, yPos);
+            yPos += 4;
+            
+            // Draw field value (with proper indentation)
+            doc.setTextColor(60, 60, 60);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            
+            yPos = renderLogTextWithIndentation(doc, fieldValue, leftMargin, yPos, maxWidth, lineHeight, pageHeight);
+            
+            yPos += 3;
+            
+            // Check for page break
+            if (yPos > pageHeight - 30) {
+                doc.addPage();
+                yPos = 14;
             }
         });
         
-        // Save the PDF
-        const filename = `${eventName} - Postmortem Log Report.pdf`;
+        yPos += 10;
+        
+        // ========== FOOTER SECTION (MATCHING ATTENDEES) ==========
+        const addFooter = function(pageNumber, pageCount) {
+            // Footer divider line (BLUE) - moved down for better spacing
+            doc.setDrawColor(30, 115, 187);
+            doc.setLineWidth(0.5);
+            doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+            
+            // Footer text (left) - GRAY
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.text('Intellismart Event Management System', 14, pageHeight - 14);
+            
+            // Page number (right) - GRAY
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(8);
+            doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth - 35, pageHeight - 14);
+            
+            // Copyright text - GRAY
+            doc.setTextColor(150, 150, 150);
+            doc.setFontSize(7);
+            doc.setFont(undefined, 'normal');
+            doc.text('© 2026 Intellismart. All rights reserved.', 14, pageHeight - 8);
+        };
+        
+        // Add footer to all pages
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            addFooter(i, pageCount);
+        }
+        
+        // Save PDF
+        const filename = `${eventName} - Log Report.pdf`;
         doc.save(filename);
-        console.log('✅ PDF Downloaded:', filename);
+        console.log('✅ Log Report PDF Downloaded:', filename);
         
     } catch (error) {
         console.error('❌ Log Report PDF Generation Error:', error.message);
-        console.error('Stack:', error.stack);
-        throw error;
+        alert('Failed to generate log report PDF: ' + error.message);
     }
 }
 
