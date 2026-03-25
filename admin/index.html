@@ -1514,61 +1514,61 @@
 
           <!-- Tab Navigation -->
           <div style="margin-bottom: 15px;" class="bg-white rounded-lg shadow-sm mb-6 border border-gray-200">
-            <div style="display: flex; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 10px 8px; gap: 8px; width: 100%;" class="border-b border-gray-200">
-              <div style="display: flex; flex-wrap: nowrap; gap: 10px; min-width: min-content;">
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">Dashboard</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('details')" data-tab="details">Event Details</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('attendees')" data-tab="attendees">Attendees</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('tasks')" data-tab="tasks">Tasks</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="try { console.log('KPI button clicked, switchTab defined:', typeof switchTab); switchTab('kpi'); } catch(e) { alert('Error: ' + e.message); console.error(e); }" data-tab="kpi">KPI</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('emails')" data-tab="emails">Emails</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('program')" data-tab="program">Program</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('marketing')" data-tab="marketing">Marketing Collateral</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('logistics')" data-tab="logistics">Logistics</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('finance')" data-tab="finance">Finance</button>
-                <button style="padding: 3px 5px; font-size: 15px;" class="font-medium event-tab-btn" onclick="switchTab('postmortem')" data-tab="postmortem">Postmortem</button>
+            <div style="display: flex; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 6px 4px; gap: 4px; width: 100%;" class="border-b border-gray-200">
+              <div style="display: flex; flex-wrap: nowrap; gap: 7px; min-width: min-content;">
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">Dashboard</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('details')" data-tab="details">Event Details</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('attendees')" data-tab="attendees">Attendees</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('tasks')" data-tab="tasks">Tasks</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="try { console.log('KPI button clicked, switchTab defined:', typeof switchTab); switchTab('kpi'); } catch(e) { alert('Error: ' + e.message); console.error(e); }" data-tab="kpi">KPI</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('emails')" data-tab="emails">Emails</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('program')" data-tab="program">Program</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('marketing')" data-tab="marketing">Marketing Collateral</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('logistics')" data-tab="logistics">Logistics</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('finance')" data-tab="finance">Finance</button>
+                <button style="padding: 2px 4px; font-size: 14px;" class="font-medium event-tab-btn" onclick="switchTab('postmortem')" data-tab="postmortem">Postmortem</button>
               </div>
-              <button onclick="openPdfExportModal()" style="margin-left: auto; padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 15px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; white-space: nowrap;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
+              <button onclick="openPdfExportModal()" style="margin-left: auto; padding: 10px 18px; background: #1E73BB; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 12px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; white-space: nowrap;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Event Sheet</button>
             </div>
           </div>
 
           <!-- Tab Content Container -->
-          <div style="width: 100%; padding: 0rem;" class="px-4 py-8">
+          <div style="width: 100%; padding: 0rem;" class="px-2 py-4">
             <!-- Dashboard Tab -->
-            <div id="dashboard" class="event-tab-content active space-y-6">
+            <div id="dashboard" class="event-tab-content active space-y-4">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
-                <p class="text-sm text-gray-600 mt-1">Operations snapshot for this event.</p>
+                <h2 class="text-lg font-bold text-gray-900">Dashboard</h2>
+                <p class="text-xs text-gray-600 mt-1">Operations snapshot for this event.</p>
               </div>
 
               <!-- KPI Cards Row -->
-              <div class="grid grid-cols-4 gap-4">
-                <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-blue-600">
-                  <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Registrations</div>
-                  <div class="text-3xl font-bold text-gray-900 mb-1" id="dashRegistrations">0</div>
+              <div class="grid grid-cols-4 gap-2">
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-600">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Registrations</div>
+                  <div class="text-2xl font-bold text-gray-900 mb-1" id="dashRegistrations">0</div>
                   <div class="text-xs text-gray-600" id="dashRegistrationsDetail">Checked in: 0 (0%)</div>
                 </div>
-                <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-yellow-500">
-                  <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Task Completion</div>
-                  <div class="text-3xl font-bold text-gray-900 mb-1" id="dashTaskCompletion">0%</div>
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-yellow-500">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Task Completion</div>
+                  <div class="text-2xl font-bold text-gray-900 mb-1" id="dashTaskCompletion">0%</div>
                   <div class="text-xs text-gray-600" id="dashTaskDetail">0/0 tasks done</div>
                 </div>
-                <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-green-600">
-                  <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Logistics Readiness</div>
-                  <div class="text-3xl font-bold text-gray-900 mb-1" id="dashLogistics">0%</div>
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-green-600">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Logistics Readiness</div>
+                  <div class="text-2xl font-bold text-gray-900 mb-1" id="dashLogistics">0%</div>
                   <div class="text-xs text-gray-600" id="dashLogisticsDetail">0 logistics items tracked</div>
                 </div>
-                <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-red-600">
-                  <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Budget Tracked</div>
-                  <div class="text-3xl font-bold text-gray-900 mb-1" id="dashBudget">$0.00</div>
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-red-600">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Budget Tracked</div>
+                  <div class="text-2xl font-bold text-gray-900 mb-1" id="dashBudget">$0.00</div>
                   <div class="text-xs text-gray-600" id="dashBudgetDetail">0 expense line items</div>
                 </div>
               </div>
 
               <!-- Two Column Layout -->
-              <div class="grid grid-cols-2 gap-6">
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-4">Task Status Mix</h4>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-3">Task Status Mix</h4>
                   <div id="taskStatusList" class="space-y-3 text-sm">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1">
@@ -1595,9 +1595,9 @@
                   <div class="text-right text-xs text-gray-500 mt-4" id="taskStatusTotal">0 total tasks</div>
                 </div>
 
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-3">Finance Summary</h4>
-                  <div id="financeSummaryList" class="space-y-2 text-sm">
+                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-2">Finance Summary</h4>
+                  <div id="financeSummaryList" class="space-y-1 text-xs">
                     <div class="flex items-center justify-between pb-2 border-b border-gray-200">
                       <span class="text-gray-600">Budget Allocated</span>
                       <span class="font-semibold text-gray-900" id="dashFinanceBudget">₱0.00</span>
@@ -1623,9 +1623,9 @@
                     <p class="text-gray-500">Loading...</p>
                   </div>
                 </div>
-                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                  <h4 class="text-base font-semibold text-gray-900 mb-4">Timeline</h4>
-                  <div id="timelineList" class="space-y-2 text-sm max-h-64 overflow-y-auto">
+                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-2">Timeline</h4>
+                  <div id="timelineList" class="space-y-1 text-xs max-h-64 overflow-y-auto">
                     <p class="text-gray-500">Loading...</p>
                   </div>
                 </div>
@@ -1633,10 +1633,10 @@
             </div>
 
             <!-- Event Details Tab -->
-            <div id="details" class="event-tab-content hidden space-y-6 event-details-form">
+            <div id="details" class="event-tab-content hidden space-y-4 event-details-form">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-2xl font-bold text-gray-900">Event Details</h2>
+                  <h2 class="text-lg font-bold text-gray-900">Event Details</h2>
                   <p class="text-sm text-gray-600 mt-1">Event information</p>
                 </div>
                 <div class="flex gap-3" id="eventDetailsButtonsContainer">
@@ -1880,13 +1880,13 @@
             </div>
 
             <!-- Attendees Tab -->
-            <div id="attendees" class="event-tab-content hidden space-y-6">
+            <div id="attendees" class="event-tab-content hidden space-y-4">
               <!-- Attendees Header - All in one row -->
-              <div class="flex items-center justify-between gap-6" style="flex-wrap: nowrap;">
+              <div class="flex items-center justify-between gap-4" style="flex-wrap: nowrap;">
                 <!-- Left: Title and Description -->
-                <div style="min-width: 320px;">
-                  <h2 class="text-2xl font-bold text-gray-900">Attendees</h2>
-                  <p class="text-sm text-gray-600 mt-1">Manage attendee lists and quickly switch between stages.</p>
+                <div style="min-width: 280px;">
+                  <h2 class="text-lg font-bold text-gray-900">Attendees</h2>
+                  <p class="text-xs text-gray-600 mt-1">Manage attendee lists and quickly switch between stages.</p>
                 </div>
                 
                 <!-- Right: Tabs, Search, and Action Buttons - All in one line -->
@@ -1963,12 +1963,12 @@
             </div>
 
             <!-- Tasks Tab -->
-            <div id="tasks" class="event-tab-content hidden space-y-6">
+            <div id="tasks" class="event-tab-content hidden space-y-4">
               <!-- Tasks Header and Controls in Same Row -->
               <div class="flex items-center justify-between gap-4">
                 <div>
-                  <h2 class="text-2xl font-bold text-gray-900">Tasks</h2>
-                  <p class="text-sm text-gray-600 mt-1">Manage event preparation tasks and deadlines.</p>
+                  <h2 class="text-lg font-bold text-gray-900">Tasks</h2>
+                  <p class="text-xs text-gray-600 mt-1">Manage event preparation tasks and deadlines.</p>
                 </div>
                 
                 <!-- Controls Row -->
@@ -3114,7 +3114,7 @@
                 <div style="margin-bottom: 20px;">
                   <h3 style="margin: 0; font-size: 18px; font-weight: bold; color: #111827;">Log Reports</h3>
                 </div>
-                <div id="logReportsList" style="space-y: 12px;">
+                <div id="logReportsList" style="display: flex; flex-direction: column; gap: 12px;">
                   <p style="color: #6b7280; text-align: center; padding: 20px;">No log reports created yet. Click "Create New" to add one.</p>
                 </div>
               </div>
@@ -4249,51 +4249,75 @@
             <input type="checkbox" id="selectAllTablesCheckbox" onchange="handleSelectAllToggle()" style="width: 18px; height: 18px; cursor: pointer; accent-color: #1E73BB;">
             <span style="font-size: 14px; font-weight: 600; color: #333; text-transform: uppercase; letter-spacing: 0.5px;">Select All Tables</span>
           </label>
-          <div style="border-top: 1px solid #ddd; padding-top: 12px;">
-            <!-- Attendees -->
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
-              <input type="checkbox" value="attendees" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
-              <span style="font-size: 13px; color: #555;">
-                <strong>Attendees</strong>
-                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Names, emails, check-in times</span>
-              </span>
-            </label>
+          <div style="border-top: 1px solid #ddd; padding-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <!-- Left Column -->
+            <div>
+              <!-- Attendees -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 14px;">
+                <input type="checkbox" value="attendees" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Attendees</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Names, emails, check-in times</span>
+                </span>
+              </label>
 
-            <!-- Tasks -->
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
-              <input type="checkbox" value="tasks" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
-              <span style="font-size: 13px; color: #555;">
-                <strong>Tasks</strong>
-                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">To-do items, assignments, status</span>
-              </span>
-            </label>
+              <!-- Tasks -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 14px;">
+                <input type="checkbox" value="tasks" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Tasks</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">To-do items, assignments, status</span>
+                </span>
+              </label>
 
-            <!-- Program -->
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
-              <input type="checkbox" value="program" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
-              <span style="font-size: 13px; color: #555;">
-                <strong>Program</strong>
-                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Sessions, speakers, schedule</span>
-              </span>
-            </label>
+              <!-- Program -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" value="program" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Program</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Sessions, speakers, schedule</span>
+                </span>
+              </label>
+            </div>
 
-            <!-- Logistics -->
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
-              <input type="checkbox" value="logistics" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
-              <span style="font-size: 13px; color: #555;">
-                <strong>Logistics</strong>
-                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Equipment, supplies, inventory</span>
-              </span>
-            </label>
+            <!-- Right Column -->
+            <div>
+              <!-- Logistics -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 14px;">
+                <input type="checkbox" value="logistics" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Logistics</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Equipment, supplies, inventory</span>
+                </span>
+              </label>
 
-            <!-- Finance -->
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-              <input type="checkbox" value="finance" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB;">
-              <span style="font-size: 13px; color: #555;">
-                <strong>Finance</strong>
-                <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Expenses, budget, cost tracking</span>
-              </span>
-            </label>
+              <!-- Finance -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 14px;">
+                <input type="checkbox" value="finance" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Finance</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Expenses, budget, cost tracking</span>
+                </span>
+              </label>
+
+              <!-- Postmortem Report -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 14px;">
+                <input type="checkbox" value="automated-report" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Postmortem Report</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Event metrics, KPIs, performance analysis</span>
+                </span>
+              </label>
+
+              <!-- Log Reports -->
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" value="log-reports" class="pdf-export-table-checkbox" onchange="handleTableCheckboxChange()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #1E73BB; flex-shrink: 0;">
+                <span style="font-size: 13px; color: #555;">
+                  <strong>Log Reports</strong>
+                  <span style="color: #999; font-size: 12px; display: block; margin-top: 2px;">Activity logs, event logs, documentation</span>
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -6419,6 +6443,7 @@
       formData.append('description', document.getElementById('eventDescription').value);
       formData.append('registration_link', document.getElementById('eventRegistrationLink').value || '');
       formData.append('website_link', document.getElementById('eventWebsiteLink').value || '');
+      formData.append('budget', document.getElementById('budgetInput').value || '0');
       formData.append('is_private', document.getElementById('createEventPrivate').checked ? 1 : 0);
       
       // Add datetime fields - format is: 2026-03-01T14:30 -> convert to  2026-03-01 14:30:00

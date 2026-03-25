@@ -3734,6 +3734,28 @@ function exportEventAttendees(eventId) {
         return;
     }
     
+    if (!eventId) {
+        showNotification('Event not found', 'error');
+        return;
+    }
+    
+    // Fetch event details from API to get reliable event name
+    const headers = getUserHeaders();
+    fetch(`api/events.php?action=detail&event_id=${eventId}`, { headers })
+        .then(response => response.json())
+        .then(data => {
+            let eventName = data.data?.event_name || data.data?.title || 'Event';
+            generateEventAttendeesPdf(eventName, allData);
+        })
+        .catch(error => {
+            console.error('Error fetching event details:', error);
+            // Fallback to default event name if API fails
+            generateEventAttendeesPdf('Event', allData);
+        });
+}
+
+// Generate event attendees PDF with event name
+function generateEventAttendeesPdf(eventName, allData) {
     try {
         if (typeof window.jspdf === 'undefined') {
             showNotification('PDF library not available. Please try again.', 'error');
@@ -3742,9 +3764,6 @@ function exportEventAttendees(eventId) {
         
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
-        // Get event name
-        const eventName = window.currentEventData?.title || 'Event Attendees';
         
         // Title
         doc.setFontSize(18);
@@ -3794,7 +3813,7 @@ function exportEventAttendees(eventId) {
         }
         
         // Download
-        const filename = `event-attendees-${eventName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        const filename = `${eventName} - Attendees Report.pdf`;
         doc.save(filename);
         
         showNotification('Attendees exported to PDF successfully', 'success');
@@ -6373,6 +6392,7 @@ function updateEvent(e) {
     formData.append('department', document.getElementById('editEventDepartment').value || '');
     formData.append('coordinator_id', document.getElementById('editEventCoordinator').value || '');
     formData.append('description', document.getElementById('editEventDescription').value || '');
+    formData.append('budget', document.getElementById('budgetInput').value || '0');
     const isPrivate = document.getElementById('editEventPrivate').checked ? 1 : 0;
     formData.append('is_private', isPrivate);
     
@@ -7945,6 +7965,10 @@ let reportAllParticipants = [];
 let reportFilteredParticipants = [];
 let reportAllEvents = [];
 
+// Expose on window object for cross-module access
+window.reportCurrentSelection = reportCurrentSelection;
+window.reportAllEvents = reportAllEvents;
+
 async function loadReports() {
     console.log('Loading reports...');
     try {
@@ -7953,6 +7977,7 @@ async function loadReports() {
             headers: getUserHeaders()
         });
         reportAllEvents = await eventsResponse.json();
+        window.reportAllEvents = reportAllEvents;  // Expose on window object
         
         // Fetch all participants data
         const participantsResponse = await fetch(`${API_BASE}/participants.php`, {
@@ -8003,6 +8028,7 @@ function buildReportEventTabs() {
 
 function selectReportEvent(eventId) {
     reportCurrentSelection = eventId;
+    window.reportCurrentSelection = eventId;  // Expose on window object
     
     // Update button states
     document.getElementById('allEventsBtn').style.background = eventId === 'all' ? '#3b82f6' : 'white';
@@ -15273,7 +15299,7 @@ function exportExpenses() {
             if (data.success && data.data) {
                 const items = data.data;
                 
-                // Get event name from API response (now it should include this)
+                // Get event name from API response
                 const eventName = data.event_name || `Event ${eventId}`;
                 
                 // Create PDF document - check for jsPDF availability
@@ -15284,120 +15310,221 @@ function exportExpenses() {
                 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
                 
-                // Add title
-                doc.setFontSize(18);
-                doc.setFont(undefined, 'bold');
-                doc.text('Finance Report', 14, 22);
+                // ========== PROFESSIONAL HEADER SECTION ==========
+                let yPos = 0;
                 
-                // Add event info
+                // Add blue header background
+                doc.setFillColor(30, 115, 187);
+                doc.rect(0, yPos, pageWidth, 50, 'F');
+                
+                // Add decorative orange accent bar
+                doc.setFillColor(237, 128, 40);
+                doc.rect(0, yPos + 48, pageWidth, 4, 'F');
+                
+                // Logo/Company name (left side)
+                doc.setTextColor(255, 255, 255);
                 doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text('Intellismart', 16, yPos + 15);
+                doc.setFontSize(8);
                 doc.setFont(undefined, 'normal');
-                doc.text(`Event: ${eventName}`, 14, 35);
-                doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 42);
+                doc.text('Event Management System', 16, yPos + 20);
+                
+                // Main heading (centered)
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(22);
+                doc.setFont(undefined, 'bold');
+                doc.text('EXPENSES REPORT', 70, yPos + 28);
+                
+                // Subheading
+                doc.setTextColor(230, 240, 250);
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                doc.text('Professional Expense Management & Documentation', 70, yPos + 35);
+                
+                // Event name
+                doc.setFontSize(9);
+                doc.text(`Event: ${eventName}`, 70, yPos + 42);
+                
+                yPos += 65;
+                
+                // ========== SUMMARY SECTION ==========
+                doc.setTextColor(30, 115, 187);
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text('BUDGET SUMMARY', 14, yPos);
+                
+                yPos += 8;
                 
                 // Calculate totals
                 let grandTotal = 0;
                 items.forEach(item => {
-                    grandTotal += parseFloat(item.total);
+                    grandTotal += parseFloat(item.total || 0);
                 });
                 
                 // Get budget and balance
                 const budget = parseFloat(data.budget || 0);
-                const balance = parseFloat(data.balance || 0);
+                const balance = budget - grandTotal;
                 
-                // Format currency for budget summary
-                const budgetFormatted = budget.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                const totalFormatted = grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                const balanceFormatted = balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                // Summary boxes styling
+                const boxWidth = 50;
+                const boxHeight = 16;
+                const boxGap = 6;
+                const baseX = 14;
                 
-                // Add Budget Summary Table with blue header
-                const budgetSummaryData = [[
-                    `P ${budgetFormatted}`,
-                    `P ${totalFormatted}`,
-                    `P ${balanceFormatted}`
-                ]];
+                // Box 1: Budget Allotted
+                doc.setFillColor(230, 240, 250);
+                doc.setDrawColor(30, 115, 187);
+                doc.setLineWidth(0.5);
+                doc.rect(baseX, yPos, boxWidth, boxHeight, 'FD');
+                doc.setTextColor(30, 115, 187);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.text('BUDGET', baseX + 3, yPos + 5);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text(`P ${budget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, baseX + 3, yPos + 12);
                 
-                doc.autoTable({
-                    head: [['Budget Alloted', 'Total Expenses', 'Balance']],
-                    body: budgetSummaryData,
-                    startY: 50,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [59, 130, 246],
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold',
-                        halign: 'center',
-                        fontSize: 11
-                    },
-                    bodyStyles: {
-                        textColor: [50, 50, 50],
-                        halign: 'center',
-                        valign: 'middle',
-                        fontSize: 10,
-                        fontStyle: 'bold'
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 60 },
-                        1: { cellWidth: 61 },
-                        2: { cellWidth: 61 }
-                    },
-                    margin: { left: 14, right: 14 }
-                });
+                // Box 2: Total Expenses
+                doc.setFillColor(250, 240, 240);
+                doc.setDrawColor(220, 38, 38);
+                doc.rect(baseX + boxWidth + boxGap, yPos, boxWidth, boxHeight, 'FD');
+                doc.setTextColor(220, 38, 38);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.text('EXPENSES', baseX + boxWidth + boxGap + 3, yPos + 5);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text(`P ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, baseX + boxWidth + boxGap + 3, yPos + 12);
                 
-                // Get Y position after budget table
-                const budgetTableEndY = doc.lastAutoTable.finalY + 5;
+                // Box 3: Balance
+                const balanceColor = balance >= 0 ? [16, 185, 129] : [220, 38, 38]; // Green if positive, red if negative
+                const balanceBgColor = balance >= 0 ? [230, 250, 240] : [250, 240, 240];
+                doc.setFillColor(...balanceBgColor);
+                doc.setDrawColor(...balanceColor);
+                doc.rect(baseX + (boxWidth + boxGap) * 2, yPos, boxWidth, boxHeight, 'FD');
+                doc.setTextColor(...balanceColor);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.text('BALANCE', baseX + (boxWidth + boxGap) * 2 + 3, yPos + 5);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text(`P ${balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, baseX + (boxWidth + boxGap) * 2 + 3, yPos + 12);
                 
-                // Prepare table data with proper formatting
-                const tableData = items.map(item => {
-                    const unitPrice = parseFloat(item.unit_price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                    const total = parseFloat(item.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                    return [
-                        item.description,
-                        item.quantity,
-                        `P ${unitPrice}`,
-                        `P ${total}`
-                    ];
-                });
+                yPos += 22;
                 
-                // Add grand total row
-                const gTotal = grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                tableData.push(['', '', 'Grand Total:', `P ${gTotal}`]);
+                // Generation timestamp
+                doc.setTextColor(100, 100, 100);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                doc.text(`Generated: ${dateStr} at ${timeStr}`, 14, yPos);
                 
-                // Add expenses table with matching widths
-                doc.autoTable({
-                    head: [['Description', 'Quantity', 'Unit Price', 'Total']],
-                    body: tableData,
-                    startY: budgetTableEndY,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [59, 130, 246],
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold',
-                        halign: 'left',
-                        fontSize: 10
-                    },
-                    bodyStyles: {
-                        textColor: [50, 50, 50],
-                        halign: 'left',
-                        fontSize: 9
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 80 },
-                        1: { halign: 'center', cellWidth: 20 },
-                        2: { halign: 'right', cellWidth: 41 },
-                        3: { halign: 'right', cellWidth: 41 }
-                    },
-                    alternateRowStyles: {
-                        fillColor: [245, 245, 245]
-                    },
-                    margin: { top: 75, left: 14, right: 14 }
-                });
+                yPos += 5;
                 
+                // ========== EXPENSES TABLE ==========
+                if (items.length > 0) {
+                    const tableData = items.map((item, idx) => {
+                        const unitPrice = parseFloat(item.unit_price || 0);
+                        const total = parseFloat(item.total || 0);
+                        return [
+                            idx + 1,
+                            item.description || '',
+                            item.quantity || '0',
+                            `P ${unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                            `P ${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                        ];
+                    });
+                    
+                    // Add grand total row
+                    tableData.push([
+                        '',
+                        '',
+                        '',
+                        'GRAND TOTAL:',
+                        `P ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                    ]);
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['No.', 'Description', 'Quantity', 'Unit Price', 'Total']],
+                        body: tableData,
+                        theme: 'grid',
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 3,
+                            lineColor: [180, 190, 200],
+                            lineWidth: 0.3,
+                            font: 'helvetica',
+                            textColor: [40, 40, 40]
+                        },
+                        headStyles: {
+                            fillColor: [30, 115, 187],
+                            textColor: 255,
+                            fontStyle: 'bold',
+                            font: 'helvetica',
+                            halign: 'center',
+                            valign: 'middle',
+                            lineColor: [30, 115, 187]
+                        },
+                        bodyStyles: {
+                            valign: 'middle',
+                            font: 'helvetica',
+                            minCellHeight: 7
+                        },
+                        alternateRowStyles: {
+                            fillColor: [248, 250, 252]
+                        },
+                        columnStyles: {
+                            0: { halign: 'center', cellWidth: 12 },
+                            1: { cellWidth: 70 },
+                            2: { halign: 'center', cellWidth: 20 },
+                            3: { halign: 'right', cellWidth: 35 },
+                            4: { halign: 'right', cellWidth: 35 }
+                        }
+                    });
+                } else {
+                    doc.setTextColor(100, 100, 100);
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'italic');
+                    doc.text('No expenses recorded for this event', 14, yPos);
+                }
                 
-                // Save PDF with event name and "Finance" label
+                // ========== ADD FOOTER TO ALL PAGES ==========
+                const pageCount = doc.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    
+                    // Footer line (blue)
+                    doc.setDrawColor(30, 115, 187);
+                    doc.setLineWidth(0.5);
+                    doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+                    
+                    // Footer text (gray)
+                    doc.setFontSize(8);
+                    doc.setTextColor(120, 120, 120);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('Intellismart Event Management System', 14, pageHeight - 10);
+                    
+                    // Page number
+                    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 30, pageHeight - 10);
+                    
+                    // Copyright
+                    doc.setFontSize(7);
+                    doc.text(`© ${new Date().getFullYear()} Intellismart. All rights reserved.`, 14, pageHeight - 5);
+                }
+                
+                // Save PDF with event name
                 const sanitizedFileName = eventName.replace(/[/\\?%*:|"<>]/g, '');
-                doc.save(`${sanitizedFileName} - Finance.pdf`);
+                doc.save(`${sanitizedFileName} - Expenses Report.pdf`);
                 showNotification('Expenses exported as PDF successfully', 'success');
             } else {
                 showNotification('Error exporting expenses', 'error');

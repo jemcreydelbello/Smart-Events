@@ -741,7 +741,8 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     website = ?, 
                     registration_start = ?, 
                     registration_end = ?, 
-                    is_private = ?";
+                    is_private = ?,
+                    budget = ?";
         
         $params = [
             $event_name,              // s
@@ -754,12 +755,13 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $website_link,            // s
             $registration_start,      // s
             $registration_end,        // s
-            $is_private               // i
+            $is_private,              // i
+            floatval($_POST['budget'] ?? 0)  // d
         ];
         
-        // Type string: s(name) s(loc) s(start) s(end) i(cap) s(desc) s(reg_link) s(web) s(reg_start) s(reg_end) i(private)
-        // Pattern: ssss i sssss i  (correctly: s s s s i s s s s s i = 11 chars)
-        $types = 'ssssisssssi';  // 11 chars for 11 params
+        // Type string: s(name) s(loc) s(start) s(end) i(cap) s(desc) s(reg_link) s(web) s(reg_start) s(reg_end) i(private) d(budget)
+        // Pattern: ssss i sssss i d  (correctly: 11 params + budget = 12 chars)
+        $types = 'ssssisssssid';  // 12 chars for 12 params
         
         // Note: access_code is stored in separate event_access_codes table, not in events table
         // We'll handle it after updating the events table
@@ -996,22 +998,24 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $columnsResult = $conn->query("SHOW COLUMNS FROM events LIKE 'coordinator_id'");
         $hasCoordinatorColumn = $columnsResult && $columnsResult->num_rows > 0;
         
+        $budget = floatval($_POST['budget'] ?? 0);
+        
         if ($hasCoordinatorColumn && $coordinator_id) {
-            $query = "INSERT INTO events (event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, coordinator_id, created_by)
+            $query = "INSERT INTO events (event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, coordinator_id, budget, created_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+            $stmt = $conn->prepare($query);
+            // bind_param: Match INSERT column order exactly
+            // Columns: event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, coordinator_id, budget
+            // Types:   s          s              s              s          s          s                    s                  s          i        i           s                 s       i           d
+            $stmt->bind_param('ssssssssiiissid', $event_name, $description, $start_event, $end_event, $location, $registration_start, $registration_end, $image_url, $capacity, $is_private, $registration_link, $website_link, $coordinator_id, $budget);
+        } else {
+            $query = "INSERT INTO events (event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, budget, created_by)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
             $stmt = $conn->prepare($query);
             // bind_param: Match INSERT column order exactly
-            // Columns: event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, coordinator_id
-            // Types:   s          s              s              s          s          s                    s                  s          i        i           s                 s       i
-            $stmt->bind_param('ssssssssiissi', $event_name, $description, $start_event, $end_event, $location, $registration_start, $registration_end, $image_url, $capacity, $is_private, $registration_link, $website_link, $coordinator_id);
-        } else {
-            $query = "INSERT INTO events (event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, created_by)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
-            $stmt = $conn->prepare($query);
-            // bind_param: Match INSERT column order exactly
-            // Columns: event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website
-            // Types:   s          s              s              s          s          s                    s                  s          i        i           s                 s
-            $stmt->bind_param('ssssssssiiss', $event_name, $description, $start_event, $end_event, $location, $registration_start, $registration_end, $image_url, $capacity, $is_private, $registration_link, $website_link);
+            // Columns: event_name, description, start_event, end_event, location, registration_start, registration_end, image_url, capacity, is_private, registration_link, website, budget
+            // Types:   s          s              s              s          s          s                    s                  s          i        i           s                 s       d
+            $stmt->bind_param('ssssssssiissid', $event_name, $description, $start_event, $end_event, $location, $registration_start, $registration_end, $image_url, $capacity, $is_private, $registration_link, $website_link, $budget);
         }
         
         if ($stmt->execute()) {
