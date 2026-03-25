@@ -12191,8 +12191,6 @@ function displayEventDetailsData(event) {
     loadDashboardTaskData();
     loadDashboardBudgetData(currentEventId);
     loadDashboardLogisticsData(currentEventId);
-    loadDashboardLogisticsItems(currentEventId);
-    loadDashboardTimeline(currentEventId, event);
     
     // Start auto-refresh of dashboard every 30 seconds
     startDashboardAutoRefresh();
@@ -14756,9 +14754,6 @@ function updateLogisticsStatus(logisticsId, newStatus) {
             if (typeof loadDashboardLogisticsData === 'function') {
                 loadDashboardLogisticsData(eventId);
             }
-            if (typeof loadDashboardLogisticsItems === 'function') {
-                loadDashboardLogisticsItems(eventId);
-            }
             showNotification('Status updated successfully', 'success');
         } else {
             console.error('Error updating status:', data.message);
@@ -16259,7 +16254,6 @@ function startDashboardAutoRefresh() {
             loadDashboardTaskData();
             loadDashboardBudgetData(window.currentEventId);
             loadDashboardLogisticsData(window.currentEventId);
-            loadDashboardLogisticsItems(window.currentEventId);
             // Note: Timeline doesn't refresh as often since it changes less frequently
         }
     }, 8000); // 8 seconds - frequent automatic refresh
