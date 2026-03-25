@@ -58,3 +58,4 @@ function executeQuery($query, $params = []) {
     return ['success' => true, 'stmt' => $stmt];
 }
 ?>
+

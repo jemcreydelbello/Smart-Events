@@ -267,6 +267,16 @@ function navigateToPage(page) {
     // Save to localStorage
     localStorage.setItem('adminLastPage', page);
     
+    // If navigating to settings, also save the current active settings tab
+    if (page === 'settings') {
+        const activeSettingsTab = document.querySelector('.settings-tab-content.active');
+        if (activeSettingsTab) {
+            localStorage.setItem('adminLastSettingsTab', activeSettingsTab.id);
+        } else {
+            localStorage.setItem('adminLastSettingsTab', 'users-settings');
+        }
+    }
+    
     // Update active link
     const navLinks = document.querySelectorAll('.sidebar-menu a');
     navLinks.forEach(l => {
@@ -293,6 +303,16 @@ function navigateToPage(page) {
         else if (page === 'participants') loadParticipants();
         else if (page === 'catalogue') loadCatalogue();
         else if (page === 'reports') renderReportsDisplay(sortReportsArray(filterReportsByType(allReportsData)));
+        else if (page === 'settings') {
+            // Load settings page - restore last active settings tab
+            if (typeof switchTab === 'function') {
+                const lastSettingsTab = localStorage.getItem('adminLastSettingsTab') || 'users-settings';
+                switchTab(lastSettingsTab);
+            }
+            if (typeof initializeProfileSettings === 'function') {
+                initializeProfileSettings();
+            }
+        }
         else if (page === 'qr-scanner') {
             // Reset QR scanner UI when navigating to the page
             const startBtn = document.getElementById('startScanBtn');

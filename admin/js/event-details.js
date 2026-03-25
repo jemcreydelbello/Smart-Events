@@ -1181,91 +1181,6 @@ function openOtherInfoModal() {
     alert('Other info management coming soon');
 }
 
-// Load Dashboard Logistics Items
-function loadDashboardLogisticsItems(eventId) {
-    if (!eventId) {
-        console.warn('⚠️ loadDashboardLogisticsItems: No eventId provided');
-        return;
-    }
-    
-    const headers = getUserHeaders ? getUserHeaders() : {
-        'Content-Type': 'application/json'
-    };
-    
-    fetch(`${API_BASE || '../api'}/logistics.php?action=list&event_id=${eventId}`, { headers })
-        .then(response => response.json())
-        .then(data => {
-            console.log('📦 Logistics items loaded:', data);
-            
-            const container = document.getElementById('logisticsItemsList');
-            if (!container) {
-                console.warn('⚠️ logisticsItemsList container not found');
-                return;
-            }
-            
-            if (data.success && data.data && data.data.length > 0) {
-                const items = data.data;
-                let html = '';
-                
-                items.forEach(item => {
-                    const status = item.status || 'Pending';
-                    const statusClass = getStatusColor(status);
-                    const statusBadge = `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`;
-                    
-                    html += `
-                        <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
-                            <div class="flex-1">
-                                <div class="font-medium text-gray-900">${item.item || '-'}</div>
-                                <div class="text-xs text-gray-600">${item.category || '-'} • Qty: ${item.quantity || 0}</div>
-                            </div>
-                            ${statusBadge}
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = html;
-                console.log('✅ Logistics items displayed:', items.length, 'items');
-            } else {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">No logistics items yet</p>';
-            }
-        })
-        .catch(err => {
-            console.error('❌ Error loading logistics items:', err);
-            const container = document.getElementById('logisticsItemsList');
-            if (container) {
-                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading logistics</p>';
-            }
-        });
-}
-window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
-
-// Helper function to get status color
-function getStatusColor(status) {
-    const statusLower = (status || '').toLowerCase();
-    
-    // Logistics statuses with color coding
-    if (statusLower === 'delivered' || statusLower === 'received') {
-        return 'bg-green-100 text-green-800';  // Green: Completed
-    } else if (statusLower === 'in transit' || statusLower === 'in-transit') {
-        return 'bg-blue-100 text-blue-800';  // Blue: In Progress
-    } else if (statusLower === 'packed') {
-        return 'bg-purple-100 text-purple-800';  // Purple: Ready to go
-    } else if (statusLower === 'scheduled') {
-        return 'bg-orange-100 text-orange-800';  // Orange: Scheduled
-    } else if (statusLower === 'pending') {
-        return 'bg-yellow-100 text-yellow-800';  // Yellow: Awaiting action
-    } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
-        return 'bg-red-100 text-red-800';  // Red: Cancelled
-    } else if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
-        return 'bg-green-100 text-green-800';  // Green: Completed
-    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
-        return 'bg-blue-100 text-blue-800';  // Blue: In Progress
-    } else {
-        return 'bg-gray-100 text-gray-800';  // Gray: Unknown
-    }
-}
-window.getStatusColor = getStatusColor;
-
 // Load Dashboard Data
 function loadDashboard(eventId) {
     if (!eventId) {
@@ -4475,16 +4390,18 @@ function loadPostmortemData(eventId) {
     fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${eventId}`, {
         headers: getUserHeaders()
     })
-    .then(response => {
-        console.log('📊 Postmortem API response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('📊 Postmortem data received:', data);
-        
+        console.log('📊 Postmortem calculation:', data);
+    })
+    .catch(err => console.error('Error calculating postmortem:', err));
+    
+    // Fetch postmortem data from API
+    fetch(`${API_BASE}/postmortem.php?action=get&event_id=${eventId}`, {
+        headers: getUserHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success && data.data) {
             const pm = data.data;
             
@@ -6668,667 +6585,73 @@ function exportPostmortemPDF() {
         return;
     }
     
-    // Fetch event name AND metrics from API
-    const headers = getUserHeaders ? getUserHeaders() : {
-        'Content-Type': 'application/json'
+    // Gather postmortem data
+    const postmortemData = {
+        event_id: currentEventId,
+        event_name: document.title,
+        registrations: document.getElementById('postmortemRegistrations').textContent,
+        attendance_rate: document.getElementById('postmortemAttendanceRate').textContent,
+        task_completion: document.getElementById('postmortemTaskCompletion').textContent,
+        logistics_completion: document.getElementById('postmortemLogisticsCompletion').textContent,
+        initial_attendees: document.getElementById('eventDynamicsInitial').textContent,
+        actual_attendees: document.getElementById('eventDynamicsActual').textContent,
+        registered: document.getElementById('eventDynamicsRegistered').textContent,
+        attended: document.getElementById('eventDynamicsAttended').textContent,
+        communications_sent: document.getElementById('commMixSent').textContent,
+        communications_scheduled: document.getElementById('commMixScheduled').textContent,
+        communications_draft: document.getElementById('commMixDraft').textContent
     };
     
-    // Fetch both postmortem data and metrics
-    Promise.all([
-        fetch(`${API_BASE || '../api'}/postmortem.php?action=get&event_id=${currentEventId}`, { headers }).then(r => r.json()),
-        fetch(`${API_BASE || '../api'}/postmortem.php?action=calculate&event_id=${currentEventId}`, { headers }).then(r => r.json())
-    ])
-        .then(async ([apiData, metricsData]) => {
-            let eventName = apiData.data?.event_name || ('Event ' + currentEventId);
-            
-            // Get metrics from the calculate API response
-            const metrics = metricsData.data || {};
-            const registrations = metrics.total_registrations || '-';
-            const attendanceRate = (metrics.attendance_rate || 0) + '%';
-            const taskCompletion = (metrics.task_completion_rate || 0) + '%';
-            const logisticsCompletion = (metrics.logistics_completion_rate || 0) + '%';
-            const initialAttendees = metrics.initial_attendees || '-';
-            const actualAttendees = metrics.actual_attendees || '-';
-            const registered = metrics.registered_count || '-';
-            const attended = metrics.attended_count || '-';
-            const commSent = metrics.communications_sent || '-';
-            const commScheduled = metrics.communications_scheduled || '-';
-            const commDraft = metrics.communications_draft || '-';
-            
-            console.log('📄 Exporting Automated Report for:', eventName);
-            console.log('📊 Metrics:', metrics);
-            
-            // Download as PDF file
-            await generatePostmortemPDF(eventName, currentEventId, registrations, attendanceRate, taskCompletion, logisticsCompletion, initialAttendees, actualAttendees, registered, attended, commSent, commScheduled, commDraft);
-        })
-        .catch(err => {
-            console.error('❌ Error exporting postmortem:', err);
-            console.error('Error details:', err.message, err.stack);
-            alert('Failed to export postmortem. Check console for details.');
-        });
+    // Create a simple HTML table for PDF export
+    let htmlContent = `
+    <html>
+    <head>
+        <title>Postmortem Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #1F4CC4; }
+            h2 { color: #333; margin-top: 20px; }
+            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f0f0f0; }
+            .metric { display: inline-block; width: 48%; margin: 1%; padding: 10px; border: 1px solid #ddd; }
+        </style>
+    </head>
+    <body>
+        <h1>Event Postmortem Report</h1>
+        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        
+        <h2>Key Metrics</h2>
+        <div class="metric"><strong>Registrations:</strong> ${postmortemData.registrations}</div>
+        <div class="metric"><strong>Attendance Rate:</strong> ${postmortemData.attendance_rate}</div>
+        <div class="metric"><strong>Task Completion:</strong> ${postmortemData.task_completion}</div>
+        <div class="metric"><strong>Logistics Completion:</strong> ${postmortemData.logistics_completion}</div>
+        
+        <h2>Event Dynamics</h2>
+        <table>
+            <tr><td>Initial Attendees</td><td>${postmortemData.initial_attendees}</td></tr>
+            <tr><td>Actual Attendees</td><td>${postmortemData.actual_attendees}</td></tr>
+            <tr><td>Registered</td><td>${postmortemData.registered}</td></tr>
+            <tr><td>Attended</td><td>${postmortemData.attended}</td></tr>
+        </table>
+        
+        <h2>Communication Mix</h2>
+        <table>
+            <tr><td>Sent</td><td>${postmortemData.communications_sent}</td></tr>
+            <tr><td>Scheduled</td><td>${postmortemData.communications_scheduled}</td></tr>
+            <tr><td>Draft</td><td>${postmortemData.communications_draft}</td></tr>
+        </table>
+    </body>
+    </html>
+    `;
+    
+    // Open print dialog
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.print();
 }
-
-// Generate Postmortem PDF
-async function generatePostmortemPDF(eventName, eventId, registrations, attendanceRate, taskCompletion, logisticsCompletion, initialAttendees, actualAttendees, registered, attended, commSent, commScheduled, commDraft) {
-    try {
-        console.log('🔧 Starting PDF generation...');
-        
-        // Check if jsPDF is available
-        let jsPDFClass = null;
-        if (window.jspdf && window.jspdf.jsPDF) {
-            jsPDFClass = window.jspdf.jsPDF;
-        } else if (window.jsPDF) {
-            jsPDFClass = window.jsPDF;
-        } else {
-            throw new Error('jsPDF library not loaded');
-        }
-        
-        const doc = new jsPDFClass();
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 14;
-        let yPos = 0;
-        
-        // ========== PROFESSIONAL HEADER SECTION (MATCHING ATTENDEES) ==========
-        // Add blue header background
-        doc.setFillColor(30, 115, 187);
-        doc.rect(0, yPos, pageWidth, 50, 'F');
-        
-        // Add decorative orange accent bar
-        doc.setFillColor(237, 128, 40);
-        doc.rect(0, yPos + 48, pageWidth, 4, 'F');
-        
-        // Logo/Company name (left side)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('Intellismart', 16, yPos + 15);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.text('Event Management System', 16, yPos + 20);
-        
-        // Main heading (centered on right)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.setFont(undefined, 'bold');
-        doc.text('POSTMORTEM REPORTS', 70, yPos + 28);
-        
-        // Subheading (light blue, centered)
-        doc.setTextColor(230, 240, 250);
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text('Professional Analysis & Log Documentation', 70, yPos + 35);
-        
-        // Event name (white text)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.text(`Event: ${eventName}`, 70, yPos + 42);
-        
-        yPos += 65;
-        
-        // ========== REPORT SUMMARY HEADING ==========
-        doc.setTextColor(30, 115, 187);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('REPORT SUMMARY', 14, yPos);
-        
-        yPos += 8;
-        
-        // Extract numeric values
-        const regCount = parseInt(registrations) || 0;
-        const attendedCount = parseInt(attended) || 0;
-        const noshow = regCount - attendedCount;
-        const attendanceNum = parseFloat(attendanceRate) || 0;
-        const taskCompNum = parseFloat(taskCompletion) || 0;
-        const logisticsNum = parseFloat(logisticsCompletion) || 0;
-        
-        // ========== KPI BOXES (4 in a row - matching attendees style) ==========
-        const boxWidth = 40;
-        const boxHeight = 16;
-        const boxGap = 5;
-        const baseX = 14;
-        
-        // Box 1: Registrations
-        doc.setFillColor(230, 240, 250);
-        doc.setDrawColor(30, 115, 187);
-        doc.setLineWidth(0.5);
-        doc.rect(baseX, yPos, boxWidth, boxHeight, 'FD');
-        doc.setTextColor(30, 115, 187);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.text('REGISTRATIONS', baseX + 2, yPos + 5);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(String(regCount), baseX + 2, yPos + 12);
-        
-        // Box 2: Attendance Rate
-        doc.setFillColor(230, 250, 240);
-        doc.setDrawColor(16, 185, 129);
-        doc.rect(baseX + boxWidth + boxGap, yPos, boxWidth, boxHeight, 'FD');
-        doc.setTextColor(16, 185, 129);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.text('ATTENDANCE RATE', baseX + boxWidth + boxGap + 2, yPos + 5);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(String(attendanceNum.toFixed(1)) + '%', baseX + boxWidth + boxGap + 2, yPos + 12);
-        
-        // Box 3: Task Completion
-        doc.setFillColor(250, 245, 230);
-        doc.setDrawColor(237, 128, 40);
-        doc.rect(baseX + (boxWidth + boxGap) * 2, yPos, boxWidth, boxHeight, 'FD');
-        doc.setTextColor(237, 128, 40);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.text('TASK COMPLETION', baseX + (boxWidth + boxGap) * 2 + 2, yPos + 5);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(String(taskCompNum.toFixed(0)) + '%', baseX + (boxWidth + boxGap) * 2 + 2, yPos + 12);
-        
-        // Box 4: Logistics Completion
-        doc.setFillColor(245, 235, 250);
-        doc.setDrawColor(168, 85, 247);
-        doc.rect(baseX + (boxWidth + boxGap) * 3, yPos, boxWidth, boxHeight, 'FD');
-        doc.setTextColor(168, 85, 247);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.text('LOGISTICS', baseX + (boxWidth + boxGap) * 3 + 2, yPos + 5);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(String(logisticsNum.toFixed(0)) + '%', baseX + (boxWidth + boxGap) * 3 + 2, yPos + 12);
-        
-        yPos += 22;
-        
-        // Generation timestamp
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        doc.text(`Generated: ${dateStr} at ${timeStr}`, 14, yPos);
-        
-        yPos += 8;
-        
-        // ========== EVENT DYNAMICS SECTION ==========
-        doc.setTextColor(30, 115, 187);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text('Event Dynamics', 14, yPos);
-        
-        yPos += 5;
-        
-        // Event Dynamics Table
-        const dynTableData = [
-          ['Initial Attendees', String(initialAttendees)],
-          ['Actual Attendees', String(actualAttendees)]
-        ];
-        
-        doc.autoTable({
-          startY: yPos,
-          head: [['Metric', 'Count']],
-          body: dynTableData,
-          theme: 'grid',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [180, 190, 200],
-            lineWidth: 0.3,
-            font: 'helvetica',
-            textColor: [40, 40, 40]
-          },
-          headStyles: {
-            fillColor: [30, 115, 187],
-            textColor: 255,
-            fontStyle: 'bold',
-            font: 'helvetica',
-            halign: 'center',
-            valign: 'middle',
-            lineColor: [30, 115, 187]
-          },
-          bodyStyles: {
-            valign: 'middle',
-            font: 'helvetica',
-            minCellHeight: 7
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252]
-          },
-          columnStyles: {
-            1: { halign: 'center' }
-          }
-        });
-        
-        yPos = doc.lastAutoTable.finalY + 8;
-        
-        // ========== FINANCE SUMMARY SECTION ==========
-        doc.setTextColor(30, 115, 187);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text('Finance Summary', 14, yPos);
-        
-        yPos += 5;
-        
-        // Finance data (default values, can be passed as parameters later)
-        const budgetAmount = 0;
-        const expenseAmount = 0;
-        const balanceAmount = budgetAmount - expenseAmount;
-        
-        // Finance Summary Table
-        const finTableData = [
-          ['Budget', `P ${budgetAmount.toFixed(2)}`],
-          ['Expense', `P ${expenseAmount.toFixed(2)}`],
-          ['Balance', `P ${balanceAmount.toFixed(2)}`]
-        ];
-        
-        doc.autoTable({
-          startY: yPos,
-          head: [['Description', 'Amount']],
-          body: finTableData,
-          theme: 'grid',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [180, 190, 200],
-            lineWidth: 0.3,
-            font: 'helvetica',
-            textColor: [40, 40, 40]
-          },
-          headStyles: {
-            fillColor: [30, 115, 187],
-            textColor: 255,
-            fontStyle: 'bold',
-            font: 'helvetica',
-            halign: 'center',
-            valign: 'middle',
-            lineColor: [30, 115, 187]
-          },
-          bodyStyles: {
-            valign: 'middle',
-            font: 'helvetica',
-            minCellHeight: 7
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252]
-          },
-          columnStyles: {
-            1: { halign: 'right' }
-          }
-        });
-        
-        yPos = doc.lastAutoTable.finalY + 8;
-        
-        // ========== FOOTER SECTION (MATCHING ATTENDEES) ==========
-        // Footer divider line (BLUE)
-        doc.setDrawColor(30, 115, 187);
-        doc.setLineWidth(0.5);
-        doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
-        
-        // Footer text (left) - GRAY
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.text('Intellismart Event Management System', 14, pageHeight - 12);
-        
-        // Page number (right) - GRAY
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(8);
-        const totalPages = doc.internal.getNumberOfPages();
-        doc.text(`Page ${totalPages} of ${totalPages}`, pageWidth - 35, pageHeight - 12);
-        
-        // Copyright text - GRAY
-        doc.setTextColor(150, 150, 150);
-        doc.setFontSize(7);
-        doc.setFont(undefined, 'normal');
-        doc.text('© 2026 Intellismart. All rights reserved.', 14, pageHeight - 6);
-        
-        // Save PDF
-        const filename = `${eventName} - Postmortem Report.pdf`;
-        doc.save(filename);
-        console.log('✅ Postmortem PDF Downloaded:', filename);
-        
-    } catch (error) {
-        console.error('❌ PDF Generation Error:', error.message);
-        alert('Failed to generate postmortem report: ' + error.message);
-    }
-}
-
-// Export Log Report as file
-function exportLogReport(reportId) {
-    console.log('📥 exportLogReport called for report:', reportId);
-    
-    if (!reportId) {
-        alert('Report ID is required');
-        return;
-    }
-    
-    // Fetch the log report from API using log_report_id
-    const headers = getUserHeaders ? getUserHeaders() : {
-        'Content-Type': 'application/json'
-    };
-    
-    const apiUrl = `${API_BASE || '../api'}/postmortem.php?action=get_log_report&log_report_id=${reportId}`;
-    console.log('🌐 API URL:', apiUrl);
-    console.log('📊 Headers:', headers);
-    
-    fetch(apiUrl, { headers })
-        .then(r => {
-            console.log('📡 API Response status:', r.status, r.statusText);
-            if (!r.ok) throw new Error('Failed to fetch log report: ' + r.statusText);
-            return r.text(); // Get as text first to debug
-        })
-        .then(async text => {
-            console.log('📄 Raw response text (first 500 chars):', text.substring(0, 500));
-            
-            // Try to parse JSON
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.error('❌ JSON Parse Error:', e.message);
-                console.error('Response starts with:', text.substring(0, 100));
-                console.error('Response ends with:', text.substring(Math.max(0, text.length - 100)));
-                throw new Error('Invalid JSON response from server: ' + e.message);
-            }
-            
-            console.log('📊 API Response data:', data);
-            console.log('  - success:', data.success);
-            console.log('  - data:', data.data);
-            console.log('  - message:', data.message);
-            
-            if (!data.success) {
-                alert(`❌ API Error: ${data.message || 'Unknown error'}`);
-                return;
-            }
-            
-            if (!data.data) {
-                alert('No log report found to export');
-                return;
-            }
-            
-            const report = data.data;
-            const eventName = report.event_name || ('Event ' + report.event_id);
-            
-            // Check if log report has any actual content
-            const hasContent = report.log_title_introduction || report.log_issue_summary || report.log_root_cause_analysis || 
-                             report.log_impact_mitigation || report.log_resolution_recovery || report.log_corrective_measures || 
-                             report.log_feedback_survey || report.log_lesson_learned || report.log_review_measurements;
-            
-            if (!hasContent) {
-                alert('⚠️ This log report has no content to export.');
-                console.log('ℹ️ Log report data is empty for report:', reportId);
-                return;
-            }
-            
-            console.log('📄 Exporting Log Report for:', eventName);
-            
-            // Add report table
-            const reportData = [
-                ['Title', report.log_title_introduction || '-'],
-                ['Issue Summary', report.log_issue_summary || '-'],
-                ['Root Cause Analysis', report.log_root_cause_analysis || '-'],
-                ['Impact & Mitigation', report.log_impact_mitigation || '-'],
-                ['Resolution & Recovery', report.log_resolution_recovery || '-'],
-                ['Corrective Measures', report.log_corrective_measures || '-'],
-                ['Feedback & Survey', report.log_feedback_survey || '-'],
-                ['Lessons Learned', report.log_lesson_learned || '-'],
-                ['Review & Measurements', report.log_review_measurements || '-']
-            ];
-            
-            // Download as PDF file
-            await generateLogReportPDF(eventName, report.event_id, reportData, report.log_report_id);
-        })
-        .catch(err => {
-            console.error('❌ Error exporting log report:', err);
-            console.error('Error details:', err.message, err.stack);
-            alert('Failed to export log report. Check console for details.');
-        });
-}
-
-// Helper function for justified text with first-line indentation  
-function renderLogTextWithIndentation(doc, text, startX, startY, maxWidth, lineHeight, pageHeight) {
-    let yPos = startY;
-    const indentMM = 10; // indentation in mm (paragraph indent)
-    const words = String(text).trim().split(/\s+/);
-    
-    if (words.length === 0) return yPos;
-    
-    let lineWords = [];
-    let lineNumber = 0;
-    
-    for (let i = 0; i < words.length; i++) {
-        lineWords.push(words[i]);
-        
-        const isFirstLine = lineNumber === 0;
-        const xOffset = isFirstLine ? indentMM : 0;
-        const availableWidth = maxWidth - xOffset;
-        const testLine = lineWords.join(' ');
-        const testWidth = doc.getTextWidth(testLine);
-        
-        if (testWidth > availableWidth && lineWords.length > 1) {
-            lineWords.pop();
-            i--;
-            
-            const xPos = startX + xOffset;
-            renderJustifiedLineForLog(doc, lineWords, xPos, yPos, availableWidth);
-            
-            yPos += lineHeight;
-            if (yPos > pageHeight - 30) {
-                doc.addPage();
-                yPos = 14;
-                lineNumber = 0;
-                lineWords = [];
-                continue;
-            }
-            
-            lineWords = [];
-            lineNumber++;
-        }
-    }
-    
-    if (lineWords.length > 0) {
-        const isFirstLine = lineNumber === 0;
-        const xOffset = isFirstLine ? indentMM : 0;
-        const xPos = startX + xOffset;
-        const lineText = lineWords.join(' ');
-        doc.text(lineText, xPos, yPos);
-        yPos += lineHeight;
-    }
-    
-    return yPos;
-}
-
-// Helper function to render justified line in log
-function renderJustifiedLineForLog(doc, words, xPos, yPos, maxWidth) {
-    if (words.length === 0) return;
-    if (words.length === 1) {
-        doc.text(words[0], xPos, yPos);
-        return;
-    }
-    
-    // Calculate word widths
-    const wordWidths = words.map(w => doc.getTextWidth(w));
-    const totalWordWidth = wordWidths.reduce((a, b) => a + b, 0);
-    
-    // Calculate space distribution
-    const totalSpaceNeeded = maxWidth - totalWordWidth;
-    const gaps = words.length - 1;
-    const spacePerGap = gaps > 0 ? totalSpaceNeeded / gaps : 0;
-    
-    // Render words with calculated spacing
-    let currentX = xPos;
-    words.forEach((word, index) => {
-        doc.text(word, currentX, yPos);
-        if (index < words.length - 1) {
-            currentX += wordWidths[index] + spacePerGap;
-        }
-    });
-}
-
-
-// Generate Log Report PDF with Professional Styling (Matching Attendees)
-async function generateLogReportPDF(eventName, eventId, reportData, logReportId) {
-    try {
-        console.log('🔧 Starting Log Report PDF generation...');
-        
-        // Check if jsPDF is available
-        let jsPDFClass = null;
-        if (window.jspdf && window.jspdf.jsPDF) {
-            jsPDFClass = window.jspdf.jsPDF;
-        } else if (window.jsPDF) {
-            jsPDFClass = window.jsPDF;
-        } else {
-            throw new Error('jsPDF library not loaded');
-        }
-        
-        const doc = new jsPDFClass();
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 14;
-        let yPos = 0;
-        
-        // ========== PROFESSIONAL HEADER SECTION (MATCHING ATTENDEES) ==========
-        // Add blue header background
-        doc.setFillColor(30, 115, 187);
-        doc.rect(0, yPos, pageWidth, 50, 'F');
-        
-        // Add decorative orange accent bar
-        doc.setFillColor(237, 128, 40);
-        doc.rect(0, yPos + 48, pageWidth, 4, 'F');
-        
-        // Logo/Company name (left side)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('Intellismart', 16, yPos + 15);
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.text('Event Management System', 16, yPos + 20);
-        
-        // Main heading (centered on right)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.setFont(undefined, 'bold');
-        doc.text('LOG REPORT', 70, yPos + 28);
-        
-        // Subheading (light blue, centered)
-        doc.setTextColor(230, 240, 250);
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text('Professional Event Documentation & Analysis', 70, yPos + 35);
-        
-        // Event name (white text)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.text(`Event: ${eventName}`, 70, yPos + 42);
-        
-        yPos += 65;
-        
-        // ========== LOG REPORT DETAILS TABLE ==========
-        doc.setTextColor(30, 115, 187);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('REPORT DETAILS', 14, yPos);
-        
-        yPos += 5;
-        
-        // Render report details with proper formatting
-        const lineHeight = 3.5;
-        const leftMargin = 18;
-        const maxWidth = pageWidth - 28;
-        
-        reportData.forEach((row, rowIndex) => {
-            const fieldName = row[0];
-            const fieldValue = row[1];
-            
-            // Draw field name (left column - bold)
-            doc.setTextColor(30, 115, 187);
-            doc.setFontSize(8);
-            doc.setFont(undefined, 'bold');
-            doc.text(fieldName + ':', 14, yPos);
-            yPos += 4;
-            
-            // Draw field value (with proper indentation)
-            doc.setTextColor(60, 60, 60);
-            doc.setFontSize(8);
-            doc.setFont(undefined, 'normal');
-            
-            yPos = renderLogTextWithIndentation(doc, fieldValue, leftMargin, yPos, maxWidth, lineHeight, pageHeight);
-            
-            yPos += 3;
-            
-            // Check for page break
-            if (yPos > pageHeight - 30) {
-                doc.addPage();
-                yPos = 14;
-            }
-        });
-        
-        yPos += 10;
-        
-        // ========== FOOTER SECTION (MATCHING ATTENDEES) ==========
-        const addFooter = function(pageNumber, pageCount) {
-            // Footer divider line (BLUE) - moved down for better spacing
-            doc.setDrawColor(30, 115, 187);
-            doc.setLineWidth(0.5);
-            doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-            
-            // Footer text (left) - GRAY
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(8);
-            doc.setFont(undefined, 'normal');
-            doc.text('Intellismart Event Management System', 14, pageHeight - 14);
-            
-            // Page number (right) - GRAY
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(8);
-            doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth - 35, pageHeight - 14);
-            
-            // Copyright text - GRAY
-            doc.setTextColor(150, 150, 150);
-            doc.setFontSize(7);
-            doc.setFont(undefined, 'normal');
-            doc.text('© 2026 Intellismart. All rights reserved.', 14, pageHeight - 8);
-        };
-        
-        // Add footer to all pages
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            addFooter(i, pageCount);
-        }
-        
-        // Save PDF
-        const filename = `${eventName} - Log Report.pdf`;
-        doc.save(filename);
-        console.log('✅ Log Report PDF Downloaded:', filename);
-        
-    } catch (error) {
-        console.error('❌ Log Report PDF Generation Error:', error.message);
-        alert('Failed to generate log report PDF: ' + error.message);
-    }
-}
-
-// Helper function to download files
-function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    console.log('✅ File downloaded:', filename);
-}
-
-window.exportPostmortemPDF = exportPostmortemPDF;
-window.exportLogReport = exportLogReport;
+window.exportPostmortemPDF = exportPostmortemPDF; // Immediate assignment
 
 // Alias function for HTML onclick handler
 function exportPostmortemReport(eventId) {
@@ -7364,80 +6687,6 @@ console.log('  - closeAddEmailBlastModal:', typeof window.closeAddEmailBlastModa
 console.log('  - saveEmailBlast:', typeof window.saveEmailBlast);
 console.log('  - editEmailBlast:', typeof window.editEmailBlast);
 console.log('  - deleteEmailBlast:', typeof window.deleteEmailBlast);
-
-// ====== Postmortem Finance Summary Loader ======
-function loadPostmortemFinanceSummary(eventId) {
-    if (!eventId) {
-        console.warn('⚠️ loadPostmortemFinanceSummary: No eventId provided');
-        return;
-    }
-    
-    const headers = getUserHeaders ? getUserHeaders() : {
-        'Content-Type': 'application/json'
-    };
-    
-    fetch(`${API_BASE || '../api'}/finance.php?action=list&event_id=${eventId}`, { headers })
-        .then(response => {
-            console.log('📊 Finance API response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Finance Summary data loaded:', data);
-            
-            if (data.success) {
-                const budget = data.budget || 0;
-                const grandTotal = data.grand_total || 0;
-                const balance = budget - grandTotal;
-                
-                // Update Postmortem Finance Summary elements
-                const budgetElem = document.getElementById('postmortemFinanceBudget');
-                const expenseElem = document.getElementById('postmortemFinanceTotalExpense');
-                const balanceElem = document.getElementById('postmortemFinanceBalance');
-                const statusElem = document.getElementById('postmortemFinanceStatusNote');
-                
-                if (budgetElem) budgetElem.textContent = '₱' + budget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                if (expenseElem) expenseElem.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                
-                if (balanceElem) {
-                    balanceElem.textContent = '₱' + Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    
-                    // Apply color coding
-                    if (balance > 0) {
-                        balanceElem.className = 'text-lg font-bold text-green-600';
-                    } else if (balance === 0) {
-                        balanceElem.className = 'text-lg font-bold text-orange-500';
-                    } else {
-                        balanceElem.className = 'text-lg font-bold text-red-600';
-                    }
-                }
-                
-                if (statusElem) {
-                    if (balance > 0) {
-                        const percentRemaining = ((balance / budget) * 100).toFixed(1);
-                        statusElem.textContent = `${percentRemaining}% of budget remaining - Good progress`;
-                        statusElem.className = 'text-sm text-green-600';
-                    } else if (balance === 0) {
-                        statusElem.textContent = 'Budget fully utilized';
-                        statusElem.className = 'text-sm text-orange-500';
-                    } else {
-                        const overBudgetAmount = Math.abs(balance);
-                        statusElem.textContent = `Over budget by ₱${overBudgetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - Action needed`;
-                        statusElem.className = 'text-sm text-red-600';
-                    }
-                }
-                
-                console.log('✅ Postmortem Finance Summary updated successfully');
-            }
-        })
-        .catch(err => {
-            console.error('❌ Error loading postmortem finance summary:', err);
-        });
-}
-window.loadPostmortemFinanceSummary = loadPostmortemFinanceSummary;
-console.log('✅ [FUNCTION] window.loadPostmortemFinanceSummary assigned:', typeof window.loadPostmortemFinanceSummary);
 
 // ====== CRITICAL: Ensure Postmortem Functions Are Globally Accessible ======
 console.log('\n🔒 [SAFETY-WRAP] Ensuring postmortem functions are accessible...');

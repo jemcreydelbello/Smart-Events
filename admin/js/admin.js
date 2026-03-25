@@ -1093,317 +1093,55 @@ function initializeProfileSettings() {
 /**
  * Load email configuration from database and populate form
  */
-async function loadEmailConfiguration() {
+// ================================================================================
+// EMAIL CONFIGURATION SECTION REMOVED
+// Email configuration is now handled via the dedicated email-configuration.php page
+// ================================================================================
+
+// Load and display current email configuration in settings tab
+async function loadCurrentEmailDisplay() {
     try {
-        const headers = getUserHeaders();
+        const headers = {
+            'Content-Type': 'application/json'
+        };
         
-        console.log('📧 Loading email configuration...');
-        console.log('📧 Headers being sent:', headers);
-        console.log('📧 User Role:', headers['X-User-Role']);
+        // Get user role from localStorage
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userInfo = (admin && admin.id) ? admin : user;
         
-        const response = await fetch('../api/email_config.php', {
+        if (userInfo.role) {
+            headers['X-User-Role'] = userInfo.role;
+        } else if (userInfo.role_name) {
+            headers['X-User-Role'] = userInfo.role_name;
+        }
+        
+        if (userInfo.id) {
+            headers['X-User-Id'] = userInfo.id;
+        } else if (userInfo.user_id) {
+            headers['X-User-Id'] = userInfo.user_id;
+        }
+        
+        const response = await fetch('../api/email-configuration.php', {
             method: 'GET',
             headers: headers
         });
         
-        console.log('📧 Response status:', response.status);
-        
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('📧 Error response:', errorText);
-            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
-        
-        console.log('📧 Response data:', result);
         
         if (result.success && result.data) {
             const config = result.data;
-            
-            console.log('📧 Populating form with config:', config);
-            
-            // Populate form fields
-            const smtpHostElement = document.getElementById('smtpHost');
-            const smtpPortElement = document.getElementById('smtpPort');
-            const smtpUserElement = document.getElementById('smtpUser');
-            const smtpPasswordElement = document.getElementById('smtpPassword');
-            const fromNameElement = document.getElementById('fromName');
-            const fromEmailElement = document.getElementById('fromEmail');
-            
-            if (smtpHostElement) {
-                smtpHostElement.value = config.smtp_host || '';
-                console.log('✅ Set smtpHost to:', config.smtp_host);
+            const currentEmailDisplay = document.getElementById('currentEmailDisplay');
+            if (currentEmailDisplay) {
+                currentEmailDisplay.textContent = config.from_email || 'Not configured';
             }
-            if (smtpPortElement) {
-                smtpPortElement.value = config.smtp_port || 587;
-                console.log('✅ Set smtpPort to:', config.smtp_port);
-            }
-            if (smtpUserElement) {
-                smtpUserElement.value = config.smtp_user || '';
-                console.log('✅ Set smtpUser to:', config.smtp_user);
-            }
-            if (smtpPasswordElement) {
-                smtpPasswordElement.value = config.smtp_password || '';
-                console.log('✅ Set smtpPassword to:', config.smtp_password ? '(masked)' : '(empty)');
-            }
-            if (fromNameElement) {
-                fromNameElement.value = config.from_name || '';
-                console.log('✅ Set fromName to:', config.from_name);
-            }
-            if (fromEmailElement) {
-                fromEmailElement.value = config.from_email || '';
-                console.log('✅ Set fromEmail to:', config.from_email);
-            }
-            
-            // Populate checkboxes using type conversion to handle string/int from DB
-            const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
-            const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
-            const emailRemindersElement = document.getElementById('emailReminders');
-            
-            if (emailOnUserCreateElement) {
-                emailOnUserCreateElement.checked = config.email_on_user_create == 1;
-                console.log('✅ Set emailOnUserCreate to:', config.email_on_user_create == 1);
-            }
-            if (emailOnEventCreateElement) {
-                emailOnEventCreateElement.checked = config.email_on_event_create == 1;
-                console.log('✅ Set emailOnEventCreate to:', config.email_on_event_create == 1);
-            }
-            if (emailRemindersElement) {
-                emailRemindersElement.checked = config.email_reminders == 1;
-                console.log('✅ Set emailReminders to:', config.email_reminders == 1);
-            }
-            
-            console.log('✅ Email configuration loaded successfully');
-            showEmailStatus('success', 'Email configuration loaded successfully');
-        } else {
-            console.warn('⚠️ No data in response:', result);
-            showEmailStatus('error', result.message || 'Failed to load configuration');
         }
     } catch (error) {
-        console.error('❌ Error loading email configuration:', error);
-        showEmailStatus('error', 'Error loading configuration: ' + error.message);
-    }
-}
-
-/**
- * Save email configuration to database
- */
-async function saveEmailConfiguration() {
-    try {
-        // Get form values - with null checks for checkboxes
-        const emailOnUserCreateElement = document.getElementById('emailOnUserCreate');
-        const emailOnEventCreateElement = document.getElementById('emailOnEventCreate');
-        const emailRemindersElement = document.getElementById('emailReminders');
-        
-        const formData = {
-            smtp_host: document.getElementById('smtpHost').value.trim(),
-            smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
-            smtp_user: document.getElementById('smtpUser').value.trim(),
-            smtp_password: document.getElementById('smtpPassword').value.trim(),
-            from_name: document.getElementById('fromName').value.trim(),
-            from_email: document.getElementById('fromEmail').value.trim(),
-            email_on_user_create: emailOnUserCreateElement ? (emailOnUserCreateElement.checked ? 1 : 0) : 1,
-            email_on_event_create: emailOnEventCreateElement ? (emailOnEventCreateElement.checked ? 1 : 0) : 1,
-            email_reminders: emailRemindersElement ? (emailRemindersElement.checked ? 1 : 0) : 1
-        };
-        
-        console.log('📧 Saving configuration:', formData);
-        
-        // Validate required fields
-        const errors = [];
-        if (!formData.smtp_host) errors.push('SMTP Host is required');
-        if (!formData.smtp_user) errors.push('SMTP Username is required');
-        if (!formData.smtp_password) errors.push('SMTP Password is required');
-        if (!formData.from_name) errors.push('From Name is required');
-        if (!isValidEmail(formData.from_email)) errors.push('Valid From Email is required');
-        
-        if (errors.length > 0) {
-            showEmailStatus('error', 'Validation failed: ' + errors.join(', '));
-            console.error('📧 Validation errors:', errors);
-            return;
-        }
-        
-        // Show loading status
-        const statusDiv = document.getElementById('emailStatusMessage');
-        if (statusDiv) {
-            statusDiv.innerHTML = '⏳ Saving configuration...';
-            statusDiv.style.display = 'block';
-            statusDiv.style.backgroundColor = '#fef3c7';
-            statusDiv.style.borderLeft = '4px solid #f59e0b';
-            statusDiv.style.color = '#92400e';
-        }
-        
-        const headers = getUserHeaders();
-        headers['Content-Type'] = 'application/json';
-        
-        console.log('📧 Sending request with headers:', headers);
-        
-        const response = await fetch('../api/email_config.php', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(formData)
-        });
-        
-        console.log('📧 Save response status:', response.status);
-        
-        const result = await response.json();
-        
-        console.log('📧 Save response data:', result);
-        
-        if (result.success) {
-            showEmailStatus('success', '✅ Email configuration saved successfully!');
-            // Reload to show saved values
-            setTimeout(() => {
-                loadEmailConfiguration();
-            }, 1000);
-        } else {
-            const errorMsg = result.errors ? result.errors.join(', ') : result.message;
-            showEmailStatus('error', '❌ Failed to save: ' + errorMsg);
-            console.error('📧 Save failed:', result);
-        }
-    } catch (error) {
-        console.error('Error saving email configuration:', error);
-        showEmailStatus('error', '❌ Error saving configuration: ' + error.message);
-    }
-}
-
-/**
- * Test SMTP connection
- */
-async function testEmailConnection() {
-    try {
-        const smtpHost = document.getElementById('smtpHost').value.trim();
-        const smtpPort = parseInt(document.getElementById('smtpPort').value) || 587;
-        const smtpUser = document.getElementById('smtpUser').value.trim();
-        const smtpPassword = document.getElementById('smtpPassword').value.trim();
-        
-        console.log('🧪 Testing SMTP connection with:', {
-            smtpHost,
-            smtpPort,
-            smtpUser,
-            passwordLength: smtpPassword.length
-        });
-        
-        if (!smtpHost || !smtpUser || !smtpPassword) {
-            showEmailStatus('error', '❌ Please fill in SMTP Host, Username, and Password before testing');
-            console.warn('🧪 Missing required fields for test');
-            return;
-        }
-        
-        showEmailStatus('pending', '⏳ Testing SMTP connection...');
-        
-        const headers = getUserHeaders();
-        headers['Content-Type'] = 'application/json';
-        
-        const testData = {
-            smtp_host: smtpHost,
-            smtp_port: smtpPort,
-            smtp_user: smtpUser,
-            smtp_password: smtpPassword
-        };
-        
-        console.log('🧪 Sending test request with headers:', headers);
-        console.log('🧪 Request body:', testData);
-        
-        const response = await fetch('../api/email_config.php?action=test', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(testData)
-        });
-        
-        console.log('🧪 Test response status:', response.status);
-        console.log('🧪 Test response headers:', response.headers);
-        
-        const result = await response.json();
-        
-        console.log('🧪 Test result:', result);
-        
-        if (result.success) {
-            showEmailStatus('success', `✅ ${result.message} (Connecting to ${result.host}:${result.port})`);
-            console.log('🧪 ✅ SMTP connection successful');
-        } else {
-            let errorMsg = result.message || 'Connection failed';
-            if (result.provider_help) {
-                errorMsg += ' - ' + result.provider_help.help;
-            }
-            showEmailStatus('error', '❌ ' + errorMsg);
-            console.error('🧪 SMTP connection failed:', result);
-        }
-    } catch (error) {
-        console.error('Error testing SMTP connection:', error);
-        console.error('🧪 Error details:', {
-            message: error.message,
-            stack: error.stack
-        });
-        showEmailStatus('error', '❌ Error testing connection: ' + error.message);
-    }
-}
-
-/**
- * Display status message for email configuration
- */
-function showEmailStatus(type, message) {
-    const statusDiv = document.getElementById('emailStatusMessage');
-    if (!statusDiv) return;
-    
-    statusDiv.style.display = 'block';
-    statusDiv.textContent = message;
-    
-    switch (type) {
-        case 'success':
-            statusDiv.style.backgroundColor = '#d1fae5';
-            statusDiv.style.borderLeft = '4px solid #10b981';
-            statusDiv.style.color = '#065f46';
-            break;
-        case 'error':
-            statusDiv.style.backgroundColor = '#fee2e2';
-            statusDiv.style.borderLeft = '4px solid #ef4444';
-            statusDiv.style.color = '#7f1d1d';
-            break;
-        case 'pending':
-            statusDiv.style.backgroundColor = '#fef3c7';
-            statusDiv.style.borderLeft = '4px solid #f59e0b';
-            statusDiv.style.color = '#92400e';
-            break;
-    }
-}
-
-/**
- * Validate email format
- */
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-/**
- * Initialize email configuration settings
- */
-function initializeEmailConfiguration() {
-    console.log('🔧 Initializing Email Configuration...');
-    loadEmailConfiguration();
-    
-    // Set up button handlers
-    const emailConfigTab = document.getElementById('email-config');
-    if (emailConfigTab) {
-        // Find all buttons and attach appropriate handlers
-        const buttons = emailConfigTab.querySelectorAll('button');
-        console.log('📍 Found buttons:', buttons.length);
-        buttons.forEach(btn => {
-            const btnText = btn.textContent.trim();
-            console.log('📍 Button text:', btnText);
-            if (btnText.includes('Test Connection') || btnText.includes('🔍')) {
-                btn.onclick = testEmailConnection;
-                console.log('✅ Attached testEmailConnection to button');
-            } else if (btnText.includes('Save') || btnText.includes('💾')) {
-                btn.onclick = saveEmailConfiguration;
-                console.log('✅ Attached saveEmailConfiguration to button');
-            } else if (btnText.includes('Reload') || btnText.includes('Update') || btnText.includes('🔄')) {
-                btn.onclick = loadEmailConfiguration;
-                console.log('✅ Attached loadEmailConfiguration to button');
-            }
-        });
+        console.error('Error loading current email display:', error);
     }
 }
 
@@ -1571,6 +1309,14 @@ function navigateToPage(page) {
     
     localStorage.setItem('adminLastPage', page);
     
+    // If navigating to settings, also save the current active settings tab
+    if (page === 'settings') {
+        const activeSettingsTab = document.querySelector('.settings-tab-content.active');
+        if (activeSettingsTab) {
+            localStorage.setItem('adminLastSettingsTab', activeSettingsTab.id);
+        }
+    }
+    
     // Update active nav link (includes buttons with data-page attribute)
     const navElements = document.querySelectorAll('[data-page]');
     navElements.forEach(el => {
@@ -1627,8 +1373,9 @@ function navigateToPage(page) {
             loadActionTypes();
         }
         else if (page === 'settings') {
-            // Load settings page - default to users-settings tab (profile)
-            switchTab('users-settings');
+            // Load settings page - default to users-settings tab (profile) or restore last active tab
+            const lastSettingsTab = localStorage.getItem('adminLastSettingsTab') || 'users-settings';
+            switchTab(lastSettingsTab);
             initializeProfileSettings();
         }
     } else {
@@ -5174,6 +4921,9 @@ function closeEventDetailsModal() {
     if (modal) {
         modal.classList.remove('active');
     }
+    
+    // Stop dashboard auto-refresh when closing
+    stopDashboardAutoRefresh();
     
     // Stop dashboard auto-refresh when closing
     stopDashboardAutoRefresh();
@@ -11884,6 +11634,14 @@ function switchTab(tabName) {
         document.querySelectorAll('.settings-tab-btn').forEach(btn => {
             if (btn.getAttribute('data-tab') === tabName) {
                 btn.classList.add('active');
+                // Save the active settings tab to localStorage
+                if (tabName.includes('-settings') || tabName === 'email-config') {
+                    localStorage.setItem('adminLastSettingsTab', tabName);
+                }
+                // Reset email config view to 'view' mode when switching to email-config tab
+                if (tabName === 'email-config' && typeof switchEmailConfigView === 'function') {
+                    switchEmailConfigView('view');
+                }
             }
         });
         
@@ -11901,9 +11659,13 @@ function switchTab(tabName) {
             }
         }
         else if (tabName === 'email-config') {
-            // Load email configuration
-            if (typeof initializeEmailConfiguration === 'function') {
-                initializeEmailConfiguration();
+            // Load and display current email configuration
+            // Prefer the new loadCurrentConfiguration if available (index.html Settings tab)
+            if (typeof loadCurrentConfiguration === 'function') {
+                loadCurrentConfiguration();
+            } else {
+                // Fallback to loadCurrentEmailDisplay for standalone pages
+                loadCurrentEmailDisplay();
             }
         }
         return;
