@@ -1479,9 +1479,18 @@ function galleryPrev() {
 function updateGalleryDisplay() {
     const mainImage = document.getElementById('galleryMainImage');
     const currentImage = currentGalleryImages[currentGalleryIndex];
-    const imageUrl = currentImage.is_cover 
-        ? `../uploads/events/${currentImage.image_url}`
-        : `../uploads/events_img/${currentImage.image_url}`;
+    
+    let imageUrl;
+    if (currentImage.is_asset) {
+        // Marketing asset - use file_path directly
+        imageUrl = `../${currentImage.file_path}`;
+    } else {
+        // Event gallery image
+        imageUrl = currentImage.is_cover 
+            ? `../uploads/events/${currentImage.image_url}`
+            : `../uploads/events_img/${currentImage.image_url}`;
+    }
+    
     mainImage.style.backgroundImage = `url('${imageUrl}')`;
     updateGalleryCounter();
     updateThumbnailSelection();
@@ -1495,15 +1504,23 @@ function updateGalleryCounter() {
 function populateGalleryThumbnails() {
     const thumbnailsContainer = document.getElementById('galleryThumbnails');
     thumbnailsContainer.innerHTML = currentGalleryImages.map((image, index) => {
-        const imagePath = image.is_cover 
-            ? `../uploads/events/${image.image_url}`
-            : `../uploads/events_img/${image.image_url}`;
+        let imagePath;
+        if (image.is_asset) {
+            // Marketing asset thumbnail
+            imagePath = `../${image.file_path}`;
+        } else {
+            // Event gallery image thumbnail
+            imagePath = image.is_cover 
+                ? `../uploads/events/${image.image_url}`
+                : `../uploads/events_img/${image.image_url}`;
+        }
+        
         return `
             <div class="w-full aspect-square bg-gray-200 rounded cursor-pointer overflow-hidden border-2 transition-all ${
                 index === currentGalleryIndex ? 'border-blue-500' : 'border-transparent hover:border-gray-300'
             }" 
             style="background-image: url('${imagePath}'); background-size: cover; background-position: center;"
-            onclick="selectGalleryImage(${index})"></div>
+            onclick="selectGalleryImage(${index})" title="${image.is_asset ? image.asset_type : 'Gallery'}"></div>
         `;
     }).join('');
 }
@@ -1513,7 +1530,9 @@ function populateGalleryEventDetails() {
     if (!currentEvent) return;
     
     // Load marketing assets for this event
-    const eventId = currentEvent.id || currentEvent.catalogue_id;
+    // Use event_id from catalogue table, not catalogue_id
+    const eventId = currentEvent.event_id;
+    console.log('📍 Loading marketing assets for event_id:', eventId, '(catalogue_id:', currentEvent.id, ')');
     loadMarketingAssetsForGallery(eventId);
 }
 
@@ -1535,19 +1554,28 @@ function loadMarketingAssetsForGallery(eventId) {
                 social_pack: []
             };
             
-            // Categorize assets
+            // Categorize assets and add them to main gallery stream
             data.data.forEach(asset => {
                 const type = asset.asset_type || 'poster';
                 console.log('📎 Processing asset:', asset.asset_type, asset.file_path);
                 if (assetsByType.hasOwnProperty(type)) {
                     assetsByType[type].push(asset);
                     console.log('✓ Added to', type, '- Total:', assetsByType[type].length);
+                    // Add asset to main gallery navigation stream
+                    currentGalleryImages.push({
+                        is_asset: true,
+                        asset_type: type,
+                        file_path: asset.file_path,
+                        image_url: asset.file_path
+                    });
                 } else {
                     console.warn('⚠️ Unknown asset type:', type);
                 }
             });
             
             console.log('📊 Assets by type:', assetsByType);
+            // Refresh counter and thumbnails to show total count
+            updateGalleryCounter();
             
             // Populate poster gallery
             const posterGallery = document.getElementById('posterGallery');
@@ -1613,16 +1641,27 @@ function createClientAssetElement(asset) {
 }
 
 function previewAsset(assetPath) {
-    // Open asset in new window or modal
-    window.open(assetPath, '_blank');
+    // Update the main gallery image with the asset
+    console.log('🖼️ Displaying asset in gallery:', assetPath);
+    
+    const mainImage = document.getElementById('galleryMainImage');
+    mainImage.style.backgroundImage = `url('${assetPath}')`;
+    mainImage.style.backgroundSize = 'contain';
+    mainImage.style.backgroundRepeat = 'no-repeat';
+    mainImage.style.backgroundPosition = 'center';
 }
 
 function downloadAsset(assetPath, fileName) {
-    // Download asset
+    // Alternative download method triggered from right-click or direct call
+    console.log('📥 Downloading asset:', fileName);
+    
     const link = document.createElement('a');
     link.href = assetPath;
     link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 }
 
 function selectGalleryImage(index) {
@@ -1644,7 +1683,7 @@ function updateThumbnailSelection() {
 }
 
 async function galleryNextEvent() {
-    // Find next event with gallery, looping to start if necessary
+    // Find next event, looping to start if necessary
     let nextIndex = currentCatalogueEventIndex + 1;
     let searched = false;
     
@@ -1652,9 +1691,9 @@ async function galleryNextEvent() {
         // If we've reached the end, loop back to the start
         if (nextIndex >= allCatalogueEvents.length) {
             nextIndex = 0;
-            // If we've looped all the way through without finding anything, break
+            // If we've looped all the way through, break
             if (nextIndex === currentCatalogueEventIndex) {
-                alert('No events with galleries available');
+                console.log('ℹ️ Already at last event in catalogue');
                 return;
             }
         }
@@ -1663,33 +1702,15 @@ async function galleryNextEvent() {
         const eventId = event.id || event.catalogue_id;
         const eventName = event.event_name;
         
-        // Try to load gallery for this event
-        try {
-            const response = await fetch(`../api/catalogue.php?action=get_gallery&catalogue_id=${eventId}`);
-            const data = await response.json();
-            
-            if (data.success && data.data && data.data.length > 0) {
-                // Found event with gallery - open it with correct index
-                openGalleryViewer(eventId, eventName, nextIndex);
-                return;
-            }
-        } catch (error) {
-            console.error('Error checking gallery:', error);
-        }
-        nextIndex++;
-        
-        // Safety check: if we've searched through all events, stop
-        if (nextIndex > allCatalogueEvents.length + currentCatalogueEventIndex) {
-            searched = true;
-        }
+        console.log('➡️ Opening event:', eventName, '(index:', nextIndex, ')');
+        // Open gallery viewer for this event (with or without gallery images)
+        openGalleryViewer(eventId, eventName, nextIndex);
+        return;
     }
-    
-    // No events with galleries found
-    alert('No events with galleries available');
 }
 
 async function galleryPrevEvent() {
-    // Find previous event with gallery, looping to end if necessary
+    // Find previous event, looping to end if necessary
     let prevIndex = currentCatalogueEventIndex - 1;
     let searched = false;
     
@@ -1697,9 +1718,9 @@ async function galleryPrevEvent() {
         // If we've gone before the start, loop back to the end
         if (prevIndex < 0) {
             prevIndex = allCatalogueEvents.length - 1;
-            // If we've looped all the way through without finding anything, break
+            // If we've looped all the way through, break
             if (prevIndex === currentCatalogueEventIndex) {
-                alert('No events with galleries available');
+                console.log('ℹ️ Already at first event in catalogue');
                 return;
             }
         }
@@ -1708,29 +1729,11 @@ async function galleryPrevEvent() {
         const eventId = event.id || event.catalogue_id;
         const eventName = event.event_name;
         
-        // Try to load gallery for this event
-        try {
-            const response = await fetch(`../api/catalogue.php?action=get_gallery&catalogue_id=${eventId}`);
-            const data = await response.json();
-            
-            if (data.success && data.data && data.data.length > 0) {
-                // Found event with gallery - open it with correct index
-                openGalleryViewer(eventId, eventName, prevIndex);
-                return;
-            }
-        } catch (error) {
-            console.error('Error checking gallery:', error);
-        }
-        prevIndex--;
-        
-        // Safety check: if we've searched through all events, stop
-        if (prevIndex < currentCatalogueEventIndex - allCatalogueEvents.length) {
-            searched = true;
-        }
+        console.log('⬅️ Opening event:', eventName, '(index:', prevIndex, ')');
+        // Open gallery viewer for this event (with or without gallery images)
+        openGalleryViewer(eventId, eventName, prevIndex);
+        return;
     }
-    
-    // No events with galleries found
-    alert('No events with galleries available');
 }
 
 // Close gallery modal when clicking outside
@@ -1746,6 +1749,18 @@ document.addEventListener('click', function(e) {
     const modal = document.getElementById('eventModal');
     if (e.target === modal) {
         closeModal('eventModal');
+    }
+});
+
+// Handle Escape key to close modals
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const galleryModal = document.getElementById('galleryViewerModal');
+        
+        // Close gallery modal if it's open
+        if (galleryModal && !galleryModal.classList.contains('hidden')) {
+            closeGalleryViewer();
+        }
     }
 });
     </script>
