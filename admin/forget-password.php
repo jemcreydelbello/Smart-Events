@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password - Event System</title>
+    <link rel="icon" type="image/jpeg" href="../assets/intellismart.jpg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 

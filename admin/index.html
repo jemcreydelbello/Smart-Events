@@ -16,7 +16,7 @@
   <!-- Quill.js Rich Text Editor -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-  <link rel="icon" type="image/png" href="../assets/logo2.png">
+  <link rel="icon" type="image/jpeg" href="../assets/intellismart.jpg">
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=3">
   <link rel="stylesheet" href="./css/styles.css?v=4">
   <style>
@@ -489,7 +489,7 @@
               <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                   <div class="flex-1">
-                    <h4 class="text-base font-semibold text-gray-900">${pm.log_title_introduction || 'Log Report'}</h4>
+                    <h4 class="text-base font-semibold text-gray-900">${pm.log_title_introduction ? (pm.log_title_introduction.length > 50 ? pm.log_title_introduction.substring(0, 50) + '...' : pm.log_title_introduction) : 'Log Report'}</h4>
                     <p class="text-sm text-gray-500 mt-1">Created: ${pm.created_at ? new Date(pm.created_at).toLocaleString() : 'N/A'}</p>
                   </div>
                   <button onclick="window.exportPostmortemReport && window.exportPostmortemReport(${window.currentEventId})" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors ml-4">
@@ -516,31 +516,95 @@
     };
 
     window.cancelLogReportForm = function() {
-      console.log('❌ Cancelling log report form');
+      console.log('❌ Checking log report form for changes...');
       
-      // Clear form fields
-      document.getElementById('logTitleIntroduction').value = '';
-      document.getElementById('logIssueSummary').value = '';
-      document.getElementById('logRootCauseAnalysis').value = '';
-      document.getElementById('logImpactMitigation').value = '';
-      document.getElementById('logResolutionRecovery').value = '';
-      document.getElementById('logCorrectiveMeasures').value = '';
-      document.getElementById('logFeedbackSurvey').value = '';
-      document.getElementById('logLessonLearned').value = '';
-      document.getElementById('logReviewMeasurements').value = '';
+      // Check for unsaved changes
+      const title = document.getElementById('logTitleIntroduction').value.trim();
+      const summary = document.getElementById('logIssueSummary').value.trim();
+      const rootCause = document.getElementById('logRootCauseAnalysis').value.trim();
+      const impact = document.getElementById('logImpactMitigation').value.trim();
+      const resolution = document.getElementById('logResolutionRecovery').value.trim();
+      const measures = document.getElementById('logCorrectiveMeasures').value.trim();
+      const feedback = document.getElementById('logFeedbackSurvey').value.trim();
+      const lessons = document.getElementById('logLessonLearned').value.trim();
+      const review = document.getElementById('logReviewMeasurements').value.trim();
       
-      // Reset edit mode
-      window.currentEditingReportId = null;
-      
-      // Reset button text
-      const saveBtn = document.getElementById('logReportCreateBtn');
-      if (saveBtn) {
-        saveBtn.textContent = 'Save';
+      // If no changes, close directly
+      if (!title && !summary && !rootCause && !impact && !resolution && !measures && !feedback && !lessons && !review) {
+        window.currentEditingReportId = null;
+        const saveBtn = document.getElementById('logReportCreateBtn');
+        if (saveBtn) {
+          saveBtn.textContent = 'Save';
+        }
+        window.switchPostmortemView('log');
+        window.loadLogReports();
+        return;
       }
       
-      // Switch to Log Report list view
-      window.switchPostmortemView('log');
-      window.loadLogReports();
+      // If changes exist, show confirmation
+      if (document.getElementById('closePostmortemConfirmModal')) {
+        return;
+      }
+      
+      const modalHTML = `
+        <div id="closePostmortemConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this form? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmPostmortemCancelBtn" 
+                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmPostmortemCloseBtn"
+                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      // Wire up the buttons
+      document.getElementById('confirmPostmortemCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closePostmortemConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmPostmortemCloseBtn').addEventListener('click', function() {
+        // Clear form fields
+        document.getElementById('logTitleIntroduction').value = '';
+        document.getElementById('logIssueSummary').value = '';
+        document.getElementById('logRootCauseAnalysis').value = '';
+        document.getElementById('logImpactMitigation').value = '';
+        document.getElementById('logResolutionRecovery').value = '';
+        document.getElementById('logCorrectiveMeasures').value = '';
+        document.getElementById('logFeedbackSurvey').value = '';
+        document.getElementById('logLessonLearned').value = '';
+        document.getElementById('logReviewMeasurements').value = '';
+        
+        // Reset edit mode
+        window.currentEditingReportId = null;
+        
+        // Reset button text
+        const saveBtn = document.getElementById('logReportCreateBtn');
+        if (saveBtn) {
+          saveBtn.textContent = 'Save';
+        }
+        
+        // Switch to Log Report list view
+        window.switchPostmortemView('log');
+        window.loadLogReports();
+        
+        const confirmDiv = document.getElementById('closePostmortemConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
     };
     
     window.saveLogReport = function() { 
@@ -667,7 +731,7 @@
                 <div style="flex: 1;">
                   <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #111827; font-size: 15px;">Log Report #${reports.length - index}</h4>
                   <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${createdDate}</p>
-                  <p style="margin: 0; font-size: 13px; color: #374151; line-height: 1.5;">${report.log_title_introduction || '(No title)'}</p>
+                  <p style="margin: 0; font-size: 13px; color: #374151; line-height: 1.5;">${report.log_title_introduction ? (report.log_title_introduction.length > 50 ? report.log_title_introduction.substring(0, 50) + '...' : report.log_title_introduction) : '(No title)'}</p>
                 </div>
                 <div style="display: flex; gap: 8px; margin-left: 16px; align-items: center;">
                   <button onclick="event.stopPropagation(); window.exportLogReport(${report.log_report_id})" style="padding: 8px 14px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background 0.2s; white-space: nowrap;" onmouseover="this.style.background='#155aa6';" onmouseout="this.style.background='#1E73BB';">
@@ -1090,7 +1154,7 @@
   
   
   <script src="./js/event-details.js?v=51"></script>
-  <script src="./js/admin.js?v=95"></script>
+  <script src="./js/admin.js?v=96"></script>
   <script src="./js/catalogue-lookup.js?v=11"></script>
   <script src="./js/edit-modal-v2.js"></script>
   <script src="./js/event-layout-manager.js?v=1"></script>
@@ -1846,8 +1910,9 @@
                   </button>
                   
                   <!-- Add Button -->
-                  <button style="padding: 8px 16px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="addAttendee()">
-                    + Add
+                  <button style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="addAttendee()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+                    Add Attendee
                   </button>
                 </div>
               </div>
@@ -1917,7 +1982,8 @@
                   </button>
                   
                   <!-- Add Task Button -->
-                  <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors" onclick="addTask()">
+                  <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors" onclick="addTask()" style="background: #1E73BB; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
                     Add Task
                   </button>
                 </div>
@@ -2057,7 +2123,7 @@
             
             <!-- Save Button -->
             <div class="mt-4">
-              <button onclick="try { console.log('Save button clicked. saveKPIDetails defined:', typeof window.saveKPIDetails); if(typeof saveKPIDetails === 'function') { saveKPIDetails(); } else { alert('ERROR: saveKPIDetails is not defined. Check console.'); console.error('saveKPIDetails not found. Available on window:', Object.keys(window).filter(k => k.includes('KPI'))); } } catch(e) { alert('Error: ' + e.message); console.error('Full error:', e); }" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+              <button onclick="try { console.log('Save button clicked. saveKPIDetails defined:', typeof window.saveKPIDetails); if(typeof saveKPIDetails === 'function') { saveKPIDetails(); } else { alert('ERROR: saveKPIDetails is not defined. Check console.'); console.error('saveKPIDetails not found. Available on window:', Object.keys(window).filter(k => k.includes('KPI'))); } } catch(e) { alert('Error: ' + e.message); console.error('Full error:', e); }" style="background-color: #1e73bb; color: white; font-weight: 500; padding: 8px 24px; border-radius: 6px; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#165aa3'" onmouseout="this.style.backgroundColor='#1e73bb'">
                 Save Details
               </button>
             </div>
@@ -2092,10 +2158,10 @@
             <div class="mt-8">
               <div class="flex justify-between items-center mb-2">
                 <p class="text-sm font-medium text-gray-700">Progress</p>
-                <p class="text-lg font-bold text-blue-600" id="kpiProgressPercent">0%</p>
+                <p class="text-lg font-bold" id="kpiProgressPercent" style="color: #1e73bb;">0%</p>
               </div>
               <div class="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                <div id="kpiProgressBar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%;"></div>
+                <div id="kpiProgressBar" class="h-full transition-all duration-300" style="width: 0%; background-color: #1e73bb;"></div>
               </div>
               <p class="text-sm text-gray-600 mt-3" id="kpiActualAttendeesText">Actual Attendees: 0</p>
             </div>
@@ -2109,14 +2175,15 @@
 
         <div id="emails" class="event-tab-content hidden space-y-6" style="display: none;">
           <!-- Email Templates Section -->
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div class="bg-gray-50 rounded-lg p-6 shadow-sm border border-gray-200">
             <div class="flex justify-between items-center mb-6">
               <div>
                 <h2 class="text-2xl font-bold text-gray-900 mb-1">Email Templates</h2>
                 <p class="text-sm text-gray-600 mt-1">Create and manage email templates for coordinators to use.</p>
               </div>
-              <button onclick="openEmailTemplateModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors" style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); border: none; cursor: pointer;">
-                + Add Email Template
+              <button onclick="openEmailTemplateModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors" style="background: #1E73BB; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+                Add Email Template
               </button>
             </div>
             
@@ -2130,7 +2197,7 @@
         </div>
         
         <!-- Email Template Modal -->
-        <div id="emailTemplateModal" class="modal" onclick="if(event.target.id === 'emailTemplateModal') closeEmailTemplateModal();">
+        <div id="emailTemplateModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'emailTemplateModal') closeEmailTemplateModal();">
           <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
             <!-- Gradient Header -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: flex-start;">
@@ -2241,7 +2308,8 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-1">Program</h2>
                 <p class="text-sm text-gray-600 mt-1">Event program schedule and agenda.</p>
               </div>
-              <button onclick="openAddProgramModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+              <button onclick="openAddProgramModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors" style="background: #1E73BB; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
                 Add Program Item
               </button>
             </div>
@@ -2258,7 +2326,8 @@
             <div>
               <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Program Flow</h3>
-                <button onclick="openAddFlowModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                <button onclick="openAddFlowModal()" style="padding: 10px 24px; background: #1E73BB; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
                   Add
                 </button>
               </div>
@@ -2284,7 +2353,7 @@
         </div>
 
         <!-- Add Program Item Modal -->
-        <div id="addProgramModal" class="modal" onclick="if(event.target.id === 'addProgramModal') closeProgramModal();">
+        <div id="addProgramModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addProgramModal') closeProgramModal();">
           <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white;">
             <div class="flex justify-between items-center mb-6">
               <h2 class="text-2xl font-bold text-gray-900">Add Program Item</h2>
@@ -2469,7 +2538,7 @@
         </div>
 
         <!-- Add Giveaway Modal -->
-        <div id="addGiveawayModal" class="modal" onclick="if(event.target.id === 'addGiveawayModal') closeGiveawayModal();">
+        <div id="addGiveawayModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addGiveawayModal') closeGiveawayModal();">
           <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white; padding: 0;">
             <!-- Header (Gradient) -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
@@ -2626,7 +2695,7 @@
         </div>
 
         <!-- Add/Edit Logistics Modal -->
-        <div id="addLogisticsModal" class="modal" onclick="if(event.target.id === 'addLogisticsModal') closeAddLogisticsModal();">
+        <div id="addLogisticsModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addLogisticsModal') closeAddLogisticsModal();">
           <div class="modal-content" style="max-width: 600px; background-color: white;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
               <h2 style="font-size: 20px; font-weight: 600; color: #333; margin: 0;">Add Logistics Item</h2>
@@ -2697,7 +2766,7 @@
         </div>
 
         <!-- Add/Edit Expense Modal -->
-        <div id="addExpenseModal" class="modal" onclick="if(event.target.id === 'addExpenseModal') closeAddExpenseModal();">
+        <div id="addExpenseModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addExpenseModal') closeAddExpenseModal();">
           <div class="modal-content" style="max-width: 600px; background-color: white;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
               <h2 style="font-size: 20px; font-weight: 600; color: #333; margin: 0;">Add Expense</h2>
@@ -2816,7 +2885,10 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-1">Logistics</h2>
                 <p class="text-sm text-gray-600">Track items to ship, receive, and retrieve with clear statuses.</p>
               </div>
-              <button onclick="openAddLogisticsModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Add Logistics Item</button>
+              <button onclick="openAddLogisticsModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium" style="background: #1E73BB; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+                Add Logistics Item
+              </button>
             </div>
 
             <!-- Status Cards -->
@@ -2895,7 +2967,7 @@
                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Set Event Budget</label>
                 <input type="number" id="budgetInput" placeholder="Enter budget amount for this event" min="0" step="0.01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
               </div>
-              <button onclick="saveBudget()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Save Budget</button>
+              <button onclick="saveBudget()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" style="background: #1E73BB; border: none; cursor: pointer;">Save Budget</button>
             </div>
           </div>
 
@@ -2907,8 +2979,11 @@
                 <p class="text-sm text-gray-600">Track all event expenses against budget.</p>
               </div>
               <div class="flex gap-2">
-                <button onclick="openAddExpenseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Add Expense</button>
-                <button onclick="exportExpenses()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Export</button>
+                <button onclick="exportExpenses()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" style="background: #1E73BB; border: none; cursor: pointer;">Export</button>
+                <button onclick="openAddExpenseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium" style="background: #1E73BB; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+                  Add Expense
+                </button>
               </div>
             </div>
 
@@ -2941,10 +3016,10 @@
                 <h2 class="text-2xl font-bold text-gray-900 mt-1">Analysis + Log Documentation</h2>
               </div>
               <div class="flex gap-3">
-                <button id="automatedReportBtn" onclick="switchPostmortemView('automated')" class="postmortem-nav-btn active px-6 py-2 font-medium rounded-lg">
+                <button id="automatedReportBtn" onclick="switchPostmortemView('automated')" class="postmortem-nav-btn active" style="padding: 8px 24px; font-weight: 500; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; transition: all 0.2s;">
                   Automated Report
                 </button>
-                <button id="logReportBtn" onclick="switchPostmortemView('log')" class="postmortem-nav-btn px-6 py-2 font-medium rounded-lg">
+                <button id="logReportBtn" onclick="switchPostmortemView('log')" class="postmortem-nav-btn" style="padding: 8px 24px; font-weight: 500; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; transition: all 0.2s;">
                   Log Report
                 </button>
                 <button id="exportReportBtn" onclick="exportPostmortemReport(window.currentEventId)" style="padding: 8px 24px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='#155a9b'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#1E73BB'; this.style.transform='translateY(0)';">
@@ -4240,7 +4315,7 @@
   </div>
 
   <!-- Add Task Modal -->
-  <div id="addTaskModal" class="modal" onclick="if(event.target.id === 'addTaskModal') closeAddTaskModal();">
+  <div id="addTaskModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addTaskModal') closeAddTaskModal();">
     <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background-color: white;">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Add Task</h2>
@@ -4896,13 +4971,13 @@
   </div>
 
   <!-- Create Other Information Modal -->
-  <div id="createOtherInformationModal" class="modal">
+  <div id="createOtherInformationModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'createOtherInformationModal') requestCloseOtherInformationModal()">
     <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
       <!-- Blue Header Section -->
       <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
         <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Create Other Information</h2>
         <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Add additional information or details for this event.</p>
-        <button type="button" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+        <button type="button" onclick="requestCloseOtherInformationModal()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
       </div>
       
       <div style="padding: 24px;">
@@ -4929,7 +5004,7 @@
         
         <!-- Action Buttons -->
         <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb; margin-top: 8px;">
-          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('createOtherInformationModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
+          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="requestCloseOtherInformationModal()" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
             Cancel
           </button>
           <button type="button" style="padding: 10px 24px; background:#1E73BB; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="submitOtherInformation()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
@@ -4942,13 +5017,13 @@
   </div>
 
   <!-- Edit Other Information Modal -->
-  <div id="editOtherInformationModal" class="modal">
+  <div id="editOtherInformationModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'editOtherInformationModal') requestCloseEditOtherInformationModal()">
     <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
       <!-- Blue Header Section -->
       <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
         <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Edit Other Information</h2>
         <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Update additional information or details for this event.</p>
-        <button type="button" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+        <button type="button" onclick="requestCloseEditOtherInformationModal()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
       </div>
       
       <div style="padding: 24px;">
@@ -4976,7 +5051,7 @@
         
         <!-- Action Buttons -->
         <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb; margin-top: 8px;">
-          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('editOtherInformationModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
+          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="requestCloseEditOtherInformationModal()" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
             Cancel
           </button>
           <button type="button" style="padding: 10px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="submitEditOtherInformation()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
@@ -5775,6 +5850,118 @@
     }
 
     // ============ OTHER INFORMATION CRUD ============
+    
+    // Request close with unsaved changes check - Create Modal
+    function requestCloseOtherInformationModal() {
+      const fieldName = document.getElementById('otherInfoFieldName').value.trim();
+      const fieldValue = document.getElementById('otherInfoFieldValue').value.trim();
+      
+      // If no changes, close directly
+      if (!fieldName && !fieldValue) {
+        document.getElementById('createOtherInformationModal').classList.remove('active');
+        return false;
+      }
+      
+      // If changes exist, show confirmation
+      if (document.getElementById('closeOtherInfoConfirmModal')) {
+        return false;
+      }
+      
+      const modalHTML = `
+        <div id="closeOtherInfoConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmModalCancelBtn" 
+                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmModalCloseBtn"
+                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      // Wire up the buttons
+      document.getElementById('confirmModalCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeOtherInfoConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmModalCloseBtn').addEventListener('click', function() {
+        document.getElementById('createOtherInformationModal').classList.remove('active');
+        const confirmDiv = document.getElementById('closeOtherInfoConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      return false;
+    }
+    
+    // Request close with unsaved changes check - Edit Modal
+    function requestCloseEditOtherInformationModal() {
+      const fieldName = document.getElementById('editOtherInfoFieldName').value.trim();
+      const fieldValue = document.getElementById('editOtherInfoFieldValue').value.trim();
+      
+      // If no changes, close directly
+      if (!fieldName && !fieldValue) {
+        document.getElementById('editOtherInformationModal').classList.remove('active');
+        return false;
+      }
+      
+      // If changes exist, show confirmation
+      if (document.getElementById('closeEditOtherInfoConfirmModal')) {
+        return false;
+      }
+      
+      const modalHTML = `
+        <div id="closeEditOtherInfoConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmEditModalCancelBtn" 
+                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmEditModalCloseBtn"
+                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      // Wire up the buttons
+      document.getElementById('confirmEditModalCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeEditOtherInfoConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmEditModalCloseBtn').addEventListener('click', function() {
+        document.getElementById('editOtherInformationModal').classList.remove('active');
+        const confirmDiv = document.getElementById('closeEditOtherInfoConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      return false;
+    }
     
     // Open create other information modal
     function openCreateOtherInformationModal(eventId) {
@@ -7081,7 +7268,7 @@
   </script>
 
   <!-- Add Attendee Modal -->
-  <div id="addAttendeeModal" class="modal" onclick="if(event.target.id === 'addAttendeeModal') closeAddAttendeeModal();">
+  <div id="addAttendeeModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addAttendeeModal') closeAddAttendeeModal();">
     <div class="modal-content" style="max-width: 800px; width: 95%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; max-height: 85vh; overflow-y: auto;">
       <!-- Gradient Header Section -->
       <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: flex-start;">
@@ -7715,22 +7902,77 @@
     window.closeEmailTemplateModal = function() {
       console.log('[TEMPLATE] Closing email template modal...');
       
-      const modal = document.getElementById('emailTemplateModal');
-      if (modal) {
-        modal.classList.remove('active');
+      // Check for unsaved changes
+      const templateName = document.getElementById('templateName').value.trim();
+      const templateSubject = document.getElementById('templateSubject').value.trim();
+      const templateRecipients = document.getElementById('templateRecipients').value.trim();
+      const templateBody = emailTemplateQuill ? emailTemplateQuill.getLength() > 1 : false;
+      
+      // If no changes, close directly
+      if (!templateName && !templateSubject && !templateRecipients && !templateBody) {
+        const modal = document.getElementById('emailTemplateModal');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+        console.log('[TEMPLATE] ✓ Modal closed');
+        return;
       }
       
-      // Clear form
-      document.getElementById('templateName').value = '';
-      document.getElementById('templateSubject').value = '';
-      document.getElementById('templateRecipients').value = '';
-      document.getElementById('templateBody').value = '';
-      
-      if (emailTemplateQuill) {
-        emailTemplateQuill.setContents([]);
+      // If changes exist, show confirmation
+      if (document.getElementById('closeEmailTemplateConfirmModal')) {
+        return;
       }
       
-      console.log('[TEMPLATE] ✓ Modal closed');
+      const modalHTML = `
+        <div id="closeEmailTemplateConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmEmailTemplateCancelBtn" 
+                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmEmailTemplateCloseBtn"
+                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      // Wire up the buttons
+      document.getElementById('confirmEmailTemplateCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeEmailTemplateConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmEmailTemplateCloseBtn').addEventListener('click', function() {
+        const modal = document.getElementById('emailTemplateModal');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+        
+        // Clear form
+        document.getElementById('templateName').value = '';
+        document.getElementById('templateSubject').value = '';
+        document.getElementById('templateRecipients').value = '';
+        document.getElementById('templateBody').value = '';
+        
+        if (emailTemplateQuill) {
+          emailTemplateQuill.setContents([]);
+        }
+        
+        const confirmDiv = document.getElementById('closeEmailTemplateConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
     };
     
     // Submit Email Template
@@ -7745,25 +7987,25 @@
       
       // Validate required fields
       if (!templateName) {
-        alert('⚠️ Please enter a template name');
+        showNotification('⚠️ Please enter a template name', 'error');
         document.getElementById('templateName').focus();
         return;
       }
       
       if (!templateSubject) {
-        alert('⚠️ Please enter an email subject');
+        showNotification('⚠️ Please enter an email subject', 'error');
         document.getElementById('templateSubject').focus();
         return;
       }
       
       if (!templateRecipients) {
-        alert('⚠️ Please select recipient type');
+        showNotification('⚠️ Please select recipient type', 'error');
         document.getElementById('templateRecipients').focus();
         return;
       }
       
       if (!templateBody || templateBody.ops.length === 0) {
-        alert('⚠️ Please enter email body content');
+        showNotification('⚠️ Please enter email body content', 'error');
         emailTemplateQuill?.focus();
         return;
       }
@@ -7796,19 +8038,326 @@
         
         if (data.success) {
           console.log('[TEMPLATE] ✓ Template saved successfully');
-          alert('✓ Email template saved successfully!');
+          showNotification('✓ Email template saved successfully!', 'success');
           
           // Close modal and reload templates
           closeEmailTemplateModal();
           loadEmailTemplates();
         } else {
           console.error('[TEMPLATE] Save failed:', data.message);
-          alert('❌ Error: ' + (data.message || 'Failed to save template'));
+          showNotification('❌ Error: ' + (data.message || 'Failed to save template'), 'error');
         }
       })
       .catch(error => {
         console.error('[TEMPLATE] Submit error:', error);
-        alert('❌ Error submitting template: ' + error.message);
+        showNotification('❌ Error submitting template: ' + error.message, 'error');
+      });
+    };
+    
+    // Close Program Modal with Discard Changes confirmation
+    window.closeProgramModal = function() {
+      const entryType = document.getElementById('programEntryType').value.trim();
+      const week = document.getElementById('programWeek').value.trim();
+      const date = document.getElementById('programDate').value.trim();
+      const title = document.getElementById('programTitle').value.trim();
+      const notes = document.getElementById('programNotes').value.trim();
+      const flowTime = document.getElementById('programFlowTime').value.trim();
+      const flowLocation = document.getElementById('programFlowLocation').value.trim();
+      const flowActivity = document.getElementById('programFlowActivity').value.trim();
+      const flowTimeFrame = document.getElementById('programFlowTimeFrame').value.trim();
+      
+      if (!entryType && !week && !date && !title && !notes && !flowTime && !flowLocation && !flowActivity && !flowTimeFrame) {
+        document.getElementById('addProgramModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeProgramConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeProgramConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmProgramCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmProgramCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmProgramCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeProgramConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmProgramCloseBtn').addEventListener('click', function() {
+        document.getElementById('addProgramModal').classList.remove('active');
+        document.getElementById('programEntryType').value = '';
+        document.getElementById('programWeek').value = '';
+        document.getElementById('programDate').value = '';
+        document.getElementById('programTitle').value = '';
+        document.getElementById('programNotes').value = '';
+        const confirmDiv = document.getElementById('closeProgramConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+    };
+    
+    // Close Add Task Modal with Discard Changes confirmation
+    window.closeAddTaskModal = function() {
+      const dueDate = document.getElementById('taskDueDate').value.trim();
+      const taskName = document.getElementById('taskName').value.trim();
+      const remarks = document.getElementById('taskRemarks').value.trim();
+      
+      if (!dueDate && !taskName && !remarks) {
+        document.getElementById('addTaskModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeTaskConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeTaskConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmTaskCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmTaskCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmTaskCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeTaskConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmTaskCloseBtn').addEventListener('click', function() {
+        document.getElementById('addTaskModal').classList.remove('active');
+        document.getElementById('taskDueDate').value = '';
+        document.getElementById('taskName').value = '';
+        document.getElementById('taskRemarks').value = '';
+        const confirmDiv = document.getElementById('closeTaskConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+    };
+    
+    // Close Giveaway Modal with Discard Changes confirmation
+    window.closeGiveawayModal = function() {
+      const name = document.getElementById('giveawayName').value.trim();
+      const location = document.getElementById('giveawayLocation').value.trim();
+      const bundle = document.getElementById('giveawayBundle').value.trim();
+      const price = document.getElementById('giveawayPrice').value.trim();
+      const reference = document.getElementById('giveawayReference').value.trim();
+      const leadTime = document.getElementById('giveawayLeadTime').value.trim();
+      const info = document.getElementById('giveawayFurtherInfo').value.trim();
+      
+      if (!name && !location && !bundle && !price && !reference && !leadTime && !info) {
+        document.getElementById('addGiveawayModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeGiveawayConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeGiveawayConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmGiveawayCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmGiveawayCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmGiveawayCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeGiveawayConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmGiveawayCloseBtn').addEventListener('click', function() {
+        document.getElementById('addGiveawayModal').classList.remove('active');
+        document.getElementById('giveawayName').value = '';
+        document.getElementById('giveawayLocation').value = '';
+        document.getElementById('giveawayBundle').value = '';
+        document.getElementById('giveawayPrice').value = '';
+        document.getElementById('giveawayReference').value = '';
+        document.getElementById('giveawayLeadTime').value = '';
+        document.getElementById('giveawayFurtherInfo').value = '';
+        const confirmDiv = document.getElementById('closeGiveawayConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+    };
+    
+    // Close Add Logistics Modal with Discard Changes confirmation
+    window.closeAddLogisticsModal = function() {
+      const category = document.getElementById('logisticsCategory').value.trim();
+      const item = document.getElementById('logisticsItem').value.trim();
+      const partner = document.getElementById('logisticsPartner').value.trim();
+      const notes = document.getElementById('logisticsNotes').value.trim();
+      
+      if (!category && !item && !partner && !notes) {
+        document.getElementById('addLogisticsModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeLogisticsConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeLogisticsConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmLogisticsCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmLogisticsCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmLogisticsCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeLogisticsConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmLogisticsCloseBtn').addEventListener('click', function() {
+        document.getElementById('addLogisticsModal').classList.remove('active');
+        document.getElementById('logisticsCategory').value = '';
+        document.getElementById('logisticsItem').value = '';
+        document.getElementById('logisticsPartner').value = '';
+        document.getElementById('logisticsNotes').value = '';
+        const confirmDiv = document.getElementById('closeLogisticsConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+    };
+    
+    // Close Add Expense Modal with Discard Changes confirmation
+    window.closeAddExpenseModal = function() {
+      const description = document.getElementById('expenseDescription').value.trim();
+      const unitPrice = document.getElementById('expenseUnitPrice').value.trim();
+      
+      if (!description && !unitPrice) {
+        document.getElementById('addExpenseModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeExpenseConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeExpenseConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmExpenseCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmExpenseCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmExpenseCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeExpenseConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmExpenseCloseBtn').addEventListener('click', function() {
+        document.getElementById('addExpenseModal').classList.remove('active');
+        document.getElementById('expenseDescription').value = '';
+        document.getElementById('expenseQuantity').value = '1';
+        document.getElementById('expenseUnitPrice').value = '';
+        const confirmDiv = document.getElementById('closeExpenseConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+    };
+    
+    // Close Add Attendee Modal with Discard Changes confirmation
+    window.closeAddAttendeeModal = function() {
+      const firstName = document.getElementById('addAttendeeFirstName').value.trim();
+      const middleName = document.getElementById('addAttendeeMiddleName').value.trim();
+      const surname = document.getElementById('addAttendeeSurname').value.trim();
+      const company = document.getElementById('addAttendeeCompany').value.trim();
+      const jobTitle = document.getElementById('addAttendeeJobTitle').value.trim();
+      const email = document.getElementById('addAttendeeEmail').value.trim();
+      const phone = document.getElementById('addAttendeePhone').value.trim();
+      
+      if (!firstName && !middleName && !surname && !company && !jobTitle && !email && !phone) {
+        document.getElementById('addAttendeeModal').classList.remove('active');
+        return;
+      }
+      
+      if (document.getElementById('closeAttendeeConfirmModal')) return;
+      
+      const modalHTML = `
+        <div id="closeAttendeeConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
+                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <button type="button" id="confirmAttendeeCancelBtn" class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button type="button" id="confirmAttendeeCloseBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">Close</button>
+                </div>
+            </div>
+        </div>
+      `;
+      
+      const modalContainer = document.createElement('div');
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer.firstElementChild);
+      
+      document.getElementById('confirmAttendeeCancelBtn').addEventListener('click', function() {
+        const confirmDiv = document.getElementById('closeAttendeeConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
+      });
+      
+      document.getElementById('confirmAttendeeCloseBtn').addEventListener('click', function() {
+        document.getElementById('addAttendeeModal').classList.remove('active');
+        document.getElementById('addAttendeeFirstName').value = '';
+        document.getElementById('addAttendeeMiddleName').value = '';
+        document.getElementById('addAttendeeSurname').value = '';
+        document.getElementById('addAttendeeCompany').value = '';
+        document.getElementById('addAttendeeJobTitle').value = '';
+        document.getElementById('addAttendeeEmail').value = '';
+        document.getElementById('addAttendeePhone').value = '';
+        const confirmDiv = document.getElementById('closeAttendeeConfirmModal');
+        if (confirmDiv) confirmDiv.remove();
       });
     };
     
@@ -7895,18 +8444,20 @@
       try {
         const bodyContent = typeof template.body === 'string' ? JSON.parse(template.body) : template.body;
         if (bodyContent && bodyContent.ops) {
-          bodySummary = bodyContent.ops.map(op => op.insert || '').join('').substring(0, 150);
+          const fullText = bodyContent.ops.map(op => op.insert || '').join('');
+          bodySummary = fullText.substring(0, 40) + (fullText.length > 40 ? '...' : '');
         }
       } catch (e) {
-        bodySummary = String(template.body || '').substring(0, 150);
+        const fullText = String(template.body || '');
+        bodySummary = fullText.substring(0, 40) + (fullText.length > 40 ? '...' : '');
       }
       
       card.innerHTML = `
         <div style="margin-bottom: 16px;">
           <h3 style="font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: -0.3px;">${template.template_name || 'Untitled'}</h3>
-          <p style="font-size: 13px; color: #6b7280; margin: 0; font-weight: 500;">Subject: ${template.subject || 'No subject'}</p>
+          <p style="font-size: 13px; color: #6b7280; margin: 0; font-weight: 500;">Subject: ${template.subject ? (template.subject.length > 30 ? template.subject.substring(0, 30) + '...' : template.subject) : 'No subject'}</p>
         </div>
-        <div style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); padding: 14px 16px; border-radius: 8px; margin-bottom: 0; font-size: 13px; color: #555; line-height: 1.6; min-height: 55px; max-height: 75px; overflow: hidden; border-left: 4px solid #559CDA;">
+        <div style="background: #f5f5f5; padding: 14px 16px; border-radius: 8px; margin-bottom: 0; font-size: 13px; color: #555; line-height: 1.6; min-height: 55px; max-height: 75px; overflow: hidden;">
           ${bodySummary}
         </div>
         <div style="padding-top: 12px; margin-top: 12px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #9ca3af;">

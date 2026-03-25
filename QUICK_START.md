@@ -1,4 +1,4 @@
-# 🚀 EMAIL CONFIGURATION - QUICK START
+ 🚀 EMAIL CONFIGURATION - QUICK START
 
 **⏱️ Time to activate: 5 minutes**
 

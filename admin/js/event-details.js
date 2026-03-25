@@ -157,6 +157,9 @@ function getImageUrl(imagePath) {
 
 // Navigation function to go back to Events List
 function backToEventsList() {
+    // Clear saved event details when going back to list
+    localStorage.removeItem('adminCurrentEventId');
+    localStorage.removeItem('adminCurrentEventTab');
     window.location.href = 'index.html?page=events';
 }
 
@@ -196,7 +199,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateTabVisibility();
     
     const params = new URLSearchParams(window.location.search);
-    currentEventId = params.get('id');
+    
+    // Check if event ID is in URL first, then fall back to localStorage
+    let eventIdFromUrl = params.get('id');
+    let eventIdFromStorage = localStorage.getItem('adminCurrentEventId');
+    
+    // If no ID in URL but we have one saved, use the saved one
+    if (!eventIdFromUrl && eventIdFromStorage) {
+        eventIdFromUrl = eventIdFromStorage;
+        // Update the URL to include the event ID so it's visible in address bar
+        window.history.replaceState({}, '', `index.html?page=events&id=${eventIdFromUrl}`);
+    }
+    
+    currentEventId = eventIdFromUrl;
     window.currentEventId = currentEventId;  // Also set on window object for cross-module access
     
     if (!currentEventId) {
@@ -376,6 +391,9 @@ function loadEventDetails() {
             console.log('Event data received:', data);
             if (data.success && data.data) {
                 console.log('✓ Event found:', data.data.event_name);
+                // Save current event ID to localStorage for session persistence
+                localStorage.setItem('adminCurrentEventId', currentEventId);
+                localStorage.setItem('adminCurrentEventTab', 'details'); // Default to details tab
                 displayEventDetails(data.data);
                 loadEventTasks(); // Load tasks after event details are displayed
                 loadAttendees(); // Load attendees after event details are displayed
@@ -548,6 +566,13 @@ function displayEventDetails(event) {
         try {
             loadDashboard(currentEventId);
         } catch (e) { console.error('Error loading dashboard:', e); }
+        
+        // Restore the previously viewed tab after all data is loaded
+        setTimeout(() => {
+            const savedTab = localStorage.getItem('adminCurrentEventTab') || 'details';
+            console.log('🔄 Restoring saved tab:', savedTab);
+            switchTab(savedTab);
+        }, 300);
     }, 500);
 }
 
@@ -557,6 +582,11 @@ function displayEventDetails(event) {
 function switchTab(tabName) {
     try {
         console.log('🔀 Switching to tab:', tabName);
+        
+        // Save current tab to localStorage for session persistence
+        if (currentEventId) {
+            localStorage.setItem('adminCurrentEventTab', tabName);
+        }
         
         // Hide all tabs
         document.querySelectorAll('.event-tab-content').forEach(tab => {
@@ -1213,16 +1243,25 @@ window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
 function getStatusColor(status) {
     const statusLower = (status || '').toLowerCase();
     
-    if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
-        return 'bg-green-100 text-green-800';
-    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
-        return 'bg-blue-100 text-blue-800';
+    // Logistics statuses with color coding
+    if (statusLower === 'delivered' || statusLower === 'received') {
+        return 'bg-green-100 text-green-800';  // Green: Completed
+    } else if (statusLower === 'in transit' || statusLower === 'in-transit') {
+        return 'bg-blue-100 text-blue-800';  // Blue: In Progress
+    } else if (statusLower === 'packed') {
+        return 'bg-purple-100 text-purple-800';  // Purple: Ready to go
+    } else if (statusLower === 'scheduled') {
+        return 'bg-orange-100 text-orange-800';  // Orange: Scheduled
     } else if (statusLower === 'pending') {
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800';  // Yellow: Awaiting action
     } else if (statusLower === 'cancelled' || statusLower === 'canceled') {
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800';  // Red: Cancelled
+    } else if (statusLower === 'completed' || statusLower === 'done' || statusLower === 'finished') {
+        return 'bg-green-100 text-green-800';  // Green: Completed
+    } else if (statusLower === 'in progress' || statusLower === 'in-progress' || statusLower === 'ongoing') {
+        return 'bg-blue-100 text-blue-800';  // Blue: In Progress
     } else {
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800';  // Gray: Unknown
     }
 }
 window.getStatusColor = getStatusColor;
@@ -3744,12 +3783,12 @@ function renderLogisticsTable(items) {
     
     tbody.innerHTML = items.map(item => {
         const statusColors = {
-            'Pending': '#fbbf24',
-            'In Transit': '#3b82f6',
-            'Packed': '#60a5fa',
-            'Delivered': '#10b981',
-            'Received': '#10b981',
-            'Scheduled': '#f59e0b'
+            'Pending': '#FBBF24',      // Yellow - awaiting action
+            'In Transit': '#3B82F6',    // Blue - in progress
+            'Packed': '#A78BFA',        // Purple - ready to go
+            'Delivered': '#10B981',     // Green - completed
+            'Received': '#10B981',      // Green - completed
+            'Scheduled': '#F59E0B'      // Orange - scheduled
         };
         
         const statusColor = statusColors[item.status] || '#666';

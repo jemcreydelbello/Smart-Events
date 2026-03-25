@@ -3050,7 +3050,9 @@ function renderEventAttendeesTab(event) {
             <button onclick="exportEventAttendees('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Export</button>
             
             <!-- Add Button -->
-            <button onclick="addEventAttendee('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">+ Add</button>
+            <button onclick="addEventAttendee('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+            </button>
           </div>
         </div>
 
@@ -5290,7 +5292,10 @@ function renderEventTasksTab(event) {
           </div>
           
           <!-- Right: Add Task Button -->
-          <button onclick="addEventTask('${event.event_id}')" style="padding: 8px 24px; background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); color: white; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Add Task</button>
+          <button onclick="addEventTask('${event.event_id}')" style="padding: 8px 14px; background: #1E73BB; color: white; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="#ffffff" fill-rule="evenodd" clip-rule="evenodd"><path d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m10-8a8 8 0 1 0 0 16a8 8 0 0 0 0-16"></path><path d="M13 7a1 1 0 1 0-2 0v4H7a1 1 0 1 0 0 2h4v4a1 1 0 1 0 2 0v-4h4a1 1 0 1 0 0-2h-4z"></path></g></svg>
+            Add Task
+          </button>
         </div>
 
         <!-- Tasks List View (Default) -->
@@ -5512,8 +5517,8 @@ function renderEventTasksTable(tasks, tableBody) {
             </td>
             <td style="padding: 12px 16px; color: #4b5563; font-size: 14px; word-break: break-word; overflow-wrap: break-word;">${escapeHtml(task.remarks || '-')}</td>
             <td style="padding: 12px 16px; text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; height: 100%; min-height: 36px;">
-                <button onclick="editEventTask(${task.task_id})" style="background: none; border: 1px solid #3b82f6; color: #3b82f6; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e40af'" onmouseout="this.style.background='none'; this.style.borderColor='#3b82f6'" title="Edit task">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+                <button onclick="editEventTask(${task.task_id})" style="background: none; border: 1px solid #1e73bb; color: #1e73bb; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e73bb'" onmouseout="this.style.background='none'; this.style.borderColor='#1e73bb'" title="Edit task">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                 </button>
                 <button onclick="deleteEventTask(${task.task_id})" style="background: none; border: 1px solid #ef4444; color: #ef4444; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'" onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'" title="Delete task">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -6028,7 +6033,38 @@ function _forceCloseCreateEventModal() {
 }
 
 function requestCloseCreateEventModal() {
-    console.log('User clicked outside modal - showing confirmation');
+    console.log('User clicked to close modal - checking for unsaved changes');
+    
+    // Get the form and check if it has any input
+    const form = document.getElementById('createEventForm');
+    if (!form) {
+        console.log('Form not found, closing directly');
+        _forceCloseCreateEventModal();
+        return false;
+    }
+    
+    // Check if form has any unsaved changes - get all form inputs
+    const formData = new FormData(form);
+    let hasChanges = false;
+    
+    // Check each form field for non-empty values
+    for (let [key, value] of formData.entries()) {
+        if (value && value.trim() !== '') {
+            hasChanges = true;
+            console.log('Form has changes in field:', key);
+            break;
+        }
+    }
+    
+    // If no changes, close directly without confirmation
+    if (!hasChanges) {
+        console.log('✓ No unsaved changes detected, closing directly');
+        _forceCloseCreateEventModal();
+        return false;
+    }
+    
+    // If changes exist, show confirmation dialog
+    console.log('! Unsaved changes detected, showing confirmation');
     
     // Check if confirmation modal already exists
     if (document.getElementById('closeEventConfirmModal')) {
@@ -12636,8 +12672,8 @@ function displayEventOtherInfo(metadata) {
             <td class="px-4 py-2.5 text-sm text-gray-900">${escapeHtml(item.field_name)}</td>
             <td class="px-4 py-2.5 text-sm text-gray-700">${escapeHtml(item.field_value)}</td>
             <td class="px-4 py-2.5 text-right text-sm space-x-2 flex justify-end gap-2">
-                <button class="action-btn" title="Edit Other Information" onclick="openEditOtherInfoModal(${item.metadata_id}, '${fieldNameEscaped}', '${fieldValueEscaped}')" style="padding: 6px; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#5a5f68" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"/><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"/></g></svg>
+                <button class="action-btn" title="Edit Other Information" onclick="openEditOtherInfoModal(${item.metadata_id}, '${fieldNameEscaped}', '${fieldValueEscaped}')" style="padding: 6px; background: white; border: 1px solid #1e73bb; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"/><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"/></g></svg>
                 </button>
                 <button class="action-btn" title="Delete Other Information" onclick="deleteOtherInfo(${item.metadata_id})" style="padding: 6px; background: white; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"/></svg>
@@ -12660,8 +12696,8 @@ function displayEventOtherInfo(metadata) {
                 this.style.backgroundColor = '#fef2f2';
                 this.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)';
             } else {
-                this.style.backgroundColor = '#f3f4f6';
-                this.style.boxShadow = '0 4px 12px rgba(107, 114, 128, 0.2)';
+                this.style.backgroundColor = '#eff6ff';
+                this.style.boxShadow = '0 4px 12px rgba(30, 115, 187, 0.2)';
             }
         });
         btn.addEventListener('mouseout', function() {
@@ -13418,14 +13454,14 @@ function renderProgramTimeline(items) {
                 </div>
                 <div class="flex gap-1.5 items-center">
                     <button onclick="editProgramTimeline(${item.timeline_id})" 
-                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; justify-content: center; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #1e73bb; color: #1e73bb; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                             title="Edit timeline item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                     </button>
                     <button onclick="deleteProgramTimeline(${item.timeline_id})" 
-                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; justify-content: center; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #ef4444; color: #ef4444; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                             title="Delete timeline item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"></path></svg>
                     </button>
                 </div>
             </div>
@@ -13452,14 +13488,14 @@ function renderProgramFlow(items) {
             <td class="px-4 py-3 text-center text-sm">
                 <div style="display: flex; gap: 8px; justify-content: center;">
                     <button onclick="editProgramFlow(${item.flow_id})" 
-                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #1e73bb; color: #1e73bb; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px;" 
                             title="Edit program flow item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g class="edit-outline"><g fill="currentColor" fill-rule="evenodd" class="Vector" clip-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></g></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                     </button>
                     <button onclick="deleteProgramFlow(${item.flow_id})" 
-                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #ef4444; color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px;" 
                             title="Delete program flow item">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"></path></svg>
                     </button>
                 </div>
             </td>
@@ -14202,22 +14238,14 @@ function renderGiveawaysTable(items) {
             <td class="px-6 py-4 text-center">
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                     <button onclick="editGiveaway(${item.giveaway_id})" 
-                            style="padding: 6px 10px; background: none; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
-                            onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#1e40af'"
-                            onmouseout="this.style.background='none'; this.style.borderColor='#3b82f6'"
+                            style="background: white; border: 1px solid #1e73bb; color: #1e73bb; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                             title="Edit giveaway">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                     </button>
                     <button onclick="deleteGiveaway(${item.giveaway_id})" 
-                            style="padding: 6px 10px; background: none; border: 1px solid #ef4444; color: #ef4444; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0px; font-size: 13px; font-weight: 600; transition: all 0.2s; width: 36px; height: 36px;" 
-                            onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#dc2626'"
-                            onmouseout="this.style.background='none'; this.style.borderColor='#ef4444'"
+                            style="background: white; border: 1px solid #ef4444; color: #ef4444; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                             title="Delete giveaway">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"></path></svg>
                     </button>
                 </div>
             </td>
@@ -14535,14 +14563,14 @@ function renderLogisticsTable(items) {
             <td class="px-4 py-3 text-sm text-gray-700" title="${escapeHtml(item.notes || '')}">${(item.notes || '').substring(0, 30)}${(item.notes || '').length > 30 ? '...' : ''}</td>
             <td class="px-4 py-3 text-center text-sm flex gap-2 justify-center">
                 <button onclick="editLogistics(${item.logistics_id})" 
-                        style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
+                        style="background: white; border: 1px solid #1e73bb; color: #1e73bb; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                         title="Edit">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                 </button>
                 <button onclick="deleteLogistics(${item.logistics_id})" 
-                        style="background: transparent; border: none; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center;" 
+                        style="background: white; border: 1px solid #ef4444; color: #ef4444; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px;" 
                         title="Delete">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"></path></svg>
                 </button>
             </td>
         </tr>
@@ -15082,14 +15110,14 @@ function renderExpensesTable(items) {
             <td class="px-4 py-3 text-center text-sm">
                 <div style="display: flex; gap: 8px; justify-content: center;">
                     <button onclick="editExpense(${item.expense_id})" 
-                            style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #1e73bb; color: #1e73bb; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px;" 
                             title="Edit">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M2 6.857A4.857 4.857 0 0 1 6.857 2H12a1 1 0 1 1 0 2H6.857A2.857 2.857 0 0 0 4 6.857v10.286A2.857 2.857 0 0 0 6.857 20h10.286A2.857 2.857 0 0 0 20 17.143V12a1 1 0 1 1 2 0v5.143A4.857 4.857 0 0 1 17.143 22H6.857A4.857 4.857 0 0 1 2 17.143z"/><path d="m15.137 13.219l-2.205 1.33l-1.033-1.713l2.205-1.33l.003-.002a1.2 1.2 0 0 0 .232-.182l5.01-5.036a3 3 0 0 0 .145-.157c.331-.386.821-1.15.228-1.746c-.501-.504-1.219-.028-1.684.381a6 6 0 0 0-.36.345l-.034.034l-4.94 4.965a1.2 1.2 0 0 0-.27.41l-.824 2.073a.2.2 0 0 0 .29.245l1.032 1.713c-1.805 1.088-3.96-.74-3.18-2.698l.825-2.072a3.2 3.2 0 0 1 .71-1.081l4.939-4.966l.029-.029c.147-.15.641-.656 1.24-1.02c.327-.197.849-.458 1.494-.508c.74-.059 1.53.174 2.15.797a2.9 2.9 0 0 1 .845 1.75a3.15 3.15 0 0 1-.23 1.517c-.29.717-.774 1.244-.987 1.457l-5.01 5.036q-.28.281-.62.487m4.453-7.126s-.004.003-.013.006z"/></g></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="#1e73bb" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M19.09 14.441v4.44a2.37 2.37 0 0 1-2.369 2.369H5.12a2.37 2.37 0 0 1-2.369-2.383V7.279a2.356 2.356 0 0 1 2.37-2.37H9.56"></path><path d="M6.835 15.803v-2.165c.002-.357.144-.7.395-.953l9.532-9.532a1.36 1.36 0 0 1 1.934 0l2.151 2.151a1.36 1.36 0 0 1 0 1.934l-9.532 9.532a1.36 1.36 0 0 1-.953.395H8.197a1.36 1.36 0 0 1-1.362-1.362M19.09 8.995l-4.085-4.086"></path></g></svg>
                     </button>
                     <button onclick="deleteExpense(${item.expense_id})" 
-                            style="background: transparent; border: 1px solid #ef5350; color: #ef5350; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 4px;" 
+                            style="background: white; border: 1px solid #ef4444; color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px;" 
                             title="Delete">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 12 12"><path fill="currentColor" d="M5 3h2a1 1 0 0 0-2 0M4 3a2 2 0 1 1 4 0h2.5a.5.5 0 0 1 0 1h-.441l-.443 5.17A2 2 0 0 1 7.623 11H4.377a2 2 0 0 1-1.993-1.83L1.941 4H1.5a.5.5 0 0 1 0-1zm3.5 3a.5.5 0 0 0-1 0v2a.5.5 0 0 0 1 0zM5 5.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5M3.38 9.085a1 1 0 0 0 .997.915h3.246a1 1 0 0 0 .996-.915L9.055 4h-6.11z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ef4444" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zm-6.287 10.713Q11 16.425 11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17t.713-.288m4 0Q15 16.426 15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17t.713-.288M7 6v13z"></path></svg>
                     </button>
                 </div>
             </td>
