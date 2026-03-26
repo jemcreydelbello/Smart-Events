@@ -620,6 +620,17 @@ function switchTab(tabName) {
         });
         
         // Load data when specific tabs are clicked
+        if (tabName === 'dashboard') {
+            console.log('✓ Loading dashboard tab... currentEventId:', currentEventId);
+            if (currentEventId) {
+                console.log('  → Calling loadDashboard()');
+                loadDashboard(currentEventId);
+                console.log('  → Dashboard tab fully loaded');
+            } else {
+                console.error('  ❌ No currentEventId available');
+            }
+        }
+        
         if (tabName === 'tasks') {
             console.log('✓ Loading tasks tab...');
             loadEventTasks();
@@ -1196,6 +1207,9 @@ function loadDashboard(eventId) {
     console.log('[Dashboard] API_BASE:', API_BASE);
     console.log('[Dashboard] Headers:', getUserHeaders());
     
+    // Store event object for passing to timeline and other functions
+    let eventObj = null;
+    
     // Fetch attendees first for accurate registration stats
     fetch(`${API_BASE}/participants.php?action=list&event_id=${eventId}`, {
         headers: getUserHeaders()
@@ -1218,6 +1232,7 @@ function loadDashboard(eventId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                eventObj = data.data;  // Store event object
                 updateDashboardKPIs(data.data);
             }
         })
@@ -1284,9 +1299,15 @@ function loadDashboard(eventId) {
             updateDashboardTasks([]);
         });
     
-    // Initialize other dashboard sections with sample data for now
+    // Initialize other dashboard sections
     updateDashboardEmails();
-    loadDashboardTimeline(currentEventId);
+    
+    // Load timeline and logistics items - delay slightly to allow event object to be fetched
+    setTimeout(() => {
+        console.log('📊 Loading timeline and logistics items (with eventObj:', !!eventObj, ')');
+        loadDashboardTimeline(eventId, eventObj);
+        loadDashboardLogisticsItems(eventId);
+    }, 300);
 }
 
 function updateDashboardKPIs(event) {
@@ -1337,13 +1358,13 @@ function updateDashboardLogistics(logisticsData) {
         }
         
         const totalItems = logisticsData.length;
-        const completedItems = logisticsData.filter(item => {
+        const receivedItems = logisticsData.filter(item => {
             const status = item.status ? item.status.toLowerCase() : '';
-            return status === 'completed' || status === 'done' || status === 'finished';
+            return status === 'received';
         }).length;
         
         // Calculate percentage (0% if no items)
-        const readinessPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        const readinessPercent = totalItems > 0 ? Math.round((receivedItems / totalItems) * 100) : 0;
         
         const dashLogistics = document.getElementById('dashLogistics');
         const dashLogisticsDetail = document.getElementById('dashLogisticsDetail');
@@ -1358,11 +1379,114 @@ function updateDashboardLogistics(logisticsData) {
             console.log('[KPI] Logistics detail updated to: ' + totalItems + ' items');
         }
         
-        console.log('📦 Logistics KPI Updated: ' + readinessPercent + '% (' + totalItems + ' items, ' + completedItems + ' completed)');
+        console.log('📦 Logistics KPI Updated: ' + readinessPercent + '% (' + totalItems + ' items, ' + receivedItems + ' received)');
     } catch (error) {
         console.error('[KPI] Error updating logistics:', error);
     }
 }
+
+// Load and display logistics items list
+function loadDashboardLogisticsItems(eventId) {
+    console.log('📦 [CALL] loadDashboardLogisticsItems called with eventId:', eventId);
+    
+    if (!eventId) {
+        console.warn('⚠️  loadDashboardLogisticsItems: No eventId provided');
+        return;
+    }
+    
+    const listContainer = document.getElementById('logisticsItemsList');
+    console.log('📦 [CHECK] logisticsItemsList container found:', !!listContainer);
+    
+    if (!listContainer) {
+        console.warn('⚠️  logisticsItemsList container not found');
+        return;
+    }
+    
+    const apiUrl = `${API_BASE}/logistics.php?action=list&event_id=${eventId}`;
+    console.log('📦 [API] Fetching from:', apiUrl);
+    
+    fetch(apiUrl, {
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('📦 [RESPONSE] Status:', response.status, 'OK:', response.ok);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📦 [DATA] Received:', data);
+            
+            if (!data.success) {
+                console.warn('📦 [WARN] API returned success=false:', data.message);
+                listContainer.innerHTML = '<p style="padding: 10px; color: #999;">No data available</p>';
+                return;
+            }
+            
+            if (!data.data || data.data.length === 0) {
+                console.log('📦 [INFO] No logistics items in database');
+                listContainer.innerHTML = '<p style="padding: 10px; color: #999;">No logistics items</p>';
+                return;
+            }
+            
+            console.log('📦 [RENDER] Rendering', data.data.length, 'items');
+            
+            // Build HTML for each logistics item
+            const itemsHTML = data.data.map(item => {
+                const statusColor = getLogisticsStatusColor(item.status);
+                const truncatedItem = item.item ? (item.item.length > 30 ? item.item.substring(0, 27) + '...' : item.item) : 'Unknown';
+                
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 13px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">${truncatedItem}</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 2px;">
+                                ${item.category || 'N/A'} • Qty: ${item.quantity || 0}
+                            </div>
+                        </div>
+                        <div style="margin-left: 10px; padding: 4px 8px; background: ${statusColor}; color: white; border-radius: 3px; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                            ${item.status || 'Unknown'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            listContainer.innerHTML = itemsHTML;
+            console.log('✅ Logistics items rendered:', data.data.length, 'items');
+        })
+        .catch(error => {
+            console.error('❌ Error loading logistics items:', error);
+            const container = document.getElementById('logisticsItemsList');
+            if (container) {
+                container.innerHTML = '<p style="padding: 10px; color: red;">Error: ' + error.message + '</p>';
+            }
+        });
+}
+
+// Helper function to get status color
+function getLogisticsStatusColor(status) {
+    if (!status) return '#999';
+    
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+        case 'received':
+            return '#4caf50'; // Green
+        case 'pending':
+            return '#ff9800'; // Orange/Yellow
+        case 'in transit':
+            return '#2196f3'; // Blue
+        case 'delayed':
+            return '#f44336'; // Red
+        default:
+            return '#999'; // Gray
+    }
+}
+
+// Export functions globally for use elsewhere
+window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
+window.getLogisticsStatusColor = getLogisticsStatusColor;
+window.loadDashboard = loadDashboard;
 
 function updateDashboardAttendees(attendees) {
     if (!attendees) {
@@ -1446,9 +1570,6 @@ function updateDashboardTasks(tasks) {
     `;
     
     document.getElementById('taskStatusTotal').textContent = `${total} total tasks`;
-    
-    // Load Logistics Items for Dashboard
-    loadDashboardLogisticsItems(currentEventId);
 }
 
 function updateDashboardEmails() {
@@ -1563,14 +1684,20 @@ function updateDashboardEmails() {
 }
 
 function loadDashboardTimeline(eventId, eventObj) {
+    console.log('📅 [CALL] loadDashboardTimeline called with eventId:', eventId, 'eventObj:', eventObj);
+    
     if (!eventId) {
         console.warn('⚠️ loadDashboardTimeline: No eventId provided');
         return;
     }
     
-    const headers = getUserHeaders ? getUserHeaders() : {
-        'Content-Type': 'application/json'
-    };
+    const container = document.getElementById('timelineList');
+    console.log('📅 [CHECK] timelineList container found:', !!container);
+    
+    if (!container) {
+        console.warn('⚠️ timelineList container not found');
+        return;
+    }
     
     // Get event date from the eventObj parameter (passed from displayEventDetailsData)
     let eventDate = new Date();
@@ -1578,61 +1705,76 @@ function loadDashboardTimeline(eventId, eventObj) {
         eventDate = new Date(eventObj.event_date);
     }
     
+    const apiUrl = `${API_BASE}/program.php?action=list-timeline&event_id=${eventId}`;
+    console.log('📅 [API] Fetching from:', apiUrl);
+    
     // Fetch timeline items
-    fetch(`${API_BASE || '../api'}/program.php?action=list-timeline&event_id=${eventId}`, { headers })
-        .then(response => response.json())
+    fetch(apiUrl, { 
+        headers: getUserHeaders()
+    })
+        .then(response => {
+            console.log('📅 [RESPONSE] Status:', response.status, 'OK:', response.ok);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            console.log('📅 Timeline items loaded:', data);
+            console.log('📅 [DATA] Received:', data);
             
-            const container = document.getElementById('timelineList');
-            if (!container) {
-                console.warn('⚠️ timelineList container not found');
+            if (!data.success) {
+                console.warn('📅 [WARN] API returned success=false:', data.message);
+                container.innerHTML = '<p style="padding: 10px; color: #999;">No data available</p>';
                 return;
             }
             
-            if (data.success && data.data && data.data.length > 0) {
-                const items = data.data;
-                let html = '';
-                
-                items.forEach(item => {
-                    const weekNum = item.week_number || '-';
-                    const activity = item.activity || item.description || '-';
-                    const status = item.status || 'Pending';
-                    const statusClass = getTimelineStatusColor(status);
-                    
-                    // Only show status badge if it's NOT Pending
-                    const statusBadge = status.toLowerCase() !== 'pending' 
-                        ? `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`
-                        : '';
-                    
-                    // Calculate month and year based on event date
-                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                                       'July', 'August', 'September', 'October', 'November', 'December'];
-                    const month = monthNames[eventDate.getMonth()];
-                    const year = eventDate.getFullYear();
-                    
-                    html += `
-                        <div class="flex justify-between items-start p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
-                            <div class="flex-1">
-                                <div class="font-semibold text-gray-900">Week ${weekNum} in Month of ${month} ${year}</div>
-                                <div class="text-sm text-gray-700 mt-1">${activity}</div>
-                            </div>
-                            ${statusBadge}
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = html;
-                console.log('✅ Timeline items displayed:', items.length, 'items');
-            } else {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">No timeline items yet</p>';
+            if (!data.data || data.data.length === 0) {
+                console.log('📅 [INFO] No timeline items in database');
+                container.innerHTML = '<p style="padding: 10px; color: #999;">No timeline items</p>';
+                return;
             }
+            
+            console.log('📅 [RENDER] Rendering', data.data.length, 'timeline items');
+            
+            const items = data.data;
+            let html = '';
+            
+            items.forEach(item => {
+                const weekNum = item.week_number || '-';
+                const activity = item.activity || item.description || '-';
+                const status = item.status || 'Pending';
+                const statusClass = getTimelineStatusColor(status);
+                
+                // Only show status badge if it's NOT Pending
+                const statusBadge = status.toLowerCase() !== 'pending' 
+                    ? `<span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${status}</span>`
+                    : '';
+                
+                // Calculate month and year based on event date
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                   'July', 'August', 'September', 'October', 'November', 'December'];
+                const month = monthNames[eventDate.getMonth()];
+                const year = eventDate.getFullYear();
+                
+                html += `
+                    <div class="flex justify-between items-start p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900">Week ${weekNum} in Month of ${month} ${year}</div>
+                            <div class="text-sm text-gray-700 mt-1">${activity}</div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            console.log('✅ Timeline items displayed:', items.length, 'items');
         })
         .catch(err => {
             console.error('❌ Error loading timeline items:', err);
-            const container = document.getElementById('timelineList');
-            if (container) {
-                container.innerHTML = '<p class="text-red-500 text-center py-4">Error loading timeline</p>';
+            const c = document.getElementById('timelineList');
+            if (c) {
+                c.innerHTML = '<p style="padding: 10px; color: red;">Error: ' + err.message + '</p>';
             }
         });
 }
@@ -4397,18 +4539,16 @@ function loadPostmortemData(eventId) {
     fetch(`${API_BASE}/postmortem.php?action=calculate&event_id=${eventId}`, {
         headers: getUserHeaders()
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('📊 Postmortem calculation:', data);
+    .then(response => {
+        console.log('📊 Postmortem API response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        return response.json();
     })
-    .catch(err => console.error('Error calculating postmortem:', err));
-    
-    // Fetch postmortem data from API
-    fetch(`${API_BASE}/postmortem.php?action=get&event_id=${eventId}`, {
-        headers: getUserHeaders()
-    })
-    .then(response => response.json())
     .then(data => {
+        console.log('📊 Postmortem data received:', data);
+        
         if (data.success && data.data) {
             const pm = data.data;
             
@@ -4486,6 +4626,79 @@ function loadPostmortemData(eventId) {
         console.error('❌ Error loading postmortem data:', err);
     });
 }
+
+// Load Postmortem Finance Summary
+function loadPostmortemFinanceSummary(eventId) {
+    if (!eventId) {
+        console.warn('⚠️ loadPostmortemFinanceSummary: No eventId provided');
+        return;
+    }
+    
+    const headers = getUserHeaders ? getUserHeaders() : {
+        'Content-Type': 'application/json'
+    };
+    
+    fetch(`${API_BASE || '../api'}/finance.php?action=list&event_id=${eventId}`, { headers })
+        .then(response => {
+            console.log('📊 Finance API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Finance Summary data loaded:', data);
+            
+            if (data.success) {
+                const budget = data.budget || 0;
+                const grandTotal = data.grand_total || 0;
+                const balance = budget - grandTotal;
+                
+                // Update Postmortem Finance Summary elements
+                const budgetElem = document.getElementById('postmortemFinanceBudget');
+                const expenseElem = document.getElementById('postmortemFinanceTotalExpense');
+                const balanceElem = document.getElementById('postmortemFinanceBalance');
+                const statusElem = document.getElementById('postmortemFinanceStatusNote');
+                
+                if (budgetElem) budgetElem.textContent = '₱' + budget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (expenseElem) expenseElem.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                if (balanceElem) {
+                    balanceElem.textContent = '₱' + Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    
+                    // Apply color coding
+                    if (balance > 0) {
+                        balanceElem.className = 'text-lg font-bold text-green-600';
+                    } else if (balance === 0) {
+                        balanceElem.className = 'text-lg font-bold text-orange-500';
+                    } else {
+                        balanceElem.className = 'text-lg font-bold text-red-600';
+                    }
+                }
+                
+                if (statusElem) {
+                    if (balance > 0) {
+                        const percentRemaining = ((balance / budget) * 100).toFixed(1);
+                        statusElem.textContent = `${percentRemaining}% of budget remaining - Good progress`;
+                        statusElem.className = 'text-sm text-green-600';
+                    } else if (balance === 0) {
+                        statusElem.textContent = 'Budget fully utilized';
+                        statusElem.className = 'text-sm text-orange-500';
+                    } else {
+                        const overBudgetAmount = Math.abs(balance);
+                        statusElem.textContent = `Over budget by ₱${overBudgetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - Action needed`;
+                        statusElem.className = 'text-sm text-red-600';
+                    }
+                }
+                
+                console.log('✅ Postmortem Finance Summary updated successfully');
+            }
+        })
+        .catch(err => {
+            console.error('❌ Error loading postmortem finance summary:', err);
+        });
+}
+window.loadPostmortemFinanceSummary = loadPostmortemFinanceSummary;
 
 // ============= ATTENDEES MANAGEMENT =============
 
@@ -5739,6 +5952,28 @@ console.log('✅ event-details.js fully loaded - switchTab function available:',
         console.log('✅ [WINDOW SETUP] window.switchTab assigned successfully');
     } else {
         console.error('❌ [WINDOW SETUP] switchTab function not found!');
+    }
+    
+    // Dashboard functions
+    if (typeof loadDashboard === 'function') {
+        window.loadDashboard = loadDashboard;
+        console.log('✅ [WINDOW SETUP] window.loadDashboard assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] loadDashboard function not found!');
+    }
+    
+    if (typeof loadDashboardLogisticsItems === 'function') {
+        window.loadDashboardLogisticsItems = loadDashboardLogisticsItems;
+        console.log('✅ [WINDOW SETUP] window.loadDashboardLogisticsItems assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] loadDashboardLogisticsItems function not found!');
+    }
+    
+    if (typeof loadDashboardTimeline === 'function') {
+        window.loadDashboardTimeline = loadDashboardTimeline;
+        console.log('✅ [WINDOW SETUP] window.loadDashboardTimeline assigned successfully');
+    } else {
+        console.error('❌ [WINDOW SETUP] loadDashboardTimeline function not found!');
     }
     
     // Task Coordinator Lookup Functions
