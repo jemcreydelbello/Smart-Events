@@ -1,4 +1,4 @@
-<?php
+=<?php
 // Output buffering to catch any unexpected output
 ob_start();
 
