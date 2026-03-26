@@ -3708,10 +3708,16 @@ function editLogistics(logisticsId) {
 }
 
 function deleteLogistics(logisticsId) {
-    if (!confirm('Are you sure you want to delete this logistics item?')) return;
+    window.pendingDeleteLogisticsId = logisticsId;
+    document.getElementById('deleteLogisticsModal').classList.add('active');
+}
+
+function confirmDeleteLogistics() {
+    const logisticsId = window.pendingDeleteLogisticsId;
     
     if (!currentEventId) {
         showNotification('No event selected', 'error');
+        document.getElementById('deleteLogisticsModal').classList.remove('active');
         return;
     }
     
@@ -3728,6 +3734,7 @@ function deleteLogistics(logisticsId) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteLogisticsModal').classList.remove('active');
         if (data.success) {
             showNotification('Logistics item deleted', 'success');
             loadLogistics();
@@ -4891,43 +4898,32 @@ function createOtherInformationModals() {
         </div>
 
         <!-- Delete Other Information Confirmation Modal -->
-        <div id="deleteOtherInformationModal" class="modal" style="z-index: 1000;" onclick="if(event.target.id === 'deleteOtherInformationModal') { document.getElementById('deleteOtherInformationModal').classList.remove('active'); }">
-            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #dc2626;">Delete Other Information</h2>
-                    <button type="button" onclick="document.getElementById('deleteOtherInformationModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">├ù</button>
+        <div id="deleteOtherInformationModal" class="modal" onclick="if(event.target.id === 'deleteOtherInformationModal') { document.getElementById('deleteOtherInformationModal').classList.remove('active'); }" style="z-index: 9999;">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+                <div style="padding: 24px 24px;">
+                    <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Information</h2>
+                    <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this information? This action cannot be undone.</p>
                 </div>
-                
-                <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to delete this information? This action cannot be undone.</p>
-                
-                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-                    <button type="button" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;" onclick="document.getElementById('deleteOtherInformationModal').classList.remove('active')">
-                        Cancel
-                    </button>
-                    <button type="button" style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;" onclick="confirmDeleteOtherInformation()">
-                        Delete
-                    </button>
+                <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('deleteOtherInformationModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+                    <button type="button" onclick="confirmDeleteOtherInformation()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
                 </div>
             </div>
         </div>
 
         <!-- Remove Coordinator Confirmation Modal -->
-        <div id="removeCoordinatorModal" class="modal" style="z-index: 1000;" onclick="if(event.target.id === 'removeCoordinatorModal') { document.getElementById('removeCoordinatorModal').classList.remove('active'); }">
-            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #dc2626;">Remove Coordinator</h2>
-                    <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; flex-shrink: 0;">├ù</button>
+        <div id="removeCoordinatorModal" class="modal" onclick="if(event.target.id === 'removeCoordinatorModal') { document.getElementById('removeCoordinatorModal').classList.remove('active'); }" style="z-index: 9999;">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+                <div style="padding: 24px 24px;">
+                    <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Remove Coordinator</h2>
+                    <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to remove this coordinator from the event? This action cannot be undone.</p>
                 </div>
-                
-                <p style="color: #6b7280; margin: 16px 0; font-size: 14px; line-height: 1.6;">Are you sure you want to remove this coordinator from the event? This action cannot be undone.</p>
-                
-                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-                    <button type="button" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')">
-                        Cancel
-                    </button>
-                    <button type="button" style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;" onclick="confirmRemoveCoordinator()">
-                        Remove
-                    </button>
+                <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+                    <button type="button" onclick="confirmRemoveCoordinator()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Remove</button>
+                </div>
+            </div>
+        </div>
                 </div>
             </div>
         </div>

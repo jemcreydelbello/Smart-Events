@@ -877,9 +877,12 @@
     };
 
     window.deleteLogReport = function(reportId) {
-      if (!confirm('Are you sure you want to delete this report?')) {
-        return;
-      }
+      window.pendingDeleteReportId = reportId;
+      document.getElementById('deleteLogReportModal').classList.add('active');
+    };
+
+    window.confirmDeleteLogReport = function() {
+      const reportId = window.pendingDeleteReportId;
       
       console.log('🗑️ Deleting report:', reportId);
       
@@ -901,6 +904,7 @@
       })
       .then(r => r.json())
       .then(data => {
+        document.getElementById('deleteLogReportModal').classList.remove('active');
         if (data.success) {
           console.log(' Report deleted successfully');
           window.loadLogReports();
@@ -911,6 +915,7 @@
       .catch(err => {
         console.error('Error deleting report:', err);
         alert('Error deleting report: ' + err.message);
+        document.getElementById('deleteLogReportModal').classList.remove('active');
       });
     };
 
@@ -920,12 +925,6 @@
         alert('Report ID not found');
         return;
       }
-
-      if (!confirm('Are you sure you want to delete this report?')) {
-        return;
-      }
-
-      console.log(' Deleting report from view:', reportId);
 
       window.deleteLogReport(reportId);
       document.getElementById('viewLogReportModal').style.display = 'none';
@@ -2693,6 +2692,21 @@
           </div>
         </div>
 
+        <!-- Delete Email Template Confirmation Modal -->
+        <div id="deleteEmailTemplateModal" class="modal" onclick="if(event.target.id === 'deleteEmailTemplateModal') { document.getElementById('deleteEmailTemplateModal').classList.remove('active'); }" style="z-index: 9999;">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+            <div style="padding: 24px 24px;">
+              <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Email Template</h2>
+              <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete the email template <strong id="deleteTemplateNameDisplay"></strong>? This action cannot be undone.</p>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeDeleteTemplateModal()" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+              <button type="button" onclick="confirmDeleteEmailTemplate()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+            </div>
+            <input type="hidden" id="deleteTemplateId">
+          </div>
+        </div>
+
         <div id="program" class="event-tab-content hidden space-y-6" style="display: none;">
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div class="flex justify-between items-center mb-6">
@@ -2745,7 +2759,7 @@
         </div>
 
         <!-- Add Program Item Modal -->
-        <div id="addProgramModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addProgramModal') closeProgramModal();">
+        <div id="addProgramModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addProgramModal') closeProgramModal(true);">
           <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white; padding: 0;">
             <!-- Gradient Header -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
@@ -2753,7 +2767,7 @@
                 <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Program Item</h2>
                 <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Create a new program timeline or flow item</p>
               </div>
-              <button type="button" onclick="closeProgramModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
+              <button type="button" onclick="closeProgramModal(true)" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
             </div>
 
             <form id="addProgramForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%; padding: 24px;">
@@ -2841,7 +2855,7 @@
 
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" onclick="closeProgramModal()"
+                <button type="button" onclick="closeProgramModal(true)"
                         style="padding: 10px 28px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;"
                         onmouseover="this.style.background='#e5e5e5'"
                         onmouseout="this.style.background='#f0f0f0'">
@@ -2950,7 +2964,7 @@
         </div>
 
         <!-- Add Giveaway Modal -->
-        <div id="addGiveawayModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addGiveawayModal') closeGiveawayModal();">
+        <div id="addGiveawayModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addGiveawayModal') closeGiveawayModal(true);">
           <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; background-color: white; padding: 0;">
             <!-- Header (Gradient) -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
@@ -2958,7 +2972,7 @@
                 <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Giveaway</h2>
                 <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Create a new giveaway for your event</p>
               </div>
-              <button type="button" onclick="closeGiveawayModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: rgba(255,255,255,0.8); position: absolute; right: 20px; top: 20px;">×</button>
+              <button type="button" onclick="closeGiveawayModal(true)" style="background: none; border: none; font-size: 24px; cursor: pointer; color: rgba(255,255,255,0.8); position: absolute; right: 20px; top: 20px;">×</button>
             </div>
 
             <form id="addGiveawayForm" style="display: flex; flex-direction: column; gap: 18px; width: 100%; padding: 24px;">
@@ -3014,7 +3028,7 @@
 
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" onclick="closeGiveawayModal()"
+                <button type="button" onclick="closeGiveawayModal(true)"
                         style="padding: 10px 28px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;"
                         onmouseover="this.style.background='#e5e5e5'"
                         onmouseout="this.style.background='#f0f0f0'">
@@ -3113,18 +3127,18 @@
         </div>
 
         <!-- Add/Edit Logistics Modal -->
-        <div id="addLogisticsModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addLogisticsModal') closeAddLogisticsModal();">
+        <div id="addLogisticsModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addLogisticsModal') closeAddLogisticsModal(true);">
           <div class="modal-content" onclick="event.stopPropagation(); event.stopImmediatePropagation();" style="max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
             <!-- Blue Header Section -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
               <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Logistics Item</h2>
               <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Track and manage your event logistics items.</p>
-              <button type="button" onclick="closeAddLogisticsModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
+              <button type="button" onclick="closeAddLogisticsModal(true)" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
             </div>
 
             <form id="addLogisticsForm" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
-              <!-- Row 1: Category and Item -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <!-- Row 1: Category, Item, Partner -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                 <div>
                   <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Category</label>
                   <select id="logisticsCategory" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
@@ -3139,23 +3153,20 @@
                   <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Item</label>
                   <input type="text" id="logisticsItem" placeholder="Enter item name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
                 </div>
-              </div>
 
-              <!-- Row 2: Partner and Quantity -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
                   <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Partner</label>
                   <input type="text" id="logisticsPartner" placeholder="Enter partner name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
                 </div>
+              </div>
 
+              <!-- Row 2: Quantity, Schedule Date, Status -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                 <div>
                   <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Quantity</label>
                   <input type="number" id="logisticsQuantity" placeholder="Enter quantity" min="1" value="1" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
                 </div>
-              </div>
 
-              <!-- Row 3: Schedule Date and Status -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
                   <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px;">Schedule Date</label>
                   <input type="date" id="logisticsScheduleDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
@@ -3181,7 +3192,7 @@
 
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" onclick="closeAddLogisticsModal()"
+                <button type="button" onclick="closeAddLogisticsModal(true)"
                         style="padding: 10px 24px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">
                   Cancel
                 </button>
@@ -3195,13 +3206,13 @@
         </div>
 
         <!-- Add/Edit Expense Modal -->
-        <div id="addExpenseModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addExpenseModal') closeAddExpenseModal();">
+        <div id="addExpenseModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addExpenseModal') closeAddExpenseModal(true);">
           <div class="modal-content" onclick="event.stopPropagation(); event.stopImmediatePropagation();" style="max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
             <!-- Blue Header Section -->
             <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
               <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Expense</h2>
               <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Record a new expense item for your event budget.</p>
-              <button type="button" onclick="closeAddExpenseModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
+              <button type="button" onclick="closeAddExpenseModal(true)" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
             </div>
 
             <form id="addExpenseForm" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
@@ -3238,7 +3249,7 @@
 
               <!-- Form Actions -->
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" onclick="closeAddExpenseModal()"
+                <button type="button" onclick="closeAddExpenseModal(true)"
                         style="padding: 10px 24px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f0f0f0'">
                   Cancel
                 </button>
@@ -3283,30 +3294,14 @@
 
         <!-- Delete Confirmation Modal -->
         <div id="deleteConfirmModal" class="hidden flex items-center justify-center" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
-          <div style="background: white; border-radius: 12px; padding: 32px; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-            <!-- Delete Icon -->
-            <div style="text-align: center; margin-bottom: 20px;">
-              <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background-color: #fee2e2;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 1.4 14a2 2 0 0 0 2 1.6h12.2a2 2 0 0 0 2-1.6L21 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6H5M10 11v6M14 11v6"/></svg>
-              </div>
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+            <div style="padding: 24px 24px;">
+              <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Expense</h2>
+              <p id="deleteConfirmMessage" style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this expense? This action cannot be undone.</p>
             </div>
-
-            <!-- Title -->
-            <h3 style="text-align: center; font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Delete Expense</h3>
-
-            <!-- Message -->
-            <p id="deleteConfirmMessage" style="text-align: center; font-size: 14px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.5;">Are you sure you want to delete this expense? This action cannot be undone.</p>
-
-            <!-- Action Buttons -->
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-              <button type="button" onclick="closeDeleteConfirmModal()" 
-                      style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;">
-                Cancel
-              </button>
-              <button type="button" onclick="confirmDeleteExpense()" 
-                      style="padding: 10px 24px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;">
-                Delete
-              </button>
+            <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+              <button type="button" onclick="closeDeleteConfirmModal()" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+              <button type="button" onclick="confirmDeleteExpense()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
             </div>
           </div>
         </div>
@@ -4914,7 +4909,7 @@
   </div>
 
   <!-- Add Task Modal -->
-  <div id="addTaskModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addTaskModal') closeAddTaskModal();">
+  <div id="addTaskModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addTaskModal') closeAddTaskModal(true);">
     <div class="modal-content" style="max-width: 600px; width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background-color: white; padding: 0; max-height: 90vh; overflow-y: auto;">
       <!-- Gradient Header -->
       <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
@@ -4922,12 +4917,12 @@
           <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Task</h2>
           <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Create a new task for event management</p>
         </div>
-        <button type="button" onclick="closeAddTaskModal()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
+        <button type="button" onclick="closeAddTaskModal(true)" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; font-size: 24px; cursor: pointer; color: white; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3);'" onmouseout="this.style.background='rgba(255,255,255,0.2);'">×</button>
       </div>
 
       <form id="addTaskForm" style="display: flex; flex-direction: column; gap: 18px; padding: 24px;">
-        <!-- Date of Completion and Task in 2 columns -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <!-- Date of Completion, Task, and Status in 3 columns -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Date of Completion</label>
             <input type="date" id="taskDueDate" required placeholder="mm/dd/yyyy"
@@ -4936,10 +4931,21 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Task</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Task Name</label>
             <textarea id="taskName" required placeholder=""
                       class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none bg-white"
                       style="height: 38px !important; min-height: 38px !important; box-sizing: border-box;"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select id="taskStatus"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white cursor-pointer appearance-none"
+                    style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3e%3cpolyline points=%226 9 12 15 18 9%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 8px center; background-size: 20px; padding-right: 32px; height: 38px;">
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
           </div>
         </div>
 
@@ -4966,30 +4972,17 @@
           </div>
         </div>
 
-        <!-- Status and Remarks in 2 columns -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select id="taskStatus"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white cursor-pointer appearance-none"
-                    style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3e%3cpolyline points=%226 9 12 15 18 9%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 8px center; background-size: 20px; padding-right: 32px; height: 38px;">
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-            <textarea id="taskRemarks" placeholder=""
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none bg-white"
-                      style="height: 38px !important; min-height: 38px !important; box-sizing: border-box;"></textarea>
-          </div>
+        <!-- Remarks -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+          <textarea id="taskRemarks" placeholder=""
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none bg-white"
+                    style="height: 38px !important; min-height: 38px !important; box-sizing: border-box;"></textarea>
         </div>
 
         <!-- Form Actions -->
         <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-          <button type="button" onclick="closeAddTaskModal()"
+          <button type="button" onclick="closeAddTaskModal(true)"
                   style="padding: 10px 28px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s;"
                   onmouseover="this.style.background='#e5e5e5'"
                   onmouseout="this.style.background='#f0f0f0'">
@@ -5526,53 +5519,29 @@
   </div>
 
   <!-- Remove Coordinator Modal -->
-  <div id="removeCoordinatorModal" class="modal">
-    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
-      <!-- Gradient Header Section -->
-      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
-        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Remove Coordinator</h2>
-        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Are you sure you want to remove this coordinator from the event?</p>
-        <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+  <div id="removeCoordinatorModal" class="modal" onclick="if(event.target.id === 'removeCoordinatorModal') { document.getElementById('removeCoordinatorModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Remove Coordinator</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to remove this coordinator from the event? This action cannot be undone.</p>
       </div>
-      
-      <div style="padding: 24px;">
-        <p style="color: #4b5563; font-size: 14px; margin: 0 0 24px 0;">This action cannot be undone.</p>
-        
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
-            Cancel
-          </button>
-          <button type="button" style="padding: 10px 24px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="confirmRemoveCoordinator()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-            Remove
-          </button>
-        </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('removeCoordinatorModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmRemoveCoordinator()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Remove</button>
       </div>
     </div>
   </div>
 
   <!-- Remove Other Information Modal -->
-  <div id="removeOtherInformationModal" class="modal">
-    <div class="modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 0;">
-      <!-- Gradient Header Section -->
-      <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; position: relative;">
-        <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Remove Information</h2>
-        <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Are you sure you want to remove this information from the event?</p>
-        <button type="button" onclick="document.getElementById('removeOtherInformationModal').classList.remove('active')" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.7); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+  <div id="removeOtherInformationModal" class="modal" onclick="if(event.target.id === 'removeOtherInformationModal') { document.getElementById('removeOtherInformationModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Remove Information</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to remove this information from the event? This action cannot be undone.</p>
       </div>
-      
-      <div style="padding: 24px;">
-        <p style="color: #4b5563; font-size: 14px; margin: 0 0 24px 0;">This action cannot be undone.</p>
-        
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button type="button" style="padding: 10px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('removeOtherInformationModal').classList.remove('active')" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
-            Cancel
-          </button>
-          <button type="button" style="padding: 10px 24px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;" onclick="confirmRemoveOtherInformation()" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-            Remove
-          </button>
-        </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('removeOtherInformationModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmRemoveOtherInformation()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Remove</button>
       </div>
     </div>
   </div>
@@ -7877,7 +7846,7 @@
   </script>
 
   <!-- Add Attendee Modal -->
-  <div id="addAttendeeModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addAttendeeModal') closeAddAttendeeModal();">
+  <div id="addAttendeeModal" class="modal" onclick="event.stopPropagation(); if(event.target.id === 'addAttendeeModal') closeAddAttendeeModal(true);">
     <div class="modal-content" style="max-width: 800px; width: 95%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; padding: 0; max-height: 85vh; overflow-y: auto;">
       <!-- Gradient Header Section -->
       <div style="background: linear-gradient(90deg, #559CDA 0%, #7BADFF 27%, #FFB58D 76%, #ED8028 100%); padding: 28px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: flex-start;">
@@ -7885,7 +7854,7 @@
           <h2 style="color: white; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Add Attendee</h2>
           <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 8px 0 0 0; font-weight: 400;">Register a new participant for the event.</p>
         </div>
-        <button type="button" onclick="closeAddAttendeeModal()" style="background: none; border: none; font-size: 32px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; transition: color 0.2s; padding: 0;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.8)'">×</button>
+        <button type="button" onclick="closeAddAttendeeModal(true)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: rgba(255,255,255,0.8); line-height: 1; transition: color 0.2s; padding: 0;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.8)'">×</button>
       </div>
 
       <!-- Form Content with padding -->
@@ -7925,11 +7894,15 @@
                 <div id="firstNameValidationFeedback" style="display: none; margin-top: 6px; padding: 8px 10px; border-radius: 4px; font-size: 12px; font-weight: 500;"></div>
               </div>
               <div>
-                <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px; margin-bottom: 8px;">Middle Name</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label style="display: block; text-transform: uppercase; font-size: 11px; font-weight: 700; color: #666; letter-spacing: 1px;">Middle Name</label>
+                  <span id="middleNameValidationStatus" style="font-size: 12px; font-weight: 600; color: #999;"></span>
+                </div>
                 <input type="text" id="addAttendeeMiddleName" placeholder="James (optional)"
                        style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #333; background: white; transition: border-color 0.2s;"
                        onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
                        onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+                <div id="middleNameValidationFeedback" style="display: none; margin-top: 6px; padding: 8px 10px; border-radius: 4px; font-size: 12px; font-weight: 500;"></div>
               </div>
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -8003,7 +7976,7 @@
 
             <!-- Form Actions -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #eee;">
-              <button type="button" onclick="closeAddAttendeeModal()"
+              <button type="button" onclick="closeAddAttendeeModal(true)"
                       style="padding: 12px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s;"
                       onmouseover="this.style.backgroundColor='#e0e0e0'"
                       onmouseout="this.style.backgroundColor='#f0f0f0'">
@@ -8496,7 +8469,7 @@
     window.openEmailTemplateModal = function() {
       console.log('[TEMPLATE] Opening email template modal...');
       
-      // Reset form
+      // Reset form completely
       document.getElementById('templateName').value = '';
       document.getElementById('templateSubject').value = '';
       document.getElementById('templateRecipients').value = '';
@@ -8527,8 +8500,8 @@
         });
         console.log('[TEMPLATE] ✓ Quill editor initialized');
       } else {
-        // Clear existing content
-        emailTemplateQuill.setContents([]);
+        // Clear existing content completely
+        emailTemplateQuill.setContents([], 'silent');
       }
       
       // Show modal
@@ -8566,18 +8539,20 @@
       
       const modalHTML = `
         <div id="closeEmailTemplateConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 9999;" onclick="event.stopPropagation();">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-                <div class="px-6 py-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Discard Changes</h2>
-                    <p class="text-gray-600">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <div style="padding: 24px;">
+                    <h2 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 12px 0; letter-spacing: 0.3px;">Discard Changes?</h2>
+                    <p style="font-size: 14px; color: #6b7280; margin: 0; line-height: 1.5;">Are you sure you want to close this modal? Any unsaved changes will be lost.</p>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
                     <button type="button" id="confirmEmailTemplateCancelBtn" 
-                            class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                            style="padding: 10px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" 
+                            onmouseover="this.style.background='#e5e5e5'" onmouseout="this.style.background='#f0f0f0'">
                         Cancel
                     </button>
                     <button type="button" id="confirmEmailTemplateCloseBtn"
-                            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                            style="padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(30, 115, 187, 0.3);" 
+                            onmouseover="this.style.background='#155a9b'; this.style.boxShadow='0 6px 16px rgba(30, 115, 187, 0.4)'" onmouseout="this.style.background='#1E73BB'; this.style.boxShadow='0 4px 12px rgba(30, 115, 187, 0.3)'">
                         Close
                     </button>
                 </div>
@@ -8601,14 +8576,15 @@
           modal.classList.remove('active');
         }
         
-        // Clear form
+        // Clear form completely
         document.getElementById('templateName').value = '';
         document.getElementById('templateSubject').value = '';
         document.getElementById('templateRecipients').value = '';
         document.getElementById('templateBody').value = '';
         
+        // Properly clear Quill editor
         if (emailTemplateQuill) {
-          emailTemplateQuill.setContents([]);
+          emailTemplateQuill.setContents([], 'silent');
         }
         
         const confirmDiv = document.getElementById('closeEmailTemplateConfirmModal');
@@ -8681,8 +8657,21 @@
           console.log('[TEMPLATE] ✓ Template saved successfully');
           showNotification('✓ Email template saved successfully!', 'success');
           
+          // Properly clear form and Quill editor
+          document.getElementById('templateName').value = '';
+          document.getElementById('templateSubject').value = '';
+          document.getElementById('templateRecipients').value = '';
+          document.getElementById('templateBody').value = '';
+          
+          if (emailTemplateQuill) {
+            emailTemplateQuill.setContents([], 'silent');
+          }
+          
           // Close modal and reload templates
-          closeEmailTemplateModal();
+          const modal = document.getElementById('emailTemplateModal');
+          if (modal) {
+            modal.classList.remove('active');
+          }
           loadEmailTemplates();
         } else {
           console.error('[TEMPLATE] Save failed:', data.message);
@@ -8696,7 +8685,25 @@
     };
     
     // Close Program Modal with Discard Changes confirmation
-    window.closeProgramModal = function() {
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeProgramModalDirect = function() {
+      document.getElementById('addProgramModal').classList.remove('active');
+      document.getElementById('programEntryType').value = '';
+      document.getElementById('programWeek').value = '';
+      document.getElementById('programDate').value = '';
+      document.getElementById('programTitle').value = '';
+      document.getElementById('programNotes').value = '';
+      document.getElementById('programFlowTime').value = '';
+      document.getElementById('programFlowLocation').value = '';
+      document.getElementById('programFlowActivity').value = '';
+      document.getElementById('programFlowTimeFrame').value = '';
+      document.getElementById('programFlowSpeaker').value = '';
+      const confirmDiv = document.getElementById('closeProgramConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
+
+    // Close Program Modal with Discard Changes confirmation
+    window.closeProgramModal = function(isClosing) {
       const entryType = document.getElementById('programEntryType').value.trim();
       const week = document.getElementById('programWeek').value.trim();
       const date = document.getElementById('programDate').value.trim();
@@ -8707,6 +8714,7 @@
       const flowActivity = document.getElementById('programFlowActivity').value.trim();
       const flowTimeFrame = document.getElementById('programFlowTimeFrame').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!entryType && !week && !date && !title && !notes && !flowTime && !flowLocation && !flowActivity && !flowTimeFrame) {
         document.getElementById('addProgramModal').classList.remove('active');
         return;
@@ -8751,18 +8759,13 @@
     };
     
     // Close Add Task Modal with Discard Changes confirmation
-    window.closeAddTaskModal = function() {
-      // If form was just submitted, close immediately without confirmation
-      if (window.suppressTaskConfirmation) {
-        window.suppressTaskConfirmation = false;
-        document.getElementById('addTaskModal').classList.remove('active');
-        return;
-      }
-      
+    // Close Program Modal with Discard Changes confirmation
+    window.closeAddTaskModal = function(isClosing) {
       const dueDate = document.getElementById('taskDueDate').value.trim();
       const taskName = document.getElementById('taskName').value.trim();
       const remarks = document.getElementById('taskRemarks').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!dueDate && !taskName && !remarks) {
         document.getElementById('addTaskModal').classList.remove('active');
         return;
@@ -8803,9 +8806,33 @@
         if (confirmDiv) confirmDiv.remove();
       });
     };
+
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeAddTaskModalDirect = function() {
+      document.getElementById('addTaskModal').classList.remove('active');
+      document.getElementById('taskDueDate').value = '';
+      document.getElementById('taskName').value = '';
+      document.getElementById('taskRemarks').value = '';
+      const confirmDiv = document.getElementById('closeTaskConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
     
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeGiveawayModalDirect = function() {
+      document.getElementById('addGiveawayModal').classList.remove('active');
+      document.getElementById('giveawayName').value = '';
+      document.getElementById('giveawayLocation').value = '';
+      document.getElementById('giveawayBundle').value = '';
+      document.getElementById('giveawayPrice').value = '';
+      document.getElementById('giveawayReference').value = '';
+      document.getElementById('giveawayLeadTime').value = '';
+      document.getElementById('giveawayFurtherInfo').value = '';
+      const confirmDiv = document.getElementById('closeGiveawayConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
+
     // Close Giveaway Modal with Discard Changes confirmation
-    window.closeGiveawayModal = function() {
+    window.closeGiveawayModal = function(isClosing) {
       const name = document.getElementById('giveawayName').value.trim();
       const location = document.getElementById('giveawayLocation').value.trim();
       const bundle = document.getElementById('giveawayBundle').value.trim();
@@ -8814,6 +8841,7 @@
       const leadTime = document.getElementById('giveawayLeadTime').value.trim();
       const info = document.getElementById('giveawayFurtherInfo').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!name && !location && !bundle && !price && !reference && !leadTime && !info) {
         document.getElementById('addGiveawayModal').classList.remove('active');
         return;
@@ -8860,12 +8888,25 @@
     };
     
     // Close Add Logistics Modal with Discard Changes confirmation
-    window.closeAddLogisticsModal = function() {
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeAddLogisticsModalDirect = function() {
+      document.getElementById('addLogisticsModal').classList.remove('active');
+      document.getElementById('logisticsCategory').value = '';
+      document.getElementById('logisticsItem').value = '';
+      document.getElementById('logisticsPartner').value = '';
+      document.getElementById('logisticsNotes').value = '';
+      const confirmDiv = document.getElementById('closeLogisticsConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
+
+    // Close Add Logistics Modal with Discard Changes confirmation
+    window.closeAddLogisticsModal = function(isClosing) {
       const category = document.getElementById('logisticsCategory').value.trim();
       const item = document.getElementById('logisticsItem').value.trim();
       const partner = document.getElementById('logisticsPartner').value.trim();
       const notes = document.getElementById('logisticsNotes').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!category && !item && !partner && !notes) {
         document.getElementById('addLogisticsModal').classList.remove('active');
         return;
@@ -8908,11 +8949,22 @@
       });
     };
     
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeAddExpenseModalDirect = function() {
+      document.getElementById('addExpenseModal').classList.remove('active');
+      document.getElementById('expenseDescription').value = '';
+      document.getElementById('expenseQuantity').value = '1';
+      document.getElementById('expenseUnitPrice').value = '';
+      const confirmDiv = document.getElementById('closeExpenseConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
+
     // Close Add Expense Modal with Discard Changes confirmation
-    window.closeAddExpenseModal = function() {
+    window.closeAddExpenseModal = function(isClosing) {
       const description = document.getElementById('expenseDescription').value.trim();
       const unitPrice = document.getElementById('expenseUnitPrice').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!description && !unitPrice) {
         document.getElementById('addExpenseModal').classList.remove('active');
         return;
@@ -8955,12 +9007,22 @@
     };
     
     // Close Add Attendee Modal with Discard Changes confirmation
-    window.closeAddAttendeeModal = function() {
-      // If form submission is in progress, don't show discard modal
-      if (window.isAddAttendeeFormSubmitting) {
-        return;
-      }
-      
+    // Direct close without confirmation (for form submission ONLY)
+    window.closeAddAttendeeModalDirect = function() {
+      document.getElementById('addAttendeeModal').classList.remove('active');
+      document.getElementById('addAttendeeFirstName').value = '';
+      document.getElementById('addAttendeeMiddleName').value = '';
+      document.getElementById('addAttendeeSurname').value = '';
+      document.getElementById('addAttendeeCompany').value = '';
+      document.getElementById('addAttendeeJobTitle').value = '';
+      document.getElementById('addAttendeeEmail').value = '';
+      document.getElementById('addAttendeePhone').value = '';
+      const confirmDiv = document.getElementById('closeAttendeeConfirmModal');
+      if (confirmDiv) confirmDiv.remove();
+    };
+
+    // Close Add Attendee Modal with Discard Changes confirmation
+    window.closeAddAttendeeModal = function(isClosing) {
       const firstName = document.getElementById('addAttendeeFirstName').value.trim();
       const middleName = document.getElementById('addAttendeeMiddleName').value.trim();
       const surname = document.getElementById('addAttendeeSurname').value.trim();
@@ -8969,9 +9031,9 @@
       const email = document.getElementById('addAttendeeEmail').value.trim();
       const phone = document.getElementById('addAttendeePhone').value.trim();
       
+      // If form is empty, just close without confirmation
       if (!firstName && !middleName && !surname && !company && !jobTitle && !email && !phone) {
         document.getElementById('addAttendeeModal').classList.remove('active');
-        window.isAddAttendeeFormSubmitting = false;
         return;
       }
       
@@ -8997,13 +9059,11 @@
       document.body.appendChild(modalContainer.firstElementChild);
       
       document.getElementById('confirmAttendeeCancelBtn').addEventListener('click', function() {
-        window.isAddAttendeeFormSubmitting = false;
         const confirmDiv = document.getElementById('closeAttendeeConfirmModal');
         if (confirmDiv) confirmDiv.remove();
       });
       
       document.getElementById('confirmAttendeeCloseBtn').addEventListener('click', function() {
-        window.isAddAttendeeFormSubmitting = false;
         document.getElementById('addAttendeeModal').classList.remove('active');
         document.getElementById('addAttendeeFirstName').value = '';
         document.getElementById('addAttendeeMiddleName').value = '';
@@ -9109,6 +9169,13 @@
       }
       
       card.innerHTML = `
+        <button type="button" onclick="showDeleteTemplateConfirmation(event, ${template.template_id})" 
+                style="position: absolute; top: 12px; right: 12px; background: #f0f0f0; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #666; font-size: 18px; line-height: 1;"
+                onmouseover="this.style.backgroundColor='#e74c3c'; this.style.color='white'"
+                onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.color='#666'"
+                title="Delete this template">
+          ×
+        </button>
         <div style="margin-bottom: 16px;">
           <h3 style="font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: -0.3px;">${template.template_name || 'Untitled'}</h3>
           <p style="font-size: 13px; color: #6b7280; margin: 0; font-weight: 500;">Subject: ${template.subject ? (template.subject.length > 30 ? template.subject.substring(0, 30) + '...' : template.subject) : 'No subject'}</p>
@@ -9289,7 +9356,85 @@
       });
     };
     
-    console.log('[TEMPLATE] Email template functions registered ✓');
+    // Show Delete Template Confirmation Modal
+    window.showDeleteTemplateConfirmation = function(event, templateId) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      
+      console.log('[TEMPLATE] Showing delete confirmation for template #' + templateId);
+      
+      // Fetch template name
+      fetch('../api/emails.php?action=get_template&template_id=' + templateId, {
+        method: 'GET',
+        headers: getEmailHeaders()
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const templateName = data.data.template_name || 'Untitled';
+          document.getElementById('deleteTemplateNameDisplay').textContent = templateName;
+          document.getElementById('deleteTemplateId').value = templateId;
+          document.getElementById('deleteEmailTemplateModal').classList.add('active');
+          console.log('[TEMPLATE] Delete confirmation modal opened for: ' + templateName);
+        }
+      })
+      .catch(error => {
+        console.error('[TEMPLATE] Error fetching template name:', error);
+        alert('Error loading template information');
+      });
+    };
+    
+    // Close Delete Template Confirmation Modal
+    window.closeDeleteTemplateModal = function() {
+      document.getElementById('deleteEmailTemplateModal').classList.remove('active');
+      document.getElementById('deleteTemplateId').value = '';
+      document.getElementById('deleteTemplateNameDisplay').textContent = '';
+      console.log('[TEMPLATE] Delete confirmation modal closed');
+    };
+    
+    // Confirm and Delete Email Template
+    window.confirmDeleteEmailTemplate = function() {
+      const templateId = document.getElementById('deleteTemplateId').value;
+      
+      if (!templateId) {
+        alert('❌ Error: Template ID not found');
+        return;
+      }
+      
+      console.log('[TEMPLATE] Confirming delete for template #' + templateId);
+      closeDeleteTemplateModal();
+      
+      fetch('../api/emails.php', {
+        method: 'POST',
+        headers: getEmailHeaders(),
+        body: JSON.stringify({
+          action: 'delete_template',
+          template_id: templateId
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('[TEMPLATE] Delete response:', data);
+        
+        if (data.success) {
+          console.log('[TEMPLATE] ✓ Template deleted successfully');
+          // Show success message via notification
+          showNotification('✓ Template deleted successfully!', 'success');
+          // Reload templates
+          loadEmailTemplates();
+        } else {
+          showNotification('❌ Error: ' + (data.message || 'Failed to delete template'), 'error');
+        }
+      })
+      .catch(error => {
+        console.error('[TEMPLATE] Delete error:', error);
+        showNotification('❌ Error deleting template: ' + error.message, 'error');
+      });
+    };
+    
+    console.log('[TEMPLATE] Email template delete functions registered ✓');
     
     // Final status after 2 seconds
     setTimeout(() => {
@@ -9403,6 +9548,90 @@
       <div style="padding: 16px 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
         <button onclick="closeTaskStatusRemarksModal()" style="padding: 10px 20px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
         <button onclick="submitTaskStatusRemarksModal()" style="padding: 10px 20px; background: #1E73BB; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#1a5fa0'" onmouseout="this.style.background='#1E73BB'">Update Status</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Program Timeline Modal -->
+  <div id="deleteProgramTimelineModal" class="modal" onclick="if(event.target.id === 'deleteProgramTimelineModal') { document.getElementById('deleteProgramTimelineModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Timeline Item</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this timeline item? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteProgramTimelineModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteProgramTimeline()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Program Flow Modal -->
+  <div id="deleteProgramFlowModal" class="modal" onclick="if(event.target.id === 'deleteProgramFlowModal') { document.getElementById('deleteProgramFlowModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Program Flow Item</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this program flow item? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteProgramFlowModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteProgramFlow()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Marketing Asset Modal -->
+  <div id="deleteMarketingAssetModal" class="modal" onclick="if(event.target.id === 'deleteMarketingAssetModal') { document.getElementById('deleteMarketingAssetModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Asset</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this asset? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteMarketingAssetModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteMarketingAsset()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Logistics Modal -->
+  <div id="deleteLogisticsModal" class="modal" onclick="if(event.target.id === 'deleteLogisticsModal') { document.getElementById('deleteLogisticsModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Logistics Item</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this logistics item? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteLogisticsModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteLogistics()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Giveaway Modal -->
+  <div id="deleteGiveawayModal" class="modal" onclick="if(event.target.id === 'deleteGiveawayModal') { document.getElementById('deleteGiveawayModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Giveaway</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this giveaway? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteGiveawayModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteGiveaway()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Log Report Modal -->
+  <div id="deleteLogReportModal" class="modal" onclick="if(event.target.id === 'deleteLogReportModal') { document.getElementById('deleteLogReportModal').classList.remove('active'); }" style="z-index: 9999;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+      <div style="padding: 24px 24px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Delete Report</h2>
+        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to delete this report? This action cannot be undone.</p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" onclick="document.getElementById('deleteLogReportModal').classList.remove('active')" style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Cancel</button>
+        <button type="button" onclick="confirmDeleteLogReport()" style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Delete</button>
       </div>
     </div>
   </div>

@@ -3982,22 +3982,13 @@ function handleAddAttendeeSubmit(event) {
             console.log('✓ Attendee added successfully:', data);
             showAddAttendeeSuccess('Attendee added successfully! Registration code: ' + (data.registration_code || 'Generated'));
             
-            // Clear form first to prevent discard modal from showing
-            document.getElementById('addAttendeeFirstName').value = '';
-            document.getElementById('addAttendeeMiddleName').value = '';
-            document.getElementById('addAttendeeSurname').value = '';
-            document.getElementById('addAttendeeCompany').value = '';
-            document.getElementById('addAttendeeJobTitle').value = '';
-            document.getElementById('addAttendeeEmail').value = '';
-            document.getElementById('addAttendeePhone').value = '';
-            
             // Reset submission flag
             window.isAddAttendeeFormSubmitting = false;
             
             // Close modal and reload attendees after a short delay
             setTimeout(() => {
-                // Modal will close directly without discard confirmation since form is now empty
-                document.getElementById('addAttendeeModal').classList.remove('active');
+                // Close modal directly without showing discard confirmation
+                closeAddAttendeeModalDirect();
                 
                 // Determine which context we're in and reload accordingly
                 if (window.currentEventId) {
@@ -5141,10 +5132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✓ ' + successMsg + ':', data);
                 if (data.success) {
                     showNotification(successMsg + ': ' + taskName, 'success');
-                    
-                    // Set flag to suppress discard confirmation on close
-                    window.suppressTaskConfirmation = true;
-                    closeAddTaskModal();
+                    closeAddTaskModalDirect();
                     
                     // Clear editing flag
                     window.editingTaskId = null;
@@ -9580,18 +9568,18 @@ const CatalogueManager = {
         // Create modal HTML
         const modalHTML = `
             <div id="removeConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-                    <div class="px-6 py-6">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-2">Remove Event</h2>
-                        <p class="text-gray-600">Are you sure you want to remove <strong>${eventName}</strong> from catalogue?</p>
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="display: flex; flex-direction: column;">
+                    <div style="padding: 24px 24px;">
+                        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Remove Event</h2>
+                        <p style="color: #4b5563; font-size: 14px; margin: 0;">Are you sure you want to remove <strong>${eventName}</strong> from catalogue? This action cannot be undone.</p>
                     </div>
-                    <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+                    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
                         <button onclick="document.getElementById('removeConfirmationModal')?.remove()" 
-                                class="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 font-medium hover:bg-gray-50 transition">
+                                style="padding: 8px 16px; border-radius: 6px; color: #374151; border: 1px solid #d1d5db; background: white; font-weight: 500; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                             Cancel
                         </button>
                         <button onclick="CatalogueManager.removeEvent(${catalogueId}); document.getElementById('removeConfirmationModal')?.remove()" 
-                                class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+                                style="padding: 8px 16px; border-radius: 6px; background: #ef4444; color: white; border: none; font-weight: 500; cursor: pointer; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                             Remove
                         </button>
                     </div>
@@ -13583,7 +13571,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         const msg = editTimelineId ? 'Timeline item updated successfully' : 'Timeline item created successfully';
                         showNotification(msg, 'success');
-                        closeProgramModal();
+                        closeProgramModalDirect();
                         loadProgramItems();
                     } else {
                         showNotification('Error: ' + data.message, 'error');
@@ -13630,7 +13618,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         const msg = editFlowId ? 'Program flow item updated successfully' : 'Program flow item created successfully';
                         showNotification(msg, 'success');
-                        closeProgramModal();
+                        closeProgramModalDirect();
                         loadProgramItems();
                     } else {
                         showNotification('Error: ' + data.message, 'error');
@@ -13733,8 +13721,12 @@ function editProgramFlow(flowId) {
 }
 
 function deleteProgramTimeline(timelineId) {
-    if (!confirm('Are you sure you want to delete this timeline item?')) return;
-    
+    window.pendingDeleteTimelineId = timelineId;
+    document.getElementById('deleteProgramTimelineModal').classList.add('active');
+}
+
+function confirmDeleteProgramTimeline() {
+    const timelineId = window.pendingDeleteTimelineId;
     const eventId = window.currentEventId;
     const headers = getUserHeaders ? getUserHeaders() : {};
     headers['Content-Type'] = 'application/json';
@@ -13749,6 +13741,7 @@ function deleteProgramTimeline(timelineId) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteProgramTimelineModal').classList.remove('active');
         if (data.success) {
             showNotification('Timeline item deleted', 'success');
             loadProgramItems();
@@ -13759,12 +13752,17 @@ function deleteProgramTimeline(timelineId) {
     .catch(error => {
         console.error('Error:', error);
         showNotification('Error deleting item', 'error');
+        document.getElementById('deleteProgramTimelineModal').classList.remove('active');
     });
 }
 
 function deleteProgramFlow(flowId) {
-    if (!confirm('Are you sure you want to delete this program flow item?')) return;
-    
+    window.pendingDeleteFlowId = flowId;
+    document.getElementById('deleteProgramFlowModal').classList.add('active');
+}
+
+function confirmDeleteProgramFlow() {
+    const flowId = window.pendingDeleteFlowId;
     const eventId = window.currentEventId;
     const headers = getUserHeaders ? getUserHeaders() : {};
     headers['Content-Type'] = 'application/json';
@@ -13779,6 +13777,7 @@ function deleteProgramFlow(flowId) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteProgramFlowModal').classList.remove('active');
         if (data.success) {
             showNotification('Program flow item deleted', 'success');
             loadProgramItems();
@@ -13789,6 +13788,7 @@ function deleteProgramFlow(flowId) {
     .catch(error => {
         console.error('Error:', error);
         showNotification('Error deleting item', 'error');
+        document.getElementById('deleteProgramFlowModal').classList.remove('active');
     });
 }
 
@@ -14221,8 +14221,12 @@ function previewMarketingAsset(filePath, assetType) {
 }
 
 function deleteMarketingAsset(assetId) {
-    if (!confirm('Delete this asset?')) return;
-    
+    window.pendingDeleteAssetId = assetId;
+    document.getElementById('deleteMarketingAssetModal').classList.add('active');
+}
+
+function confirmDeleteMarketingAsset() {
+    const assetId = window.pendingDeleteAssetId;
     const headers = getUserHeaders ? getUserHeaders() : {};
     const fetchOptions = {
         method: 'POST',
@@ -14233,6 +14237,7 @@ function deleteMarketingAsset(assetId) {
     fetch(`${API_BASE}/marketing-assets.php`, fetchOptions)
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteMarketingAssetModal').classList.remove('active');
         if (data.success) {
             showNotification('Asset deleted successfully', 'success');
             loadMarketingAssets();
@@ -14243,6 +14248,7 @@ function deleteMarketingAsset(assetId) {
     .catch(error => {
         console.error('Delete error:', error);
         showNotification('Delete failed', 'error');
+        document.getElementById('deleteMarketingAssetModal').classList.remove('active');
     });
 }
 
@@ -14331,8 +14337,6 @@ function editGiveaway(giveawayId) {
 }
 
 function deleteGiveaway(giveawayId) {
-    if (!confirm('Are you sure you want to delete this giveaway?')) return;
-    
     // Get event ID from multiple sources
     let eventId = window.currentEventId;
     
@@ -14345,6 +14349,19 @@ function deleteGiveaway(giveawayId) {
     if (!eventId) {
         showNotification('No event selected', 'error');
         return;
+    }
+    
+    window.pendingDeleteGiveawayId = giveawayId;
+    document.getElementById('deleteGiveawayModal').classList.add('active');
+}
+
+function confirmDeleteGiveaway() {
+    const giveawayId = window.pendingDeleteGiveawayId;
+    let eventId = window.currentEventId;
+    
+    if (!eventId) {
+        const params = new URLSearchParams(window.location.search);
+        eventId = params.get('id') || params.get('eventId') || params.get('event_id');
     }
     
     const headers = getUserHeaders ? getUserHeaders() : {};
@@ -14360,6 +14377,7 @@ function deleteGiveaway(giveawayId) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteGiveawayModal').classList.remove('active');
         if (data.success) {
             showNotification('Giveaway deleted', 'success');
             loadGiveaways();
@@ -14370,6 +14388,7 @@ function deleteGiveaway(giveawayId) {
     .catch(error => {
         console.error('Error:', error);
         showNotification('Error deleting giveaway', 'error');
+        document.getElementById('deleteGiveawayModal').classList.remove('active');
     });
 }
 
@@ -14430,7 +14449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     const msg = isEditing ? 'Giveaway updated successfully' : 'Giveaway created successfully';
                     showNotification(msg, 'success');
-                    closeGiveawayModal();
+                    closeGiveawayModalDirect();
                     loadGiveaways();
                 } else {
                     showNotification('Error: ' + data.message, 'error');
@@ -14657,8 +14676,12 @@ function editLogistics(logisticsId) {
 }
 
 function deleteLogistics(logisticsId) {
-    if (!confirm('Are you sure you want to delete this logistics item?')) return;
-    
+    window.pendingDeleteLogisticsId = logisticsId;
+    document.getElementById('deleteLogisticsModal').classList.add('active');
+}
+
+function confirmDeleteLogistics() {
+    const logisticsId = window.pendingDeleteLogisticsId;
     let eventId = window.currentEventId;
     
     if (!eventId && typeof currentEventId !== 'undefined') {
@@ -14672,6 +14695,7 @@ function deleteLogistics(logisticsId) {
     
     if (!eventId) {
         showNotification('No event selected', 'error');
+        document.getElementById('deleteLogisticsModal').classList.remove('active');
         return;
     }
     
@@ -14688,6 +14712,7 @@ function deleteLogistics(logisticsId) {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('deleteLogisticsModal').classList.remove('active');
         if (data.success) {
             showNotification('Logistics item deleted', 'success');
             loadLogistics();
@@ -14835,7 +14860,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     const msg = isEditing ? 'Logistics item updated' : 'Logistics item created';
                     showNotification(msg, 'success');
-                    closeAddLogisticsModal();
+                    closeAddLogisticsModalDirect();
                     loadLogistics();
                 } else {
                     showNotification('Error: ' + data.message, 'error');
@@ -15669,7 +15694,7 @@ function submitExpense(eventId, isEditing, description, quantity, unit_price) {
         if (data.success) {
             const msg = isEditing ? 'Expense updated' : 'Expense created';
             showNotification(msg, 'success');
-            closeAddExpenseModal();
+            closeAddExpenseModalDirect();
             loadExpenses();
         } else {
             showNotification('Error: ' + data.message, 'error');
