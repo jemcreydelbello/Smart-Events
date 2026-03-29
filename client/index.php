@@ -1509,7 +1509,6 @@ function populateGalleryThumbnails() {
             // Marketing asset thumbnail
             imagePath = `../${image.file_path}`;
         } else {
-            // Event gallery image thumbnail
             imagePath = image.is_cover 
                 ? `../uploads/events/${image.image_url}`
                 : `../uploads/events_img/${image.image_url}`;

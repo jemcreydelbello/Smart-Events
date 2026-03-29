@@ -26,7 +26,7 @@ function downloadQrCertificate(data) {
         if (imagesLoaded === 1) drawCertificateContent();
     };
     
-    logoImg.src = '../assets/ITI.jpg';
+    logoImg.src = '../assets/intellismart.jpg';
     
     function drawCertificateContent() {
     
